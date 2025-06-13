@@ -22,15 +22,17 @@ knitr::opts_chunk$set(
 [![Codecov test coverage](https://codecov.io/gh/pasahe/bdlnm/graph/badge.svg)](https://app.codecov.io/gh/pasahe/bdlnm)
 <!-- badges: end -->
 
-The goal of bdlnm is to ...
+The goal of bdlnm is to provide a collection of functions for distributed lag non-linear bayesian models.
 
 ## Installation
 
 You can install the development version of bdlnm like so:
 
 ``` r
-# FILL THIS IN! HOW CAN PEOPLE INSTALL YOUR DEV PACKAGE?
+pak::pkg_install("pasahe/bdlnm")
 ```
+
+Because this is a private repository, you have to get installation permissions.
 
 ## Example
 
