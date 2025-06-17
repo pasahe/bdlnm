@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 [![Codecov test coverage](https://codecov.io/gh/pasahe/bdlnm/graph/badge.svg)](https://app.codecov.io/gh/pasahe/bdlnm)
 <!-- badges: end -->
 
-The goal of bdlnm is to provide a collection of functions for distributed lag non-linear bayesian models.
+The goal of bdlnm is to provide a collection of functions for distributed lag linear (DLMs) and non-linear (DLNMs) bayesian models.
 
 ## Installation
 
