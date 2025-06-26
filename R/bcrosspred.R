@@ -4,6 +4,7 @@
 #' @param basis
 #' @param model
 #' @param coef
+#' @param model.link
 #' @param at
 #' @param from
 #' @param to
@@ -19,7 +20,7 @@
 #'
 #' @examples
 
-bcrosspred <- function(basis, model = NULL, coef = NULL, at = NULL, from = NULL, to = NULL, by = NULL, lag, bylag = 1, cen = NULL, cumul = FALSE, n_sample = 100) {
+bcrosspred <- function(basis, model = NULL, coef = NULL, model.link = NULL, at = NULL, from = NULL, to = NULL, by = NULL, lag, bylag = 1, cen = NULL, cumul = FALSE, n_sample = NULL) {
 
   #######################################
   #Determine the type of model and checks
@@ -52,11 +53,20 @@ bcrosspred <- function(basis, model = NULL, coef = NULL, at = NULL, from = NULL,
   if(!is.null(model)) {
     if(any(class(model) != "inla")) stop("'mod' must be an inla model.") else
       if(!model$.args$control.compute$config) stop("'mod' must be an inla model computed with option `control.compute=list(config = TRUE)`.")
+    if(!is.null(coef)) stop("'mod' and 'coef' cannot be provided at the same time.")
+  } else {
+
+    if(!"latent" %in% names(coef[[1]])) stop("'coef' must be an object created by `inla.posterior.sample()`.")
+
+    if(is.null(model.link)) stop("'model.link' has to be provided if a model is not supplied.")
+
   }
 
   ###############################
   # SET COEF AND LINK FOR EVERY TYPE OF MODELS
   if(!is.null(model)) {
+
+    if(is.null(n_sample)) n_sample <- 100
 
     # WRITE CONDITIONS (DEPENDENT ON TYPE AND IF MATRIX/VECTOR)
     #Regex type condition to find the estimates of the crossbasis coefficients in the model
@@ -68,15 +78,30 @@ bcrosspred <- function(basis, model = NULL, coef = NULL, at = NULL, from = NULL,
     names(list_sel) <- names_sel
 
     inla_res <- INLA::inla.posterior.sample(n = n_sample, model, selection = list_sel)
-    coef <- lapply(inla_res, function(x) x$latent[,1])
+    coef <- do.call(cbind, lapply(inla_res, function (x) x$latent))
 
     # Define for only some specific classes
-    model.link <- if(model$.args$family %in% c("poisson", "coxph", "exponential")) "log" else if(model$.args$family %in% c("binomial"))
-      "logit" else if(model$.args$family == "gaussian")
-        "identity" else
-          NA
+    if(is.null(model.link)) {
+      model.link <- if(model$.args$family %in% c("poisson", "coxph", "exponential")) "log" else if(model$.args$family %in% c("binomial"))
+        "logit" else if(model$.args$family == "gaussian")
+          "identity" else
+            NA
+    }
 
     model.class <- "inla"
+
+  } else {
+
+    #Get coef as a matrix
+    coef <- do.call(cbind, lapply(coef, function (x) x$latent))
+
+    model.class <- "inla"
+
+    if(!is.null(n_sample)) {
+      if(n_sample != ncol(coef)) stop("'n_sample' must match the number of samples provided in 'coef'")
+    } else {
+      n_sample <- ncol(coef)
+    }
 
   }
 
@@ -85,7 +110,7 @@ bcrosspred <- function(basis, model = NULL, coef = NULL, at = NULL, from = NULL,
   #Number of parameters of the crossbasis
   npar <- ncol(basis)
 
-  if(length(coef[[1]]) != npar || any(is.na(coef[[1]]))) {
+  if(nrow(coef) != npar || any(is.na(coef))) {
       #It the number of parameters of the original crossbasis and the number of parameters estimated by the model don't match
       stop("coef/vcov not consistent with basis matrix. See help(crosspred)")
   }
@@ -118,13 +143,8 @@ bcrosspred <- function(basis, model = NULL, coef = NULL, at = NULL, from = NULL,
   #This matrix is created with a tensor product and it will be (length(predvar) x length(predlag)) x npar (we do it manually with a loop)
   Xpred <- dlnm:::mkXpred(type,basis,at,predvar,predlag,cen)
 
-  matfit <- lapply(coef, function (x) {
-    y <- matrix(Xpred %*% x, length(predvar), length(predlag))
-    # NAMES
-    rownames(y) <- predvar
-    colnames(y) <- outer("lag", predlag, paste, sep="")
-    y
-  })
+  matfit <- Xpred %*% coef
+  colnames(matfit) <- outer("sample", seq(1, n_sample), paste, sep="")
 
   #################################
   # PREDICTION OF OVERALL+CUMULATIVE EFFECTS
@@ -138,7 +158,7 @@ bcrosspred <- function(basis, model = NULL, coef = NULL, at = NULL, from = NULL,
   # CREATE OVERALL AND (OPTIONAL) CUMULATIVE EFFECTS AND SE
   Xpredall <- 0
 
-  cumfit <- lapply(coef, function (x) matrix(0,length(predvar),length(predlag)))
+  cumfit <- matrix(0, nrow(matfit), ncol(matfit))
 
   for(i in seq(length(predlag))) {
 
@@ -146,23 +166,14 @@ bcrosspred <- function(basis, model = NULL, coef = NULL, at = NULL, from = NULL,
     Xpredall <- Xpredall + Xpred[ind,,drop=FALSE]
 
     if(cumul) {
-      cumfit <- lapply(coef, function (x) {
-        y <- Xpredall %*% x
-        # NAMES
-        rownames(y) <- predvar
-        colnames(y) <- outer("lag", dlnm:::seqlag(lag), paste, sep="")
-        y
-      })
+      cumfit[ind,] <- Xpredall %*% coef
+      colnames(cumfit) <- outer("sample", seq(1, n_sample), paste, sep="")
     }
-
   }
 
-  allfit <- lapply(coef,  function (x) {
-    y <- as.vector(Xpredall %*% x)
-    # NAMES
-    names(y) <- predvar
-    y
-  })
+  allfit <- Xpredall %*% coef
+  rownames(allfit) <- predvar
+  colnames(allfit) <- outer("sample", seq(1, n_sample), paste, sep="")
 
   ########################
   # CREATE THE OBJECT
@@ -177,10 +188,10 @@ bcrosspred <- function(basis, model = NULL, coef = NULL, at = NULL, from = NULL,
 
   link.inv <- if(!is.null(model.link) && model.link %in% c("log","logit")) exp else identity
 
-  list$matRRfit <- lapply(matfit, link.inv)
-  list$allRRfit <- lapply(allfit, link.inv)
+  list$matRRfit <- link.inv(matfit)
+  list$allRRfit <- link.inv(allfit)
 
-  if(cumul) list$cumRRfit <- lapply(ncumfit, link.inv)
+  if(cumul) list$cumRRfit <- link.inv(cumfit)
 
   list$model.class <- model.class
   list$model.link <- model.link
