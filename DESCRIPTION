@@ -20,4 +20,5 @@ Depends:
 LazyData: true
 VignetteBuilder: knitr
 Imports: 
-    dlnm
+    dlnm,
+    INLA
