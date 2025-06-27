@@ -21,5 +21,6 @@ LazyData: true
 VignetteBuilder: knitr
 Imports: 
     dlnm,
-    INLA (>= 23.4.24)
+    INLA (>= 23.4.24),
+    sn
 Additional_repositories: https://inla.r-inla-download.org/R/stable
