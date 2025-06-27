@@ -11,11 +11,11 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 status](https://www.r-pkg.org/badges/version/bdlnm)](https://CRAN.R-project.org/package=bdlnm)
 [![R-CMD-check](https://github.com/pasahe/bdlnm/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pasahe/bdlnm/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
-coverage](https://codecov.io/gh/pasahe/bdlnm/graph/badge.svg)](https://app.codecov.io/gh/pasahe/bdlnm)
+coverage](https://codecov.io/gh/pasahe/bdlnm/graph/badge.svg?token=EXX0AMK19O)](https://app.codecov.io/gh/pasahe/bdlnm)
 <!-- badges: end -->
 
 The goal of bdlnm is to provide a collection of functions for
-distributed lag non-linear bayesian models.
+distributed lag linear (DLMs) and non-linear (DLNMs) bayesian models.
 
 ## Installation
 
