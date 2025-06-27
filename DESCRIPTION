@@ -23,4 +23,4 @@ Imports:
     dlnm,
     INLA (>= 23.4.24)
 Remotes:  
-    https://inla.r-inla-download.org/R/stable
+    https://github.com/hrue/r-inla/tree/stable/rinla
