@@ -9,6 +9,7 @@ bcrosspred(
   basis,
   model = NULL,
   coef = NULL,
+  model.link = NULL,
   at = NULL,
   from = NULL,
   to = NULL,
@@ -17,7 +18,7 @@ bcrosspred(
   bylag = 1,
   cen = NULL,
   cumul = FALSE,
-  n_sample = 100
+  n_sample = NULL
 )
 }
 \arguments{
