@@ -66,7 +66,7 @@ bcrosspred <- function(basis, model = NULL, coef = NULL, model.link = NULL, at =
   # SET COEF AND LINK FOR EVERY TYPE OF MODELS
   if(!is.null(model)) {
 
-    if(is.null(n_sample)) n_sample <- 100
+    if(is.null(n_sample)) n_sample <- 1000
 
     # WRITE CONDITIONS (DEPENDENT ON TYPE AND IF MATRIX/VECTOR)
     #Regex type condition to find the estimates of the crossbasis coefficients in the model

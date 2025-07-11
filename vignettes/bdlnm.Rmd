@@ -25,6 +25,7 @@ library(rlang)
 library(tidyr)
 library(splines)
 library(ggplot2)
+library(tictoc)
 ```
 
 # london dataset
@@ -95,7 +96,9 @@ mod <- inla(mort_75plus ~ cb + factor(dow) + seas, data = london_2, family = "po
 ## From model
 
 ```{r}
+tic()
 cpred <- bcrosspred(cb, mod, at = temp)
+toc()
 ```
 
 Find each sample's Minimum Mortality Temperature (MMT):
@@ -172,7 +175,9 @@ plot(cpred , "slices", var = temp["99%"], col=3, ylab="RR", ci.arg=list(density=
 We can increase the number of samplings with the `n_sample` argument:
 
 ```{r}
+tic()
 cpred <- bcrosspred(cb, mod, at = temp, n_sample = 10000)
+toc()
 ```
 
 ```{r fig.width = 7, fig.height = 4}
@@ -230,13 +235,17 @@ names_sel <- grep("^v", rownames(mod$summary.fixed), value = TRUE)
 list_sel <- lapply(1:length(names_sel), function(x) 1)
 names(list_sel) <- names_sel
 
+tic()
 coef <- inla.posterior.sample(n = 100, mod, selection = list_sel)
+toc()
 ```
 
 Then, we perform the prediction:
 
 ```{r}
+tic()
 cpred <- bcrosspred(cb, coef = coef, model.link = "log", at = temp)
+toc()
 ```
 
 Center the results at the median MMT:
