@@ -26,6 +26,7 @@ library(tidyr)
 library(splines)
 library(ggplot2)
 library(tictoc)
+library(stringr)
 ```
 
 # london dataset
@@ -91,9 +92,42 @@ seas <- seas[-c(1:dlnm_var$max_lag),]
 mod <- inla(mort_75plus ~ cb + factor(dow) + seas, data = london_2, family = "poisson", control.compute = list(config = TRUE))
 ```
 
-# Predict & Plot
+# Minimum mortality temperature
 
-## From model
+Let's get the minimum mortality temperature (MMT):
+
+```{r}
+mmt <- minimum_risk(cb, mod, at = temp, seed = 5243)
+
+str(mmt)
+
+mmt$res |> 
+  head()
+
+mmt$res.summary
+```
+
+We can plot the posterior distribution of the MMT estimates:
+
+```{r fig.width = 7}
+tibble(sample = seq_along(mmt$res), mmt = mmt$res) |> 
+  ggplot(aes(x = mmt)) +
+  geom_density(alpha = .3, fill = "#F8766D") +
+  geom_vline(xintercept = mmt$res.summary[["0.5quant"]], lty = 2) +
+  labs(x = "Minimum Mortality Temperature (ºC)") + 
+  theme_bw()
+```
+
+We will center the risk at the median of these values:
+
+```{r}
+cen <- mmt$res.summary[["0.5quant"]] 
+cen
+```
+
+# Risk
+
+Predict the risk at the quantile temperature values:
 
 ```{r}
 tic()
@@ -101,130 +135,21 @@ cpred <- bcrosspred(cb, mod, at = temp)
 toc()
 ```
 
-Find each sample's Minimum Mortality Temperature (MMT):
-
-```{r fig.width = 7, fig.height = 4}
-mmt <- apply(cpred$allfit, 2, which.min)
-mmt <- temp[mmt]
-cen <- median(mmt) 
-
-tibble(sample = 1:ncol(cpred$allfit), mmt = mmt) |> 
-  ggplot(aes(x = mmt)) +
-  geom_density(alpha = .3, fill = "#F8766D") +
-  geom_vline(xintercept = cen, lty = 2) +
-  labs(x = "Minimum Mortality Temperature (ºC)") + 
-  theme_bw()
-```
-
-Center at the median of these values:
-
-```{r}
-cpred <- bcrosspred(cb, mod, at = temp, cen = cen)
-```
-
-Let's plot the overall efect using the `plot()` function:
-
-```{r fig.width = 7, fig.height = 4}
-plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, main="Overall", log = "y")
-```
-
-Or ggplot2:
-
-```{r fig.width = 7, fig.height = 4}
-median_all <- tibble(
-  temp = temp, 
-  rr = apply(cpred$allRRfit, 1, "median") 
-)
-  
-cpred$allRRfit |>
-  as.data.frame() |> 
-  tibble::rownames_to_column("temp") |>
-  pivot_longer(-temp, names_pattern = "(sample)(\\d+)", names_to = c(".value", "id")) |> 
-  rename(rr = sample, sample = id) |> 
-  mutate(temp = as.numeric(temp)) |> 
-  ggplot(aes(x = temp, y = rr)) +
-    geom_line(aes(group = sample), alpha = 0.6, color = "grey70") +
-    geom_line(inherit = FALSE, data = median_all, aes(x = temp, y = rr), group = 1, lwd = 0.8) +
-    geom_hline(yintercept = 1) +
-    scale_y_continuous(trans = "log10") +
-    labs(x = "Temperature (ºC)", y = "Relative risk") +
-    theme_bw()
-```
-
-Let's plot the 3-D plot:
-
-```{r fig.width = 7, fig.height = 6}
-plot(cpred, zlab = "Relative risk", col = 4, lphi = 60, cex.axis = 0.6, xlab = "Temperature (ºC)", main = "3D graph of temperature effect")
-```
-
-Let's plot the contour plot:
-
-```{r fig.width = 7, fig.height = 6}
-plot(cpred, "contour", xlab = "Temperature (ºC)", ylab = "Lag", main="Contour plot")
-```
-
-Let's plot the lag-response effect setting the temperature equal to the MMT centering temperature:
-
-```{r fig.width = 7, fig.height = 6}
-plot(cpred , "slices", var = temp["99%"], col=3, ylab="RR", ci.arg=list(density=15,lwd=2),
-     main=paste0("Association for a high temperature (", round(temp["99%"], 0), "ºC)"))
-```
-
-### Increase number of samples
-
-We can increase the number of samplings with the `n_sample` argument:
+We can repeat it centering the risk at the MMT median values obtained before:
 
 ```{r}
 tic()
-cpred <- bcrosspred(cb, mod, at = temp, n_sample = 10000)
+cpred <- bcrosspred(cb, mod, at = temp, cen = cen)
 toc()
 ```
 
-```{r fig.width = 7, fig.height = 4}
-mmt <- apply(cpred$allfit, 2, which.min)
-mmt <- temp[mmt]
-cen <- median(mmt) 
-
-tibble(sample = 1:ncol(cpred$allfit), mmt = mmt) |> 
-  ggplot(aes(x = mmt)) +
-  geom_density(alpha = .3, fill = "#F8766D") +
-  geom_vline(xintercept = cen, lty = 2) +
-  labs(x = "Minimum Mortality Temperature (ºC)") + 
-  theme_bw()
-```
-
-Center at the median of these values:
+We can set a seed for reproducibility:
 
 ```{r}
-cpred <- bcrosspred(cb, mod, at = temp, cen = cen, n_sample = 10000)
+tic()
+cpred <- bcrosspred(cb, mod, at = temp, cen = cen, seed = 5243)
+toc()
 ```
-
-Let's plot the overall effect using the `plot()` function:
-
-```{r fig.width = 7, fig.height = 4}
-plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, main="Overall", log = "y")
-```
-
-Let's plot the 3-D plot:
-
-```{r fig.width = 7, fig.height = 6}
-plot(cpred, zlab = "Relative risk", col = 4, lphi = 60, cex.axis = 0.6, xlab = "Temperature (ºC)", main = "3D graph of temperature effect")
-```
-
-Let's plot the contour plot:
-
-```{r fig.width = 7, fig.height = 6}
-plot(cpred, "contour", xlab = "Temperature (ºC)", ylab = "Lag", main="Contour plot")
-```
-
-Let's plot the lag-response effect setting the temperature equal to the MMT centering temperature:
-
-```{r fig.width = 7, fig.height = 6}
-plot(cpred , "slices", var = temp["99%"], col=3, ylab="RR", ci.arg=list(density=15,lwd=2),
-     main=paste0("Association for a high temperature (", round(temp["99%"], 0), "ºC)"))
-```
-
-## Supply coefficients
 
 Alternatively, we can predict from the supplied coefficients from the posterior distribution. 
 
@@ -236,7 +161,7 @@ list_sel <- lapply(1:length(names_sel), function(x) 1)
 names(list_sel) <- names_sel
 
 tic()
-coef <- inla.posterior.sample(n = 100, mod, selection = list_sel)
+coef <- inla.posterior.sample(n = 1000, mod, selection = list_sel, seed = 5243)
 toc()
 ```
 
@@ -244,23 +169,75 @@ Then, we perform the prediction:
 
 ```{r}
 tic()
-cpred <- bcrosspred(cb, coef = coef, model.link = "log", at = temp)
+cpred <- bcrosspred(cb, coef = coef, model.link = "log", at = temp, cen = cen, seed = 5243)
 toc()
 ```
 
-Center the results at the median MMT:
+Let's see the `str` of the generated prediction:
 
 ```{r}
-mmt <- apply(cpred$allfit, 2, which.min)
-mmt <- temp[mmt]
-cen <- median(mmt)
-cpred <- bcrosspred(cb, coef = coef, model.link = "log", at = temp, cen = cen)
+cpred <- bcrosspred(cb, mod, at = temp, cen = cen)
+
+str(cpred)
+```
+
+In this object we store each of the generated samples from the posterior distribution and its summaries. 
+
+For example, we have the estimated crossbasis coefficients:
+
+```{r}
+cpred$coefficients |> 
+  head(c(5, 5))
+```
+
+We have also stored all the RR effects for each temperature and lag in each of the samples:
+
+```{r}
+cpred$matRRfit |> 
+  head(c(5, 5))
+```
+
+And the overall effects for each temperature (adding up all the lags):
+
+```{r}
+cpred$allRRfit |> 
+  head(c(5, 5))
+```
+
+In addition, the summary of these effects is also available:
+
+```{r}
+cpred$matRRfit.summary |> 
+  head(5)
+
+cpred$allRRfit.summary |> 
+  head(5)
+```
+
+# Plot
+
+Center at the median of these values:
+
+```{r}
+cpred <- bcrosspred(cb, mod, at = temp, cen = cen, seed = 5243)
 ```
 
 Let's plot the overall effect using the `plot()` function:
 
 ```{r fig.width = 7, fig.height = 4}
 plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, main="Overall", log = "y")
+```
+
+We can plot the 99% credible interval:
+
+```{r fig.width = 7, fig.height = 4}
+plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, main="Overall", log = "y", ci.level = 0.99)
+```
+
+Or we can plot all the lines from each of the posterior samples:
+
+```{r fig.width = 7, fig.height = 4}
+plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, main="Overall", log = "y", ci = "sampling")
 ```
 
 Let's plot the 3-D plot:
@@ -278,6 +255,42 @@ plot(cpred, "contour", xlab = "Temperature (ºC)", ylab = "Lag", main="Contour p
 Let's plot the lag-response effect setting the temperature equal to the MMT centering temperature:
 
 ```{r fig.width = 7, fig.height = 6}
-plot(cpred , "slices", var = temp["99%"], col=3, ylab="RR", ci.arg=list(density=15,lwd=2),
+plot(cpred , "slices", var = temp["99%"], col=3, ylab="RR",
      main=paste0("Association for a high temperature (", round(temp["99%"], 0), "ºC)"))
+```
+
+Or the exposure-response at lag 0:
+
+```{r fig.width = 7, fig.height = 6}
+plot(cpred , "slices", lag = 0, col=4, ylab="RR",
+     main=paste0("Association at Lag 0"))
+```
+
+# Attributable number
+
+Calculate the fraction and number of deaths attributable to temperature in all the period. We can calculate it with the backwards algorithm:
+
+```{r}
+tic()
+attributable_risk(london$tmean, cb, london$mort_75plus, mod, cen = cen, n_sample = 100, dir = "back")
+toc()
+```
+
+Or with the forward one:
+
+```{r}
+tic()
+attributable_risk(london$tmean, cb, london$mort_75plus, mod, cen = cen, n_sample = 100, dir = "forw")
+toc()
+```
+
+We can also calculate the attributable number for each value of the temperature series:
+
+```{r}
+tic()
+ar <- attributable_risk(london$tmean, cb, london$mort_75plus, mod, cen = cen, n_sample = 100, dir = "back", tot = FALSE)
+toc()
+
+ar$an |> 
+  head()
 ```

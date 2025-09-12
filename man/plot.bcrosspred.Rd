@@ -12,7 +12,7 @@ This function generates plots for bayesian distributed lag non-linear model's pr
   lag = NULL,
   ci = "area",
   ci.arg,
-  ci.level = 0.95,
+  ci.level = x$ci.level,
   cumul = FALSE,
   exp = NULL,
   ...

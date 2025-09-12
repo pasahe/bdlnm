@@ -17,12 +17,14 @@ bcrosspred(
   lag,
   bylag = 1,
   cen = NULL,
+  ci.level = 0.95,
   cumul = FALSE,
-  n_sample = NULL
+  n_sample = NULL,
+  seed = 0L
 )
 }
 \arguments{
-\item{n_sample}{}
+\item{seed}{}
 }
 \description{
 bcrosspred

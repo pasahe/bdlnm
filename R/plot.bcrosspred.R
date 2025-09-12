@@ -16,13 +16,13 @@
 #' @export
 #'
 #' @examples
-plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.level = 0.95, cumul=FALSE, exp=NULL, ...) {
+plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.level = x$ci.level, cumul=FALSE, exp=NULL, ...) {
 
   ######################
   #CHECK
 
   #Check if it matches the possible choices for ci
-  ci <- match.arg(ci, c("area","bars","lines","n"))
+  ci <- match.arg(ci, c("area","bars","lines","n", "sampling"))
 
   # SETTING DEFAULT FOR ptype: OVERALL FOR NO LAG, SLICES FOR VAR/LAG, OTHERWISE 3D
   if(missing(ptype)) {
@@ -51,7 +51,7 @@ plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.
   if(!is.null(var)&&sum(var%in%x$predvar)!=length(var)&&(ptype=="slices")) {
     stop("'var' must match values used for prediction")
   }
-  if(!is.null(lag)&&sum(lag%in%seqlag(x$lag,x$bylag))!=length(lag)&&(ptype=="slices")) {
+  if(!is.null(lag)&&sum(lag%in%dlnm:::seqlag(x$lag,x$bylag))!=length(lag)&&(ptype=="slices")) {
     stop("'lag' must match values used for prediction")
   }
   if(missing(ci.arg)) {
@@ -60,6 +60,14 @@ plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.
   if(!is.numeric(ci.level)||ci.level>=1||ci.level<=0) {
     stop("'ci.level' must be numeric and between 0 and 1")
   }
+
+  # CHECK IF LOW AND HIGH CREDIBLE INTERVALS ARE ALREADY CALCULATED IN SUMMARY ELEMENT
+  if(ci.level != x$ci.level) {
+    ci_compute <- TRUE
+  } else {
+    ci_compute <- FALSE
+  }
+
   if(cumul==TRUE) {
     # SET THE LAG STEP EQUAL TO 1
     x$bylag <- 1
@@ -87,6 +95,8 @@ plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.
 
     x$matfit <- x$matRRfit
     x$allfit <- x$allRRfit
+    x$matfit.summary <- x$matRRfit.summary
+    x$allfit.summary <- x$allRRfit.summary
 
     noeff <- 1
 
@@ -113,16 +123,25 @@ plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.
     predlag <- dlnm:::seqlag(x$lag, x$bylag)
 
     #Get the median coefficients
-    summaryfit <- matrix(apply(x$matfit, 1, median), length(x$predvar), length(predlag))
+    median <- matrix(x$matfit.summary[, "0.5quant"], length(x$predvar), length(predlag))
+
+    if(!ci_compute) {
+      quantiles <- grep("quant$", colnames(x$matfit.summary))
+      low <- matrix(x$matfit.summary[, quantiles[1]], length(x$predvar), length(predlag))
+      high <- matrix(x$matfit.summary[, quantiles[3]], length(x$predvar), length(predlag))
+    } else {
+      quantiles <- c((1 - ci.level)/2, 1 - (1 - ci.level)/2)
+      low <- matrix(sapply(1:nrow(x$matfit), function (i) quantile(x$matfit[i,], quantiles[1])), length(x$predvar), length(predlag))
+      high <- matrix(sapply(1:nrow(x$matfit), function (i) quantile(x$matfit[i,], quantiles[2])), length(x$predvar), length(predlag))
+    }
 
     # LAG
     if(!is.null(lag)) {
       # START LOOP FOR LAG
-      xlag <- paste("lag",lag,sep="")
       for(i in lag) {
 
         #Find effect for the corresponding lags
-        ind <- seq(length(x$predvar)*which(predlag == i) + 1, length(x$predvar)*(which(predlag == i) + 1), by = 1)
+        ind <- seq(length(x$predvar)*(which(predlag == i) - 1) + 1, length(x$predvar)*(which(predlag == i)), by = 1)
 
         # SET DEFAULT VALUES IF NOT INCLUDED BY THE USER
         plot.arg <- list(type="l",xlab="Var",ylab="Outcome",
@@ -133,6 +152,16 @@ plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.
         #Get plot arguments supplied to the function
         plot.arg <- modifyList(plot.arg,list(...))
 
+        # SET CONFIDENCE INTERVALS
+        smatfit <- matrix(x$matfit[ind,], length(x$predvar), ncol(x$matfit))
+
+        ci.list <- list(panel.first=call("fci",ci=ci,x=x$predvar, y=smatfit,
+                                         high=high[,which(predlag == i)],low=low[,which(predlag == i)],ci.arg,plot.arg,
+                                         noeff=noeff))
+
+        plot.arg <- modifyList(plot.arg,c(ci.list,
+                                          list(x = x$predvar, y = median[,which(predlag == i)])))
+
         col <- plot.arg$col
 
         if(length(lag)+length(var)>1) {
@@ -140,23 +169,8 @@ plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.
           plot.arg$xlab <- "Var"
         }
 
-        #Plot each sample
-        for(j in 1:ncol(x$allfit)) {
-          smatfit <- matrix(x$matfit[,j], length(x$predvar), length(predlag))
-          plot.arg <- modifyList(plot.arg,c(list(x=x$predvar, y=smatfit[,which(predlag == i)], col = "grey80")))
-          #Not all the plot arguments can be supplied to lines
-          lines.arg <- plot.arg[names(plot.arg) %in% c("x", "y", "col", "lty", "lwd", "lend", "ljoin", "lmitre")]
-
-
-          if(j == 1) {
-            do.call("plot", plot.arg)
-          } else {
-            do.call("lines", lines.arg)
-          }
-        }
-
-        lines.arg <- modifyList(lines.arg,c(list(x=x$predvar, y=summaryfit[,which(predlag == i)], col = col)))
-        do.call("lines", lines.arg)
+        # PLOT
+        do.call("plot", plot.arg)
 
         if(length(lag)>1) mtext(paste("Lag =",i), cex=0.8)
 
@@ -166,7 +180,6 @@ plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.
     # VAR
     if(!is.null(var)) {
       # START LOOP FOR VAR
-      xvar <- as.character(var)
       for(i in var) {
 
         #Find effect for the corresponding temperature values
@@ -181,30 +194,24 @@ plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.
         #Get plot arguments supplied to the function
         plot.arg <- modifyList(plot.arg, list(...))
 
-        col <- plot.arg$col
+        # SET CONFIDENCE INTERVALS
+        smatfit <- matrix(x$matfit[ind,], length(predlag), ncol(x$matfit))
+
+        ci.list <- list(panel.first=call("fci",ci=ci,x=predlag, y=smatfit,
+                                         high=high[which(x$predvar == i),],low=low[which(x$predvar == i),],ci.arg,plot.arg,
+                                         noeff=noeff))
+
+        plot.arg <- modifyList(plot.arg,c(ci.list,
+                                          list(x = predlag, y = median[which(x$predvar == i),])))
+
 
         if(length(lag)+length(var)>1) {
           plot.arg$main <- ""
           plot.arg$xlab <- "Lag"
         }
 
-        #Plot each sample
-        for(j in 1:ncol(x$allfit)) {
-
-          smatfit <- matrix(x$matfit[,j], length(x$predvar), length(predlag))
-          plot.arg <- modifyList(plot.arg, c(list(x=predlag, y=smatfit[which(x$predvar == i),], col = "grey80")))
-          #Not all the plot arguments can be supplied to lines
-          lines.arg <- plot.arg[names(plot.arg) %in% c("x", "y", "col", "lty", "lwd", "lend", "ljoin", "lmitre")]
-
-          if(j == 1) {
-            do.call("plot", plot.arg)
-          } else {
-            do.call("lines", lines.arg)
-          }
-        }
-
-        lines.arg <- modifyList(lines.arg, c(list(x=predlag, y=summaryfit[which(x$predvar == i),], col = col)))
-        do.call("lines", lines.arg)
+        # PLOT
+        do.call("plot",plot.arg)
 
         if(length(lag)>1) mtext(paste("Var =",var[i]),cex=0.8)
 
@@ -221,8 +228,6 @@ plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.
     min_all <- min(x$allfit)
     max_all <- max(x$allfit)
 
-    summary_all <- apply(x$allfit, 1, median)
-
     plot.arg <- list(type="l", ylim=c(min_all, max_all),
                      xlab="Var", ylab="Outcome", bty="l")
 
@@ -231,22 +236,27 @@ plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.
 
     col <- plot.arg$col
 
-    for(i in 1:ncol(x$allfit)) {
+    median <- x$allfit.summary[, "0.5quant"]
 
-      plot.arg <- modifyList(plot.arg,c(list(x=x$predvar, y = x$allfit[,i], col = "grey80")))
-      #Not all the plot arguments can be supplied to lines
-      lines.arg <- plot.arg[names(plot.arg) %in% c("x", "y", "col", "lty", "lwd", "lend", "ljoin", "lmitre")]
-
-      if(i == 1) {
-        do.call("plot", plot.arg)
-      } else {
-        do.call("lines", lines.arg)
-      }
-
+    if(!ci_compute) {
+      quantiles <- grep("quant$", colnames(x$allfit.summary))
+      low <- x$allfit.summary[, quantiles[1]]
+      high <- x$allfit.summary[, quantiles[3]]
+    } else {
+      quantiles <- c((1 - ci.level)/2, 1 - (1 - ci.level)/2)
+      low <- sapply(1:nrow(x$allfit), function (i) quantile(x$allfit[i,], quantiles[1]))
+      high <- sapply(1:nrow(x$allfit), function (i) quantile(x$allfit[i,], quantiles[2]))
     }
 
-    lines.arg <- modifyList(lines.arg, c(list(x = x$predvar, y = summary_all, col = col)))
-    do.call("lines", lines.arg)
+    # SET CONFIDENCE INTERVALS
+    ci.list <- list(panel.first=call("fci",ci=ci,x=x$predvar,y=x$allfit,
+                                     high=high,low=low,ci.arg,plot.arg,noeff=noeff))
+    plot.arg <- modifyList(plot.arg,c(ci.list,
+                                      list(x=x$predvar, y=median)))
+
+    # PLOT
+    do.call("plot",plot.arg)
+
   }
 
   #3D
@@ -257,7 +267,7 @@ plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.
     predlag <- dlnm:::seqlag(x$lag, x$bylag)
 
     #Get the median coefficients
-    summaryfit <- matrix(apply(x$matfit, 1, median), length(x$predvar), length(predlag))
+    summaryfit <- matrix(x$matfit.summary[, "0.5quant"], length(x$predvar), length(predlag))
     rownames(summaryfit) <- x$predvar
     colnames(summaryfit) <- outer("lag", predlag, paste, sep="")
 
@@ -283,7 +293,7 @@ plot.bcrosspred <- function(x, ptype, var=NULL, lag=NULL, ci="area", ci.arg, ci.
     predlag <- dlnm:::seqlag(x$lag, x$bylag)
 
     #Get the median coefficients
-    summaryfit <- matrix(apply(x$matfit, 1, median), length(x$predvar), length(predlag))
+    summaryfit <- matrix(x$matfit.summary[, "0.5quant"], length(x$predvar), length(predlag))
     rownames(summaryfit) <- x$predvar
     colnames(summaryfit) <- outer("lag", predlag, paste, sep="")
 

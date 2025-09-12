@@ -12,15 +12,17 @@
 #' @param lag
 #' @param bylag
 #' @param cen
+#' @param ci.level
 #' @param cumul
 #' @param n_sample
+#' @param seed
 #'
 #' @returns
 #' @export
 #'
 #' @examples
 
-bcrosspred <- function(basis, model = NULL, coef = NULL, model.link = NULL, at = NULL, from = NULL, to = NULL, by = NULL, lag, bylag = 1, cen = NULL, cumul = FALSE, n_sample = NULL) {
+bcrosspred <- function(basis, model = NULL, coef = NULL, model.link = NULL, at = NULL, from = NULL, to = NULL, by = NULL, lag, bylag = 1, cen = NULL, ci.level = 0.95, cumul = FALSE, n_sample = NULL, seed = 0L) {
 
   #######################################
   #Determine the type of model and checks
@@ -49,6 +51,8 @@ bcrosspred <- function(basis, model = NULL, coef = NULL, model.link = NULL, at =
   # OTHER COHERENCE CHECKS
   if(is.null(model) && (is.null(coef)))
     stop("At least 'model' or 'coef' must be provided")
+  if(!is.numeric(ci.level) || ci.level>=1 || ci.level<=0)
+    stop("'ci.level' must be numeric and between 0 and 1")
 
   if(!is.null(model)) {
     if(any(class(model) != "inla")) stop("'mod' must be an inla model.") else
@@ -77,7 +81,8 @@ bcrosspred <- function(basis, model = NULL, coef = NULL, model.link = NULL, at =
     list_sel <- lapply(1:length(names_sel), function(x) 1)
     names(list_sel) <- names_sel
 
-    inla_res <- INLA::inla.posterior.sample(n = n_sample, model, selection = list_sel)
+    #set.seed doesn't work outside the function argument (INLA computes in parallel so setting a seed slows down the code)
+    inla_res <- INLA::inla.posterior.sample(n = n_sample, model, selection = list_sel, seed = seed)
     coef <- do.call(cbind, lapply(inla_res, function (x) x$latent))
 
     # Define for only some specific classes
@@ -182,6 +187,8 @@ bcrosspred <- function(basis, model = NULL, coef = NULL, model.link = NULL, at =
   list <- list(predvar=predvar)
   if(!is.null(cen)) list$cen <- cen
 
+  colnames(coef) <- outer("sample", seq(1, n_sample), paste, sep="")
+
   list <- c(list, list(lag=lag, bylag=bylag, coefficients=coef, matfit=matfit, allfit=allfit))
 
   if(cumul) list <- c(list, list(cumfit=cumfit))
@@ -193,6 +200,50 @@ bcrosspred <- function(basis, model = NULL, coef = NULL, model.link = NULL, at =
 
   if(cumul) list$cumRRfit <- link.inv(cumfit)
 
+  # SUMMARY FITTED VALUES
+  quantiles <- c((1 - ci.level)/2, 0.5, 1 - (1 - ci.level)/2)
+  stats <- c("mean", "sd", paste0(quantiles, "quant"), "mode")
+
+  #For coefficients
+  list$coefficients.summary <- matrix(nrow = nrow(list$coefficients), ncol = length(stats))
+  rownames(list$coefficients.summary) <- rownames(list$coefficients)
+  colnames(list$coefficients.summary) <- stats
+  list$coefficients.summary[, "mean"] <- sapply(1:nrow(list$coefficients), function (i) mean(list$coefficients[i,]))
+  list$coefficients.summary[, "sd"] <- sapply(1:nrow(list$coefficients), function (i) sd(list$coefficients[i,]))
+  for(q in quantiles) {
+    list$coefficients.summary[, paste0(q, "quant")] <- sapply(1:nrow(list$coefficients), function (i) quantile(list$coefficients[i,], q))
+  }
+  list$coefficients.summary[, "mode"] <- sapply(1:nrow(list$coefficients), function (i) unique(list$coefficients[i,])[which.max(tabulate(match(list$coefficients[i,], unique(list$coefficients[i,]))))])
+
+
+  #For matfit
+  list$matfit.summary <- matrix(nrow = nrow(list$matfit), ncol = length(stats))
+  colnames(list$matfit.summary) <- stats
+  list$matfit.summary[, "mean"] <- sapply(1:nrow(list$matfit), function (i) mean(list$matfit[i,]))
+  list$matfit.summary[, "sd"] <- sapply(1:nrow(list$matfit), function (i) sd(list$matfit[i,]))
+  for(q in quantiles) {
+    list$matfit.summary[, paste0(q, "quant")] <- sapply(1:nrow(list$matfit), function (i) quantile(list$matfit[i,], q))
+  }
+  list$matfit.summary[, "mode"] <- sapply(1:nrow(list$matfit), function (i) unique(list$matfit[i,])[which.max(tabulate(match(list$matfit[i,], unique(list$matfit[i,]))))])
+
+  #For allfit
+  list$allfit.summary <- matrix(nrow = nrow(list$allfit), ncol = length(stats))
+  rownames(list$allfit.summary) <- rownames(list$allfit)
+  colnames(list$allfit.summary) <- stats
+  list$allfit.summary[, "mean"] <- sapply(1:nrow(list$allfit), function (i) mean(list$allfit[i,]))
+  list$allfit.summary[, "sd"] <- sapply(1:nrow(list$allfit), function (i) sd(list$allfit[i,]))
+  for(q in quantiles) {
+    list$allfit.summary[, paste0(q, "quant")] <- sapply(1:nrow(list$allfit), function (i) quantile(list$allfit[i,], q))
+  }
+  list$allfit.summary[, "mode"] <- sapply(1:nrow(list$allfit), function (i) unique(list$allfit[i,])[which.max(tabulate(match(list$allfit[i,], unique(list$allfit[i,]))))])
+
+  #For matRRfit
+  list$matRRfit.summary <- link.inv(list$matfit.summary)
+
+  #For allRRfit
+  list$allRRfit.summary <- link.inv(list$allfit.summary)
+
+  list$ci.level <- ci.level
   list$model.class <- model.class
   list$model.link <- model.link
 
