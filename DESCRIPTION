@@ -1,14 +1,17 @@
 Package: bdlnm
-Title: What the Package Does (One Line, Title Case)
+Title: Bayesian Distributed Lag Non-Linear Models (B-DLNM)
 Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Authors@R: c(
+    person(given = "Pau", family = "Satorra", email = "psatorra@igtp.cat", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-8144-4089")),
+    person(given = "Marcos", family = "Quijal", email = "marcos.quijal@isglobal.org", role = c("aut")),
+    person(given = "Joan", family = "Ballester", email = "joan.ballester@isglobal.org", role = c("aut")),
+    person(given = "Cristian", family = "Tebé", email = "ctebe@igtp.cat", role = c("ctb")),
+    person(given = c("Miguel", "A."), family = c("Martínez", "Beneito"), email = "miguel.a.martinez@uv.es", role = c("aut", "ths")),
+    person(given = "Marc", family = c("Marí", "Dell'Olmo"), email = "mmari@aspb.cat", role = c("aut", "ths"))
+  )
+Description: Collection of functions for Bayesian distributed lag linear and non-linear models. 
 License: GPL (>= 3)
-Suggests: 
-    knitr,
-    rmarkdown,
-    testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -21,6 +24,16 @@ LazyData: true
 VignetteBuilder: knitr
 Imports: 
     dlnm,
-    INLA (>= 23.4.24),
-    sn
+    cli,
+    tsModel,
+    crs,
+    graphics,
+    grDevices,
+    stats,
+    utils
+Suggests:
+  INLA (>= 23.4.24),
+  knitr,
+  rmarkdown,
+  testthat (>= 3.0.0)
 Additional_repositories: https://inla.r-inla-download.org/R/stable

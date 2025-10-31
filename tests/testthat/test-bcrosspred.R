@@ -1,9 +1,3 @@
-# Prediction values
-temp <-
-  c(quantile(london$tmean, seq(0, 0.9, by = 0.1)/100),
-    quantile(london$tmean, seq(1, 99, by = 1)/100),
-    quantile(london$tmean, seq(99.1, 100, by = 0.1)/100))
-
 test_that("works with inla model", {
 
   expect_no_error(cpred <- bcrosspred(bdlnm:::cb_london, bdlnm:::mod_london, at = temp))

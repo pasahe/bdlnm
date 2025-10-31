@@ -2,31 +2,89 @@
 % Please edit documentation in R/bcrosspred.R
 \name{bcrosspred}
 \alias{bcrosspred}
-\title{bcrosspred
-This function generates predictions from bayesian distributed lag linear (DLMs) and distributed lag non-linear models (DLNM).}
+\title{Generate predicted effects from Bayesian distributed-lag models (B-DLNM).}
 \usage{
 bcrosspred(
+  x,
   basis,
-  model = NULL,
-  coef = NULL,
   model.link = NULL,
   at = NULL,
   from = NULL,
   to = NULL,
   by = NULL,
-  lag,
-  bylag = 1,
+  lag = NULL,
+  bylag = 1L,
   cen = NULL,
   ci.level = 0.95,
-  cumul = FALSE,
-  n_sample = NULL,
-  seed = 0L
+  cumul = FALSE
 )
 }
 \arguments{
-\item{seed}{}
+\item{x}{A fitted object returned by \link{bdlnm} (list with components \code{model} and \code{coef}).}
+
+\item{basis}{A DLNM basis object produced by \code{dlnm}. It can be one of \link[dlnm:crossbasis]{dlnm::crossbasis} or \link[dlnm:onebasis]{dlnm::onebasis}.}
+
+\item{model.link}{Optional character; model link (if \code{NULL} it is
+inferred from the fitted model).}
+
+\item{at}{Values (or matrix) of the predictor at which to predict; can be \code{NULL} and reconstructed from \code{from}, \code{to}, \code{by} and the basis attributes.}
+
+\item{from, to, by}{Optional numeric used to construct \code{at} when
+not provided.}
+
+\item{lag}{Optional lag specification; when \code{NULL} the original lag
+from \code{basis} is used.}
+
+\item{bylag}{Integer step for lags (default \code{1}).}
+
+\item{cen}{Centering value for predictions; if \code{NULL} a centering
+value is constructed from \code{basis} attributes.}
+
+\item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}).}
+
+\item{cumul}{Logical; if \code{TRUE} compute cumulative predictions (default \code{FALSE}).}
+}
+\value{
+An object of class \code{"bcrosspred"} containing
+coefficients, fitted matrices, summaries and relative-risks (if link is
+log/logit).
 }
 \description{
-bcrosspred
-This function generates predictions from bayesian distributed lag linear (DLMs) and distributed lag non-linear models (DLNM).
+It produces lag-specific, overall and (optionally) cumulative predictions from an object produced by \code{bdlnm()}.
+}
+\examples{
+# Set exposure-response and lag-response spline parameters
+ dlnm_var <- list(
+   var_prc = c(10, 75, 90),
+   var_fun = "ns",
+   lag_fun = "ns",
+   max_lag = 21,
+   lagnk = 3
+ )
+
+
+# Set cross-basis parameters
+ argvar <- list(fun = dlnm_var$var_fun,
+                knots = stats::quantile(london$tmean,
+                                 dlnm_var$var_prc/100, na.rm = TRUE),
+                Bound = range(london$tmean, na.rm = TRUE))
+
+ arglag <- list(fun = dlnm_var$lag_fun,
+                knots = dlnm::logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
+
+ # Create crossbasis
+ cb <- dlnm::crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
+
+ # Seasonality of mortality time series
+ seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
+
+ # Prediction values (equidistant points)
+ temp <- seq(round(min(london$tmean), 1), round(max(london$tmean), 1), by = 0.1)
+
+ # Fit the model
+ mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+
+ # Prediction
+ cpred <- bcrosspred(x, cb, at = temp)
+
 }

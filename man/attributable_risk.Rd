@@ -2,25 +2,98 @@
 % Please edit documentation in R/attributable_risk.R
 \name{attributable_risk}
 \alias{attributable_risk}
-\title{attributable_risk function}
+\title{Calculate attributable risks from Bayesian distributed-lag models (B-DLNM).}
 \usage{
 attributable_risk(
   x,
   basis,
+  exp,
   cases,
-  model,
-  dir = "back",
-  average = NULL,
   tot = TRUE,
+  dir = "back",
+  average = FALSE,
   cen,
-  range = NULL,
-  n_sample = 1000,
-  seed = 0L
+  range = NULL
 )
 }
 \arguments{
-\item{seed}{}
+\item{x}{A fitted object returned by \link{bdlnm} (list with components \code{model} and \code{coef}).}
+
+\item{basis}{A DLNM crossbasis object produced by \code{dlnm}. It has to be of class \link[dlnm:crossbasis]{dlnm::crossbasis}.}
+
+\item{exp}{Numeric vector of exposure values (one per observed time point) at which to compute attributable risk.}
+
+\item{cases}{Numeric vector of counts of the modelled outcome (one per observed time point). Has to be of the same length of \code{exp}.}
+
+\item{tot}{Logical; if TRUE (default) returns total attributable number / fraction across the time series. If FALSE returns values for each time point.}
+
+\item{dir}{Character; "back" (default) or "forw" direction in the lag dimension for calculating attributable risks.}
+
+\item{average}{Logical. When TRUE the function uses average (lag-averaged) contributions to calculate attributable risks. For forward perspective, average defaults to FALSE.}
+
+\item{cen}{Numeric scalar; centering value for predictions. If missing the function will attempt to read it from attr(basis, "argvar")$cen.}
+
+\item{range}{Optional numeric vector of range 2. It gives the exposure value range for which attributable risks will be calculated.}
+}
+\value{
+A list with elements:
+\itemize{
+\item \code{af}: attributable fraction (AF)
+\item \code{an}: attributable number (AN)
+\item \code{af.summary}: data frame with summary statistics for AF
+\item \code{an.summary}: data frame with summary statistics for AN
+}
 }
 \description{
-attributable_risk function
+It computes the attributable number (AN) and fraction (AF) from a fitted B-DLNM returned by \code{bdlnm()}.
+}
+\examples{
+# Set exposure-response and lag-response spline parameters
+ dlnm_var <- list(
+   var_prc = c(10, 75, 90),
+   var_fun = "ns",
+   lag_fun = "ns",
+   max_lag = 21,
+   lagnk = 3
+ )
+
+
+# Set cross-basis parameters
+ argvar <- list(fun = dlnm_var$var_fun,
+                knots = stats::quantile(london$tmean,
+                                 dlnm_var$var_prc/100, na.rm = TRUE),
+                Bound = range(london$tmean, na.rm = TRUE))
+
+ arglag <- list(fun = dlnm_var$lag_fun,
+                knots = dlnm::logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
+
+ # Create crossbasis
+ cb <- dlnm::crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
+
+ # Seasonality of mortality time series
+ seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
+
+ # Prediction values (equidistant points)
+ temp <- seq(round(min(london$tmean), 1), round(max(london$tmean), 1), by = 0.1)
+
+ # Fit the model
+ mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+
+ # Center at Minimum Mortality Temperature (MMT)
+ mmt <- minimum_risk(mod, cb, at = temp)
+ cen <- mmt$min.summary[["0.5quant"]]
+
+ # Attributables risk
+
+ # backwards algorithm
+ ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back")
+
+ #forward algorithm
+ ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "forw")
+
+ # backwards for each day
+ ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back",
+ tot = FALSE)
+
+
 }

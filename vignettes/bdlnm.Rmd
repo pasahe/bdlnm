@@ -20,18 +20,12 @@ knitr::opts_chunk$set(
 library(bdlnm)
 library(dlnm)
 library(INLA)
-library(dplyr)
-library(rlang)
-library(tidyr)
 library(splines)
-library(ggplot2)
-library(tictoc)
-library(stringr)
 ```
 
 # london dataset
 
-We will use the built-in dataset, `london` which contains daily temperature and mortality data from 1990 to 2012. Mortality counts are stratified by age group (less/more than 75 years). 
+We will use the built-in dataset, `london` which contains daily temperature and mortality data from 2000 to 2012. Using Distributed Non-Linear Models (DLNM) we will estimate the effect of the temperature exposure to mortality in the population with more than 75 years old, taking 21 days of lags.
 
 ```{r}
 london
@@ -39,7 +33,10 @@ london
 
 # Set DLNM parameters
 
+We will start by setting the basic parameters for the configuration of the crossbasis:
+
 ```{r}
+# Exposure-response and lag-response spline parameters
 dlnm_var <- list(
     var_prc = c(10, 75, 90),
     var_fun = "ns",
@@ -48,7 +45,6 @@ dlnm_var <- list(
     lagnk = 3
 )
 
-seas <- ns(london$date, df = round(8 * length(london$date) / 365.25))
 
 # Cross-basis parameters
 argvar <- list(fun = dlnm_var$var_fun, 
@@ -58,126 +54,94 @@ argvar <- list(fun = dlnm_var$var_fun,
 
 arglag <- list(fun = dlnm_var$lag_fun, 
                knots = logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
-
-# Prediction values
-temp <- 
-    c(quantile(london$tmean, seq(0, 0.9, by = 0.1)/100),
-      quantile(london$tmean, seq(1, 99, by = 1)/100),
-      quantile(london$tmean, seq(99.1, 100, by = 0.1)/100))
-
-lags <- 0:dlnm_var$max_lag
 ```
 
-# Fit model
+With the defined parameters, we can create now the crossbasis using the {dlnm} package:
 
 ```{r}
 # Create crossbasis
 cb <- crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
-
-# Omit NA's
-attr_names <- names(attributes(cb))
-attr_names <- attr_names[! attr_names %in% c("dim", "dimnames")]
-attr <- attributes(cb)[attr_names]
-
-cb <- cb[-c(1:max(dlnm_var$max_lag)),]
-
-class(cb) <- c("crossbasis","matrix")
-attributes(cb)[attr_names] <- attr
-
-london_2 <- london[-c(1:dlnm_var$max_lag),]
-seas <- seas[-c(1:dlnm_var$max_lag),]
-
-# Fit the model (75+ years)
-# config=TRUE is necessary if we want to sample from the posterior distribution
-mod <- inla(mort_75plus ~ cb + factor(dow) + seas, data = london_2, family = "poisson", control.compute = list(config = TRUE))
 ```
 
-# Minimum mortality temperature
-
-Let's get the minimum mortality temperature (MMT):
+First, let's define the seasonality of the analysed mortality time series and the temperature exposure values for which we want to make predictions:
 
 ```{r}
-mmt <- minimum_risk(cb, mod, at = temp, seed = 5243)
+# Seasonality of mortality time series
+seas <- ns(london$date, df = round(8 * length(london$date) / 365.25))
 
-str(mmt)
-
-mmt$res |> 
-  head()
-
-mmt$res.summary
+# Prediction values (equidistant points)
+temp <- round(seq(round(min(london$tmean), 1), round(max(london$tmean), 1), by = 0.1), 1)
 ```
 
-We can plot the posterior distribution of the MMT estimates:
+# Fit the model and posterior samples
 
-```{r fig.width = 7}
-tibble(sample = seq_along(mmt$res), mmt = mmt$res) |> 
-  ggplot(aes(x = mmt)) +
-  geom_density(alpha = .3, fill = "#F8766D") +
-  geom_vline(xintercept = mmt$res.summary[["0.5quant"]], lty = 2) +
-  labs(x = "Minimum Mortality Temperature (ºC)") + 
-  theme_bw()
-```
-
-We will center the risk at the median of these values:
+Fit the bayesian DLNM model with the function `bdlnm()`. We will use a Poisson model:
 
 ```{r}
-cen <- mmt$res.summary[["0.5quant"]] 
-cen
-```
-
-# Risk
-
-Predict the risk at the quantile temperature values:
-
-```{r}
-tic()
-cpred <- bcrosspred(cb, mod, at = temp)
-toc()
-```
-
-We can repeat it centering the risk at the MMT median values obtained before:
-
-```{r}
-tic()
-cpred <- bcrosspred(cb, mod, at = temp, cen = cen)
-toc()
+tictoc::tic()
+mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+tictoc::toc()
 ```
 
 We can set a seed for reproducibility:
 
 ```{r}
-tic()
-cpred <- bcrosspred(cb, mod, at = temp, cen = cen, seed = 5243)
-toc()
+tictoc::tic()
+mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson", sample.arg = list(seed = 5243))
+tictoc::toc()
 ```
 
-Alternatively, we can predict from the supplied coefficients from the posterior distribution. 
+# Minimum mortality temperature
 
-First, we have to extract the coefficients:
+Let's get the minimum mortality temperature (MMT), defined as the value at which the overall mortality risk is minimized:
 
 ```{r}
-names_sel <- grep("^v", rownames(mod$summary.fixed), value = TRUE)
-list_sel <- lapply(1:length(names_sel), function(x) 1)
-names(list_sel) <- names_sel
+tictoc::tic()
+mmt <- minimum_risk(mod, cb, at = temp)
+tictoc::toc()
 
-tic()
-coef <- inla.posterior.sample(n = 1000, mod, selection = list_sel, seed = 5243)
-toc()
+str(mmt)
+
+mmt$min |> 
+  head()
+
+mmt$min.summary
 ```
 
-Then, we perform the prediction:
+We can plot the posterior distribution of the posterior distribution sample of the MMT estimates:
+
+```{r fig.width = 7}
+plot(mmt, xlab = "Temperature (ºC)", main = paste0("MMT (Median = ", round(mmt$min.summary[["0.5quant"]], 1), "ºC)"))
+```
+
+To make the predictions, we will center the risk at the median of these values:
 
 ```{r}
-tic()
-cpred <- bcrosspred(cb, coef = coef, model.link = "log", at = temp, cen = cen, seed = 5243)
-toc()
+cen <- mmt$min.summary[["0.5quant"]] 
+cen
+```
+
+# Predict risk
+
+Predict the risk at the quantile temperature values:
+
+```{r}
+tictoc::tic()
+cpred <- bcrosspred(mod, cb, at = temp)
+tictoc::toc()
+```
+
+We can repeat it centering the risk at the MMT median values obtained before:
+
+```{r}
+tictoc::tic()
+cpred <- bcrosspred(mod, cb, at = temp, cen = cen)
+tictoc::toc()
 ```
 
 Let's see the `str` of the generated prediction:
 
 ```{r}
-cpred <- bcrosspred(cb, mod, at = temp, cen = cen)
-
 str(cpred)
 ```
 
@@ -216,47 +180,42 @@ cpred$allRRfit.summary |>
 
 # Plot
 
-Center at the median of these values:
-
-```{r}
-cpred <- bcrosspred(cb, mod, at = temp, cen = cen, seed = 5243)
-```
-
-Let's plot the overall effect using the `plot()` function:
+Let's plot the overall effect for each temperature exposure using the `plot()` function:
 
 ```{r fig.width = 7, fig.height = 4}
 plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, main="Overall", log = "y")
 ```
 
-We can plot the 99% credible interval:
+We can plot the 99% credible interval, instead of the 95% used by default:
 
 ```{r fig.width = 7, fig.height = 4}
 plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, main="Overall", log = "y", ci.level = 0.99)
 ```
 
-Or we can plot all the lines from each of the posterior samples:
+We can also plot all the lines from each of the posterior samples:
 
 ```{r fig.width = 7, fig.height = 4}
 plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, main="Overall", log = "y", ci = "sampling")
 ```
 
-Let's plot the 3-D plot:
+Let's plot the 3-D plot, visualizing both the exposure-response and the lag-response relationships:
 
 ```{r fig.width = 7, fig.height = 6}
-plot(cpred, zlab = "Relative risk", col = 4, lphi = 60, cex.axis = 0.6, xlab = "Temperature (ºC)", main = "3D graph of temperature effect")
+plot(cpred, "3d", zlab = "Relative risk", col = 4, lphi = 60, cex.axis = 0.6, xlab = "Temperature (ºC)", main = "3D graph of temperature effect")
 ```
 
-Let's plot the contour plot:
+Let's plot the contour plot, which is a projection in 2D of the previous relationship:
 
 ```{r fig.width = 7, fig.height = 6}
 plot(cpred, "contour", xlab = "Temperature (ºC)", ylab = "Lag", main="Contour plot")
 ```
 
-Let's plot the lag-response effect setting the temperature equal to the MMT centering temperature:
+Let's plot the lag-response effect for a high temperature (99th percentile):
 
 ```{r fig.width = 7, fig.height = 6}
-plot(cpred , "slices", var = temp["99%"], col=3, ylab="RR",
-     main=paste0("Association for a high temperature (", round(temp["99%"], 0), "ºC)"))
+htemp <- 23
+plot(cpred , "slices", var = htemp, col=3, ylab="RR",
+     main=paste0("Association for a high temperature (", htemp, "ºC)"))
 ```
 
 Or the exposure-response at lag 0:
@@ -271,26 +230,29 @@ plot(cpred , "slices", lag = 0, col=4, ylab="RR",
 Calculate the fraction and number of deaths attributable to temperature in all the period. We can calculate it with the backwards algorithm:
 
 ```{r}
-tic()
-attributable_risk(london$tmean, cb, london$mort_75plus, mod, cen = cen, n_sample = 100, dir = "back")
-toc()
+tictoc::tic()
+ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back")
+tictoc::toc()
+
+str(ar)
 ```
 
 Or with the forward one:
 
 ```{r}
-tic()
-attributable_risk(london$tmean, cb, london$mort_75plus, mod, cen = cen, n_sample = 100, dir = "forw")
-toc()
+tictoc::tic()
+ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "forw")
+tictoc::toc()
+
+str(ar)
 ```
 
-We can also calculate the attributable number for each value of the temperature series:
+We can also calculate the attributable number corresponding to each day:
 
 ```{r}
-tic()
-ar <- attributable_risk(london$tmean, cb, london$mort_75plus, mod, cen = cen, n_sample = 100, dir = "back", tot = FALSE)
-toc()
+tictoc::tic()
+ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back", tot = FALSE)
+tictoc::toc()
 
-ar$an |> 
-  head()
+str(ar)
 ```

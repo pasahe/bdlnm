@@ -15,18 +15,20 @@ A tibble with 8.279 rows and 7 columns:
 \item{tmean}{Temperature mean}
 \item{mort_00_74}{Mortality in the age group <75 years}
 \item{mort_75plus}{Mortality in the age group +75 years}
-\item{mortality}{All mortality}
-...
+\item{mort}{All mortality}
 }
 }
 }
 \source{
-\url{https://github.com/gasparrini/2019_vicedo-cabrera_Epidem_Rcodedata}
+<https://github.com/gasparrini/2019_vicedo-cabrera_Epidem_Rcodedata
 }
 \usage{
-london
+data(london)
 }
 \description{
-Time series data containing the temperature and mortality from 1990 to 2012. Mortality data is stratified for <75 years and 75+ years age groups.
+The dataset includes observed daily mean temperature and total number of deaths in London between 2000 and 2012. Mortality data is stratified for <75 years and 75+ years age groups.
+}
+\references{
+Vicedo-Cabrera AM, Sera F, Armstrong B, Gasparrini A. A hands-on tutorial on a modelling framework for projections of climate change impacts on health. Epidemiology. 2019;30(3):321-329. DOI: 10.1097/EDE.0000000000000982. PMID: 30829832.
 }
 \keyword{datasets}

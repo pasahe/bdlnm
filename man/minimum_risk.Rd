@@ -2,22 +2,64 @@
 % Please edit documentation in R/minimum_risk.R
 \name{minimum_risk}
 \alias{minimum_risk}
-\title{minimum_risk: function to obtain the minimum exposure value in which there is the minimum overall risk effect.}
+\title{Minimum-risk exposure value estimation}
 \usage{
-minimum_risk(
-  basis,
-  model = NULL,
-  at = NULL,
-  from = NULL,
-  to = NULL,
-  by = NULL,
-  n_sample = 1000,
-  seed = 0L
-)
+minimum_risk(x, basis, at = NULL, from = NULL, to = NULL, by = NULL)
 }
 \arguments{
-\item{seed}{}
+\item{x}{A fitted object returned by \link{bdlnm} (list with components \code{model} and \code{coef}).}
+
+\item{basis}{A DLNM basis object produced by \code{dlnm}. It can be one of \link[dlnm:crossbasis]{dlnm::crossbasis} or \link[dlnm:onebasis]{dlnm::onebasis}.}
+
+\item{at}{Values (or matrix) of the predictor at which to predict; can be \code{NULL} and reconstructed from \code{from}, \code{to}, \code{by} and the basis attributes.}
+
+\item{from, to, by}{Optional numeric used to construct \code{at} when not provided.}
+}
+\value{
+A list of class \code{min.risk} containing:
+\itemize{
+\item \code{min}: numeric vector with the minimum-exposure value for each posterior sample
+\item \code{min.summary}: data frame with summary statistics for the minima
+}
+
+The returned object has attribute \code{xvar} containing the exposure grid used.
 }
 \description{
-minimum_risk: function to obtain the minimum exposure value in which there is the minimum overall risk effect.
+The function finds the exposure value that minimises the overall effect for each posterior sample, together with a small summary of these minima. This exposure value is called Minimum Mortality Temperature (MMT) in case of the relationship between temperature and mortality.
+}
+\examples{
+# Set exposure-response and lag-response spline parameters
+ dlnm_var <- list(
+   var_prc = c(10, 75, 90),
+   var_fun = "ns",
+   lag_fun = "ns",
+   max_lag = 21,
+   lagnk = 3
+ )
+
+
+# Set cross-basis parameters
+ argvar <- list(fun = dlnm_var$var_fun,
+                knots = stats::quantile(london$tmean,
+                                 dlnm_var$var_prc/100, na.rm = TRUE),
+                Bound = range(london$tmean, na.rm = TRUE))
+
+ arglag <- list(fun = dlnm_var$lag_fun,
+                knots = dlnm::logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
+
+ # Create crossbasis
+ cb <- dlnm::crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
+
+ # Seasonality of mortality time series
+ seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
+
+ # Prediction values (equidistant points)
+ temp <- seq(round(min(london$tmean), 1), round(max(london$tmean), 1), by = 0.1)
+
+ # Fit the model
+ mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+
+ # Find minimum risk exposure value
+ mmt <- minimum_risk(x, cb, at = temp)
+
 }
