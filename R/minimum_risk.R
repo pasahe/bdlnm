@@ -42,13 +42,13 @@
 #'  seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
 #'
 #'  # Prediction values (equidistant points)
-#'  temp <- seq(round(min(london$tmean), 1), round(max(london$tmean), 1), by = 0.1)
+#'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
 #'  # Fit the model
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
 #'
 #'  # Find minimum risk exposure value
-#'  mmt <- minimum_risk(x, cb, at = temp)
+#'  mmt <- minimum_risk(mod, cb, at = temp)
 #'
 minimum_risk <- function(x, basis, at = NULL, from = NULL, to = NULL, by = NULL) {
 

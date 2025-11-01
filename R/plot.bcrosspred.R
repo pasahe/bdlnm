@@ -41,28 +41,32 @@
 #'  seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
 #'
 #'  # Prediction values (equidistant points)
-#'  temp <- seq(round(min(london$tmean), 1), round(max(london$tmean), 1), by = 0.1)
+#'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
 #'  # Fit the model
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
 #'
 #'  # Prediction
-#'  cpred <- bcrosspred(x, cb, at = temp)
+#'  cpred <- bcrosspred(mod, cb, at = temp)
 #'
 #'  # Perform the plots:
 #'
 #'  #Overall
-#'   plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4,
-#'   main="Overall", log = "y")
-#' #3-D plot
-#'   plot(cpred, zlab = "Relative risk", col = 4, lphi = 60, cex.axis = 0.6,
-#'   xlab = "Temperature (ºC)", main = "3D graph of temperature effect")
-#'   #Contour
+#'  plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4,
+#'  main="Overall", log = "y")
+#'
+#'  #3-D plot
+#'  plot(cpred, "3d", zlab = "Relative risk", col = 4, lphi = 60, cex.axis = 0.6,
+#'  xlab = "Temperature (ºC)", main = "3D graph of temperature effect")
+#'
+#'  #Contour
 #'  plot(cpred, "contour", xlab = "Temperature (ºC)", ylab = "Lag", main="Contour plot")
+#'
 #'  #Slices (for a high temperature)
 #'  htemp <- 23
 #'  plot(cpred , "slices", var = htemp, col=3, ylab="RR",
 #'  main=paste0("Association for a high temperature (", htemp, "ºC)"))
+#'
 #'  #Slices (for lag 0)
 #'  plot(cpred , "slices", lag = 0, col=4, ylab="RR", main=paste0("Association at Lag 0"))
 #'
@@ -204,46 +208,34 @@ plot.bcrosspred <- function(x,
                    by = x$bylag)
 
     # medians: use stored summary
-    matfitmed <- matrix(matfitsum[, "0.5quant"],
-                        nrow = length(x$predvar),
-                        ncol = length(predlag))
+    matfitmed <- matfitsum[, , "0.5quant"]
 
     # low / high intervals
     if (!ci_compute) {
       #use stored summary
-      quantiles <- grep("quant$", colnames(matfitsum))
-      matfitlow <- matrix(matfitsum[, utils::head(quantiles, 1)], length(x$predvar), length(predlag))
-      matfithigh <- matrix(matfitsum[, utils::tail(quantiles, 1)], length(x$predvar), length(predlag))
+      quantiles <- grep("quant$", dimnames(matfitsum)[[3]])
+      matfitlow <- matfitsum[, , quantiles[1]]
+      matfithigh <- matfitsum[, , rev(quantiles)[1]]
     } else {
       #recompute quantiles again
       quantiles <- c((1 - ci.level) / 2, 1 - (1 - ci.level) / 2)
-      matfitlow <- matrix(
-        apply(matfit, 1, stats::quantile, probs = quantiles[1]),
-        length(x$predvar),
-        length(predlag)
-      )
-      matfithigh <- matrix(
-        apply(matfit, 1, stats::quantile, probs = quantiles[2]),
-        length(x$predvar),
-        length(predlag)
-      )
+      matfitlow <- apply(matfit, c(1, 2), stats::quantile, probs = quantiles[1])
+      matfithigh <- apply(matfit, c(1, 2), stats::quantile, probs = quantiles[2])
     }
 
     # plot by requested lags
     if (!is.null(lag)) {
       for (i in lag) {
-        # find which blog corresponds to this lag
-        ind <- seq(length(x$predvar) * (which(predlag == i) - 1) + 1,
-                   length(x$predvar) * (which(predlag == i)),
-                   by = 1)
-        matfit_ind <- matrix(x$matfit[ind, ], length(x$predvar), ncol(x$matfit))
+
+        # filter for i-th lag
+        matfit_i <- matfit[, which(predlag == i), ]
 
         # set default plot arguments
         plot.arg <- list(
           type = "l",
           xlab = "Var",
           ylab = "Outcome",
-          ylim = c(min(matfit[ind, ], na.rm = TRUE), max(matfit[ind, ], na.rm = TRUE)),
+          ylim = c(min(matfit_i, na.rm = TRUE), max(matfit_i, na.rm = TRUE)),
           bty = "l"
         )
 
@@ -258,7 +250,7 @@ plot.bcrosspred <- function(x,
             "fci",
             ci = ci,
             x = x$predvar,
-            y = matfit_ind,
+            y = matfit_i,
             high = matfithigh[, which(predlag == i)],
             low = matfitlow[, which(predlag == i)],
             ci.arg,
@@ -289,17 +281,16 @@ plot.bcrosspred <- function(x,
     # plot by requested predictor values (var)
     if (!is.null(var)) {
       for (i in var) {
-        # indices for this var across lag blocks
-        ind <- which(x$predvar == i) + length(x$predvar) * (0:(length(predlag) - 1L))
 
-        matfit_ind <- matrix(matfit[ind, ], length(predlag), ncol(matfit))
+        # filter for i-th exposure value
+        matfit_i <- matfit[which(x$predvar == i), , ]
 
         # set default plot arguments
         plot.arg <- list(
           type = "l",
           xlab = "Lag",
           ylab = "Outcome",
-          ylim = c(min(matfit[ind, ], na.rm = TRUE), max(matfit[ind, ], na.rm = TRUE)),
+          ylim = c(min(matfit_i, na.rm = TRUE), max(matfit_i, na.rm = TRUE)),
           bty = "l"
         )
 
@@ -314,7 +305,7 @@ plot.bcrosspred <- function(x,
             "fci",
             ci = ci,
             x = predlag,
-            y = matfit_ind,
+            y = matfit_i,
             high = matfithigh[which(x$predvar == i), ],
             low = matfitlow[which(x$predvar == i), ],
             ci.arg,
@@ -423,9 +414,7 @@ plot.bcrosspred <- function(x,
                    by = x$bylag)
 
     # get the median summary
-    matfitmed <- matrix(matfitsum[, "0.5quant"], length(x$predvar), length(predlag))
-    rownames(matfitmed) <- x$predvar
-    colnames(matfitmed) <- outer("lag", predlag, paste, sep = "")
+    matfitmed <- matfitsum[, , "0.5quant"]
 
     # set plot defaults
     plot.arg <- list(
@@ -472,9 +461,7 @@ plot.bcrosspred <- function(x,
                    by = x$bylag)
 
     # get the median summary
-    matfitmed <- matrix(matfitsum[, "0.5quant"], length(x$predvar), length(predlag))
-    rownames(matfitmed) <- x$predvar
-    colnames(matfitmed) <- outer("lag", predlag, paste, sep = "")
+    matfitmed <- matfitsum[, , "0.5quant"]
 
     # set default values
     levels <- pretty(matfitmed, n = 20)

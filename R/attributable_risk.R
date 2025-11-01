@@ -47,7 +47,7 @@
 #'  seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
 #'
 #'  # Prediction values (equidistant points)
-#'  temp <- seq(round(min(london$tmean), 1), round(max(london$tmean), 1), by = 0.1)
+#'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
 #'  # Fit the model
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
@@ -56,17 +56,9 @@
 #'  mmt <- minimum_risk(mod, cb, at = temp)
 #'  cen <- mmt$min.summary[["0.5quant"]]
 #'
-#'  # Attributables risk
-#'
-#'  # backwards algorithm
+#'  # Attributables risk (using the backwards algorithm):
 #'  ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back")
 #'
-#'  #forward algorithm
-#'  ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "forw")
-#'
-#'  # backwards for each day
-#'  ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back",
-#'  tot = FALSE)
 #'
 #'
 attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", average = FALSE, cen, range = NULL) {
@@ -121,6 +113,7 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
     cli::cli_abort("{.arg cen} must be a numeric scalar.")
   }
 
+
   ## -----------------------
   ## Prepare
   ## -----------------------
@@ -139,8 +132,15 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
   )
 
   cp <- cpred$matfit
-  #Si no té RR es pot calcular?
-  cp_rr <- cpred$matRRfit
+
+  if (!is.null(cpred$matRRfit)) {
+    cp_rr <- cpred$matRRfit
+  } else {
+    # if there is no RR available in the model we can not calculate attributable numbers
+    cli::cli_abort("An attributable risk cannot be computed because predicted effects are not on the relative-risk scale. Ensure the link of the {.arg x} model is {.val 'log'} or {.val 'logit'}.")
+
+  }
+
 
   ## -----------------------
   ## Calculate AF/AN
@@ -152,7 +152,7 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
   if(!tot) {
     an <- af <- M_an
   } else {
-    an <- af <- matrix(nrow = 1L, ncol = ncol(cp))
+    an <- af <- matrix(nrow = 1L, ncol = n_sample)
   }
 
   # forward perspective: contributions from the current day to future days
@@ -167,8 +167,8 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
 
       for(i in seq_len(n_sample)) {
 
-        # initialize
-        an_sample_init <- matrix(af_cp[,i], nrow = length(exp), ncol = length(predlag))
+        # filter for i-th sample
+        an_sample_init <- af_cp[, , i]
 
         # multiply element-wise by lagged cases
         an_sample <- an_sample_init * lagged_cases
@@ -202,7 +202,8 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
 
       for(i in seq_len(n_sample)) {
 
-        cp_sample <- matrix(cp[,i], nrow = length(exp), ncol = length(predlag))
+        # filter for i-th sample
+        cp_sample <- cp[, , i]
         # sum across lags then exponentiate
         cp_rr_all <- exp(rowSums(cp_sample))
         M_af[,i] <- (cp_rr_all - 1) / cp_rr_all
@@ -230,7 +231,8 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
 
       for(i in seq_len(n_sample)) {
 
-        af_sample <- matrix(af_cp[,i], nrow = length(exp), ncol = length(predlag))
+        # filter for the i-th sample
+        af_sample <- af_cp[, , i]
 
         # sum anti-diagonals: elements contributing to the same calendar day when shifting
         # we use indices row + col to group anti-diagonals
@@ -274,6 +276,10 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
 
   #calculate mode (using default kernel density estimate, revisar...)
   ansum[, "mode"] <- apply(an, 1, function(v) {
+    dv <- stats::density(v)
+    with(dv, x[which.max(y)])
+  })
+  afsum[, "mode"] <- apply(af, 1, function(v) {
     dv <- stats::density(v)
     with(dv, x[which.max(y)])
   })

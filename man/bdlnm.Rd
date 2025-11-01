@@ -67,7 +67,7 @@ If the basis indicates some lag, the first \code{max(lags)} rows of \code{data} 
  seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
 
  # Prediction values (equidistant points)
- temp <- seq(round(min(london$tmean), 1), round(max(london$tmean), 1), by = 0.1)
+ temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")

@@ -70,7 +70,7 @@ First, let's define the seasonality of the analysed mortality time series and th
 seas <- ns(london$date, df = round(8 * length(london$date) / 365.25))
 
 # Prediction values (equidistant points)
-temp <- round(seq(round(min(london$tmean), 1), round(max(london$tmean), 1), by = 0.1), 1)
+temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 ```
 
 # Fit the model and posterior samples
@@ -154,11 +154,11 @@ cpred$coefficients |>
   head(c(5, 5))
 ```
 
-We have also stored all the RR effects for each temperature and lag in each of the samples:
+We have also stored all the RR effects in an array for each temperature and lag in each of the samples. For example, for the first sample:
 
 ```{r}
-cpred$matRRfit |> 
-  head(c(5, 5))
+cpred$matRRfit[, , "sample1"] |> 
+  head()
 ```
 
 And the overall effects for each temperature (adding up all the lags):

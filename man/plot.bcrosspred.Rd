@@ -68,28 +68,32 @@ Plot lag-specific, overall, slices, contour or 3D representations for predicted 
  seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
 
  # Prediction values (equidistant points)
- temp <- seq(round(min(london$tmean), 1), round(max(london$tmean), 1), by = 0.1)
+ temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
 
  # Prediction
- cpred <- bcrosspred(x, cb, at = temp)
+ cpred <- bcrosspred(mod, cb, at = temp)
 
  # Perform the plots:
 
  #Overall
-  plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4,
-  main="Overall", log = "y")
-#3-D plot
-  plot(cpred, zlab = "Relative risk", col = 4, lphi = 60, cex.axis = 0.6,
-  xlab = "Temperature (ºC)", main = "3D graph of temperature effect")
-  #Contour
+ plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4,
+ main="Overall", log = "y")
+
+ #3-D plot
+ plot(cpred, "3d", zlab = "Relative risk", col = 4, lphi = 60, cex.axis = 0.6,
+ xlab = "Temperature (ºC)", main = "3D graph of temperature effect")
+
+ #Contour
  plot(cpred, "contour", xlab = "Temperature (ºC)", ylab = "Lag", main="Contour plot")
+
  #Slices (for a high temperature)
  htemp <- 23
  plot(cpred , "slices", var = htemp, col=3, ylab="RR",
  main=paste0("Association for a high temperature (", htemp, "ºC)"))
+
  #Slices (for lag 0)
  plot(cpred , "slices", lag = 0, col=4, ylab="RR", main=paste0("Association at Lag 0"))
 

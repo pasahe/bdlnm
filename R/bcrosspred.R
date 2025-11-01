@@ -50,13 +50,13 @@
 #'  seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
 #'
 #'  # Prediction values (equidistant points)
-#'  temp <- seq(round(min(london$tmean), 1), round(max(london$tmean), 1), by = 0.1)
+#'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
 #'  # Fit the model
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
 #'
 #'  # Prediction
-#'  cpred <- bcrosspred(x, cb, at = temp)
+#'  cpred <- bcrosspred(mod, cb, at = temp)
 #'
 
 bcrosspred <- function(x,
@@ -265,8 +265,7 @@ bcrosspred <- function(x,
   }
 
   # Create the estimated lag-specific effects (each sample in each column)
-  matfit <- Xpred %*% coef
-  colnames(matfit) <- paste0("sample", seq_len(n_sample))
+  matfit <- array(Xpred %*% coef, dim = c(length(predvar), length(predlag), n_sample), dimnames = list(predvar, paste0("lag", predlag), paste0("sample", seq_len(n_sample))))
 
   ## ----------------------
   ## Overall & cumulative
@@ -276,7 +275,7 @@ bcrosspred <- function(x,
 
   Xpredall <- 0
 
-  cumfit <- matrix(0, nrow(matfit), ncol(matfit))
+  cumfit <- matrix(0, nrow(Xpred), n_sample)
 
   for (i in seq(length(predlag))) {
     ind <- seq(length(predvar)) + length(predvar) * (i - 1)
@@ -287,9 +286,12 @@ bcrosspred <- function(x,
     }
   }
 
+  # convert to array
+  cumfit <- array(cumfit, dim = c(length(predvar), length(predlag), n_sample), dimnames = list(predvar, paste0("lag", predlag), paste0("sample", seq_len(n_sample))))
+
   allfit <- Xpredall %*% coef
   rownames(allfit) <- predvar
-  colnames(allfit) <- colnames(cumfit) <- paste0("sample", seq_len(n_sample))
+  colnames(allfit) <- paste0("sample", seq_len(n_sample))
 
   ## ----------------------
   ## Build output object
@@ -312,17 +314,13 @@ bcrosspred <- function(x,
 
   if (cumul) res$cumfit <- cumfit
 
-  ## inverse link for scale conversion (only support common links, revisar)
-  link.inv <- if (!is.na(model.link) && model.link %in% c("log", "logit")) {
-    exp
-  } else {
-    identity
+  ## inverse link
+  if (!is.na(model.link) && model.link %in% c("log", "logit")) {
+    res$matRRfit <- exp(matfit)
+    res$allRRfit <- exp(allfit)
+    if(cumul) res$cumRRfit <- exp(cumfit)
   }
 
-  res$matRRfit <- link.inv(matfit)
-  res$allRRfit <- link.inv(allfit)
-
-  if (cumul) res$cumRRfit <- link.inv(cumfit)
 
   ## -----------------------
   ## summaries
@@ -352,23 +350,42 @@ bcrosspred <- function(x,
   res$coefficients.summary <- coefsum
 
   #matfit summary
-  matfitsum <- matrix(nrow = nrow(res$matfit), ncol = length(sumcols))
-  colnames(matfitsum) <- sumcols
+  matfitsum <- array(dim = c(length(predvar), length(predlag), length(sumcols)), dimnames = list(predvar, paste0("lag", predlag), sumcols))
 
-  matfitsum[, "mean"] <- apply(res$matfit, 1, mean)
-  matfitsum[, "sd"] <- apply(res$matfit, 1, stats::sd)
+  matfitsum[, , "mean"] <- apply(res$matfit, c(1, 2), mean)
+  matfitsum[, , "sd"] <- apply(res$matfit, c(1, 2), stats::sd)
 
   for (q in quantiles) {
-    matfitsum[, paste0(q, "quant")] <- apply(res$matfit, 1, stats::quantile, probs = q)
+    matfitsum[, , paste0(q, "quant")] <- apply(res$matfit, c(1, 2), stats::quantile, probs = q)
   }
 
   #calculate mode (using default kernel density estimate, revisar...)
-  matfitsum[, "mode"] <- apply(res$matfit, 1, function(v) {
+  matfitsum[, , "mode"] <- apply(res$matfit, c(1, 2), function(v) {
     dv <- stats::density(v)
     with(dv, x[which.max(y)])
   })
 
   res$matfit.summary <- matfitsum
+
+  if(cumul) {
+    #cumfit summary
+    cumfitsum <- array(dim = c(length(predvar), length(predlag), length(sumcols)), dimnames = list(predvar, paste0("lag", predlag), sumcols))
+
+    cumfitsum[, , "mean"] <- apply(res$cumfit, c(1, 2), mean)
+    cumfitsum[, , "sd"] <- apply(res$cumfit, c(1, 2), stats::sd)
+
+    for (q in quantiles) {
+      cumfitsum[, , paste0(q, "quant")] <- apply(res$cumfit, c(1, 2), stats::quantile, probs = q)
+    }
+
+    #calculate mode (using default kernel density estimate, revisar...)
+    cumfitsum[, , "mode"] <- apply(res$cumfit, c(1, 2), function(v) {
+      dv <- stats::density(v)
+      with(dv, x[which.max(y)])
+    })
+
+    res$cumfit.summary <- cumfitsum
+  }
 
   #allfit summary
   allfitsum <- matrix(nrow = nrow(res$allfit), ncol = length(sumcols))
@@ -391,8 +408,11 @@ bcrosspred <- function(x,
   res$allfit.summary <- allfitsum
 
   # Relative-risk summaries
-  res$matRRfit.summary <- link.inv(res$matfit.summary)
-  res$allRRfit.summary <- link.inv(res$allfit.summary)
+  if (!is.na(model.link) && model.link %in% c("log", "logit")) {
+    res$matRRfit.summary <- exp(res$matfit.summary)
+    if(cumul) res$cumRRfit.summary <- exp(res$cumfit.summary)
+    res$allRRfit.summary <- exp(res$allfit.summary)
+  }
 
   res$ci.level <- ci.level
   res$model.class <- "inla"

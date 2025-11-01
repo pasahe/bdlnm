@@ -74,7 +74,7 @@ It computes the attributable number (AN) and fraction (AF) from a fitted B-DLNM 
  seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
 
  # Prediction values (equidistant points)
- temp <- seq(round(min(london$tmean), 1), round(max(london$tmean), 1), by = 0.1)
+ temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
@@ -83,17 +83,9 @@ It computes the attributable number (AN) and fraction (AF) from a fitted B-DLNM 
  mmt <- minimum_risk(mod, cb, at = temp)
  cen <- mmt$min.summary[["0.5quant"]]
 
- # Attributables risk
-
- # backwards algorithm
+ # Attributables risk (using the backwards algorithm):
  ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back")
 
- #forward algorithm
- ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "forw")
-
- # backwards for each day
- ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back",
- tot = FALSE)
 
 
 }
