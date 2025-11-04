@@ -261,8 +261,8 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
         af[1L, i] <- if(sum(cases[!isna]) > 0) an[,i]/sum(cases[!isna]) else NA
         # an <- af*den #No entenc això del denominador ajustat
       } else {
-        an <- M_an
-        af <- M_af
+        an[, i] <- M_an[,i]
+        af[, i] <- M_af[,i]
       }
 
     }
