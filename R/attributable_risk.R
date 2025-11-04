@@ -62,7 +62,13 @@
 #'
 #'
 attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", average = FALSE, cen, range = NULL) {
+# TODO: I WOULD RETHINK THE NAME OF THE FUNCTION, I THINK attributable / attributable_measures or attributable_impacts
+# TODO: I don't like "x" for the model, i will change it to "model" or "coef" if only the coefficients are necessary
 
+  # TODO 2: We should rewrite the function to add the option type = "af" / "an"
+  # (many time you are only interested in the af and in that case for examples is not necessary to provide the cases)
+
+  # is more suitable
   ## -----------------------
   ## Basic checks
   ## -----------------------
@@ -141,7 +147,6 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
 
   }
 
-
   ## -----------------------
   ## Calculate AF/AN
   ## -----------------------
@@ -159,107 +164,119 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
   if(dir == "forw") {
 
     #Compute the Lagged matrix of daily cases for that day and the next max_lag days
-    lagged_cases <- tsModel::Lag(cases, seq(lag[1], -lag[2]))
+    # TODO: WARMING, WE ARE ASSUMING THAT THE TIME SERIES OF TEMPEARTURES IS
+    # CONTINUOS, IF IS NOT THE USER NEED TO PROVIDE THE LAG CASES
+    # TODO: maybe we should think of an idea to deal with the issue when the
+    # time series is not only continuos (e.g. only summers)
+    lagged_cases <- tsModel::Lag(cases, seq(-lag[1], -lag[2]))
 
-    if(!average) {
-
-      af_cp <- (cp_rr - 1) / cp_rr
+    # if(!average) {
 
       for(i in seq_len(n_sample)) {
 
         # filter for i-th sample
-        an_sample_init <- af_cp[, , i]
+        rr_sample <- cp_rr[match(exp, cpred$predvar),,i]
+        af_sample <- (rr_sample - 1) / rr_sample
 
         # multiply element-wise by lagged cases
-        an_sample <- an_sample_init * lagged_cases
+        an_sample <- af_sample * lagged_cases
 
         # sum across lags to get AN per time point (ignoring NA to include rows in the end)
-        M_an[,i] <- rowSums(an_sample, na.rm = TRUE)
-
-        # calculate the denominator
-        denom <- rowSums(lagged_cases, na.rm = TRUE)
-
-        # AF per time point: an / observed denominator
-        # revisar amb Marcos
-
-        # care when denom = 0
-        M_af[denom == 0, i] <- NA
-        M_af[denom > 0, i] <- M_an[denom > 0, i]/denom[denom > 0]
+        # TODO: for me makes more sense to leave an NA in the case there are some NAs in the lagged_cases
+        M_an[,i] <- rowSums(an_sample)
 
         # total if requested
         if(tot) {
           isna <- is.na(M_an[, i])
           an[1L, i] <- sum(M_an[!isna, i])
-          af[1L, i] <- if(sum(cases[!isna]) > 0) an[1L, i]/sum(cases[!isna]) else NA
+          af[1L, i] <- if(sum(cases[!isna]) > 0) an[1L, i]/sum(rowMeans(lagged_cases)[!isna]) else NA
           # an <- af*den # revisar: no entenc això del denominador ajustat
         } else {
-          an <- M_an
-          af <- M_af
+          an[, i] <- M_an[,i]
+          af[, i] <- exp(rowSums(log(rr_sample)))
         }
       }
 
-    } else {
-
-      for(i in seq_len(n_sample)) {
-
-        # filter for i-th sample
-        cp_sample <- cp[, , i]
-        # sum across lags then exponentiate
-        cp_rr_all <- exp(rowSums(cp_sample))
-        M_af[,i] <- (cp_rr_all - 1) / cp_rr_all
-        # AN per time point using average of lagged cases (mean across lag columns)
-        M_an[,i] <- M_af[,i] * rowMeans(lagged_cases, na.rm = TRUE)
-
-        # total if requested
-        if(tot) {
-          isna <- is.na(M_an[,i])
-          an[1L, i] <- sum(M_an[!isna, i], na.rm = TRUE)
-          af[1L, i] <- if(sum(cases[!isna]) > 0) an[,i]/sum(cases[!isna]) else NA
-          # an <- af*den # revisar: no entenc això del denominador ajustat
-        } else {
-          an <- M_an
-          af <- M_af
-        }
-      }
-
-    }
+    # } else {
+    #
+    #   for(i in seq_len(n_sample)) {
+    #
+    #     # filter for i-th sample
+    #     cp_sample <- cp[, , i]
+    #     # sum across lags then exponentiate
+    #     cp_rr_all <- exp(rowSums(cp_sample))
+    #     M_af[,i] <- (cp_rr_all - 1) / cp_rr_all
+    #     # AN per time point using average of lagged cases (mean across lag columns)
+    #     M_an[,i] <- M_af[,i] * rowMeans(lagged_cases, na.rm = TRUE)
+    #
+    #     # total if requested
+    #     if(tot) {
+    #       isna <- is.na(M_an[,i])
+    #       an[1L, i] <- sum(M_an[!isna, i], na.rm = TRUE)
+    #       af[1L, i] <- if(sum(cases[!isna]) > 0) an[,i]/sum(cases[!isna]) else NA
+    #       # an <- af*den # revisar: no entenc això del denominador ajustat
+    #     } else {
+    #       an <- M_an
+    #       af <- M_af
+    #     }
+    #   }
+    #
+    # }
 
   # backward perspective: contributions from past exposures to current day
   } else {
 
-      af_cp <- (cp_rr - 1) / cp_rr
+    # TODO: WARMING, WE ARE ASSUMING THAT THE TIME SERIES OF TEMPEARTURES IS
+    # CONTINUOS, IF IS NOT THE USER NEED TO PROVIDE THE BACK_LAGGED TEMPERATURES
+    # TODO: ADD back_lagged_temp as a parameter of the functions (default = NULL)
+    # calculate the matrix of backward temperatures
+    back_lagged_temp <- NULL
+    if(is.null(back_lagged_temp)) {
+      back_lagged_temp <- tsModel::Lag(exp, seq(lag[1], lag[2]))
+      colnames(back_lagged_temp) <- paste0("lag", seq(lag[1], lag[2]))
+    }
 
-      for(i in seq_len(n_sample)) {
+    for(i in seq_len(n_sample)) {
 
-        # filter for the i-th sample
-        af_sample <- af_cp[, , i]
+      # calculate the matrix of backward rr
+      back_lagged_rr <- sapply(seq(lag[1], lag[2]), function(i_lag) {
+        col_lag <- paste0("lag", i_lag)
+        rr <- cpred$matRRfit[
+          match(back_lagged_temp[,col_lag], cpred$predvar), col_lag, i]
+        return(rr)
+      })
+      back_rr <- exp(rowSums(log(back_lagged_rr)))
 
-        # sum anti-diagonals: elements contributing to the same calendar day when shifting
-        # we use indices row + col to group anti-diagonals
-        af_sample <- tapply(af_sample, row(af_sample) + col(af_sample), sum)
+      # filter for the i-th sample
+      af_sample <- (back_rr - 1) / back_rr
 
-        # easy to visualize if we do it in a 3x3 example. It's clear that we don't want those row-column elements that sum more than the number of rows
-        M_af[,i] <- af_sample[seq_along(cases)]
-        M_an[,i] <- M_af[,i] * cases
+      # easy to visualize if we do it in a 3x3 example. It's clear that we don't want those row-column elements that sum more than the number of rows
+      M_af[,i] <- af_sample
+      M_an[,i] <- M_af[,i] * cases
 
-        # total if requested
-        if(tot) {
-          isna <- is.na(M_an[, i])
-          an[1L, i] <- sum(M_an[!isna, i], na.rm = TRUE)
-          af[1L, i] <- if(sum(cases[!isna]) > 0) an[,i]/sum(cases[!isna]) else NA
-          # an <- af*den #No entenc això del denominador ajustat
-        } else {
-          an <- M_an
-          af <- M_af
-        }
-
+      # total if requested
+      if(tot) {
+        isna <- is.na(M_an[, i])
+        an[1L, i] <- sum(M_an[!isna, i], na.rm = TRUE)
+        af[1L, i] <- if(sum(cases[!isna]) > 0) an[,i]/sum(cases[!isna]) else NA
+        # an <- af*den #No entenc això del denominador ajustat
+      } else {
+        an <- M_an
+        af <- M_af
       }
+
+    }
 
   }
 
   ## -----------------------
   ## summaries
   ## -----------------------
+
+  # TODO: Rethink if we want to give the summary statistics of the attributable
+  # measures. I don't see it that relevant (any user can do it easily) and for
+  # me is more clean the code and output without that. But maybe i'm bias
+  # and people will find it useful.
 
   ansum <- afsum <-  matrix(nrow = nrow(an), ncol = ncol(cpred$allfit.summary))
   colnames(ansum) <- colnames(afsum) <- colnames(cpred$allfit.summary)
