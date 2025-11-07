@@ -4,11 +4,10 @@
 #'
 #' @param x A fitted object returned by [bdlnm] (list with components `model` and `coef`).
 #' @param basis A DLNM crossbasis object produced by `dlnm`. It has to be of class [dlnm::crossbasis].
-#' @param exp Numeric vector of exposure values (one per observed time point) at which to compute attributable risk.
-#' @param cases Numeric vector of counts of the modelled outcome (one per observed time point). Has to be of the same length of `exp`.
+#' @param exp Numeric vector of exposure values (one per observed time point) at which to compute attributable risk.  The vector must represent a continuous time series with no gaps between time points.
+#' @param cases Numeric vector of counts of the modelled outcome (one per observed time point). Has to be measured in the same continuous time scale as `exp`.
 #' @param tot Logical; if TRUE (default) returns total attributable number / fraction across the time series. If FALSE returns values for each time point.
 #' @param dir Character; "back" (default) or "forw" direction in the lag dimension for calculating attributable risks.
-#' @param average Logical. When TRUE the function uses average (lag-averaged) contributions to calculate attributable risks. For forward perspective, average defaults to FALSE.
 #' @param cen Numeric scalar; centering value for predictions. If missing the function will attempt to read it from attr(basis, "argvar")$cen.
 #' @param range Optional numeric vector of range 2. It gives the exposure value range for which attributable risks will be calculated.
 #'
@@ -61,12 +60,15 @@
 #'
 #'
 #'
-attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", average = FALSE, cen, range = NULL) {
+attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", cen, range = NULL) {
 # TODO: I WOULD RETHINK THE NAME OF THE FUNCTION, I THINK attributable / attributable_measures or attributable_impacts
+# Ok, I think that attributable would make a good name.
 # TODO: I don't like "x" for the model, i will change it to "model" or "coef" if only the coefficients are necessary
-
-  # TODO 2: We should rewrite the function to add the option type = "af" / "an"
-  # (many time you are only interested in the af and in that case for examples is not necessary to provide the cases)
+# RE: x is the result from fitting bdlnm. I think that is easier for the user to pass x as an argument. For coherence, all functions work in the same way, bcrosspred also needs a bdlnm ouptut named x.
+#
+# TODO 2: We should rewrite the function to add the option type = "af" / "an"
+# (many time you are only interested in the af and in that case for examples is not necessary to provide the cases)
+# RE: I think that to give both af and an is not a problem, you just access one thing or another afterwards.
 
   # is more suitable
   ## -----------------------
@@ -97,11 +99,6 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
   # direction
   if (! dir %in% c("back", "forw")) {
     cli::cli_abort("{.arg cases} must be one of: {.val 'back'}, {.val 'forw'}.")
-  }
-
-  # average
-  if (!is.logical(average)) {
-    cli::cli_abort("{.arg average} must be logical ({.val TRUE}/{.val FALSE}).")
   }
 
   # define centering value
@@ -168,60 +165,37 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
     # CONTINUOS, IF IS NOT THE USER NEED TO PROVIDE THE LAG CASES
     # TODO: maybe we should think of an idea to deal with the issue when the
     # time series is not only continuos (e.g. only summers)
+    # RE: Agree. I think that at the moment we only need to allow the temperatures and cases to be provided in a continuous basis. In an update, we could add this possibility. The problem is that we are not able to check if it's provided in a continuous basis or not. I understand that simply I would have to add an argument for them to give the lagged cases. If not given, we assume that is continuous (maybe we could provide a message if no lagged_case is provided?)
+
     lagged_cases <- tsModel::Lag(cases, seq(-lag[1], -lag[2]))
 
-    # if(!average) {
+    #RE: I have ommitted the average and removed the argument.
+    for(i in seq_len(n_sample)) {
 
-      for(i in seq_len(n_sample)) {
+      # filter for i-th sample
+      # RE: Good implementation. If exp is repeated across different times it works as cpred only contains unique exposure values. Thus, it will match repeated rows and will be expanded for the exact exposure value length.
+      rr_sample <- cp_rr[match(exp, cpred$predvar),,i]
+      af_sample <- (rr_sample - 1) / rr_sample
 
-        # filter for i-th sample
-        rr_sample <- cp_rr[match(exp, cpred$predvar),,i]
-        af_sample <- (rr_sample - 1) / rr_sample
+      # multiply element-wise by lagged cases
+      an_sample <- af_sample * lagged_cases
 
-        # multiply element-wise by lagged cases
-        an_sample <- af_sample * lagged_cases
+      # sum across lags to get AN per time point (ignoring NA to include rows in the end)
+      # TODO: for me makes more sense to leave an NA in the case there are some NAs in the lagged_cases
+      # RE: Agree. If not, we are counting NA's are 0 so we would be underreporting AN's.
+      M_an[,i] <- rowSums(an_sample)
 
-        # sum across lags to get AN per time point (ignoring NA to include rows in the end)
-        # TODO: for me makes more sense to leave an NA in the case there are some NAs in the lagged_cases
-        M_an[,i] <- rowSums(an_sample)
-
-        # total if requested
-        if(tot) {
-          isna <- is.na(M_an[, i])
-          an[1L, i] <- sum(M_an[!isna, i])
-          af[1L, i] <- if(sum(cases[!isna]) > 0) an[1L, i]/sum(rowMeans(lagged_cases)[!isna]) else NA
-          # an <- af*den # revisar: no entenc això del denominador ajustat
-        } else {
-          an[, i] <- M_an[,i]
-          af[, i] <- exp(rowSums(log(rr_sample)))
-        }
+      # total if requested
+      if(tot) {
+        isna <- is.na(M_an[, i])
+        an[1L, i] <- sum(M_an[!isna, i])
+        af[1L, i] <- if(sum(cases[!isna]) > 0) an[1L, i]/sum(rowMeans(lagged_cases)[!isna]) else NA
+        # RE: no entenc per què s'ha de fer la mitjana per fil adels lagged cases? No seria la suma de tots els casos el denominador??
+      } else {
+        an[, i] <- M_an[,i]
+        af[, i] <- exp(rowSums(log(rr_sample)))
       }
-
-    # } else {
-    #
-    #   for(i in seq_len(n_sample)) {
-    #
-    #     # filter for i-th sample
-    #     cp_sample <- cp[, , i]
-    #     # sum across lags then exponentiate
-    #     cp_rr_all <- exp(rowSums(cp_sample))
-    #     M_af[,i] <- (cp_rr_all - 1) / cp_rr_all
-    #     # AN per time point using average of lagged cases (mean across lag columns)
-    #     M_an[,i] <- M_af[,i] * rowMeans(lagged_cases, na.rm = TRUE)
-    #
-    #     # total if requested
-    #     if(tot) {
-    #       isna <- is.na(M_an[,i])
-    #       an[1L, i] <- sum(M_an[!isna, i], na.rm = TRUE)
-    #       af[1L, i] <- if(sum(cases[!isna]) > 0) an[,i]/sum(cases[!isna]) else NA
-    #       # an <- af*den # revisar: no entenc això del denominador ajustat
-    #     } else {
-    #       an <- M_an
-    #       af <- M_af
-    #     }
-    #   }
-    #
-    # }
+    }
 
   # backward perspective: contributions from past exposures to current day
   } else {
@@ -230,6 +204,7 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
     # CONTINUOS, IF IS NOT THE USER NEED TO PROVIDE THE BACK_LAGGED TEMPERATURES
     # TODO: ADD back_lagged_temp as a parameter of the functions (default = NULL)
     # calculate the matrix of backward temperatures
+    # RE: Entenc que hauriem de fer el mateix pels forwards no? Si no tenim un temps continu, que ens donin els lagged cases.
     back_lagged_temp <- NULL
     if(is.null(back_lagged_temp)) {
       back_lagged_temp <- tsModel::Lag(exp, seq(lag[1], lag[2]))
@@ -238,11 +213,9 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
 
     for(i in seq_len(n_sample)) {
 
-      # calculate the matrix of backward rr
-      back_lagged_rr <- sapply(seq(lag[1], lag[2]), function(i_lag) {
-        col_lag <- paste0("lag", i_lag)
-        rr <- cpred$matRRfit[
-          match(back_lagged_temp[,col_lag], cpred$predvar), col_lag, i]
+      # calculate the matrix of backward rr: get the rr associated to each temperature and lag specified in the column of back_lagged_temp
+      back_lagged_rr <- sapply(colnames(back_lagged_temp), function(col_lag) {
+        rr <- cp_rr[match(back_lagged_temp[,col_lag], cpred$predvar), col_lag, i]
         return(rr)
       })
       back_rr <- exp(rowSums(log(back_lagged_rr)))
@@ -250,7 +223,6 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
       # filter for the i-th sample
       af_sample <- (back_rr - 1) / back_rr
 
-      # easy to visualize if we do it in a 3x3 example. It's clear that we don't want those row-column elements that sum more than the number of rows
       M_af[,i] <- af_sample
       M_an[,i] <- M_af[,i] * cases
 
@@ -259,7 +231,6 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
         isna <- is.na(M_an[, i])
         an[1L, i] <- sum(M_an[!isna, i], na.rm = TRUE)
         af[1L, i] <- if(sum(cases[!isna]) > 0) an[,i]/sum(cases[!isna]) else NA
-        # an <- af*den #No entenc això del denominador ajustat
       } else {
         an[, i] <- M_an[,i]
         af[, i] <- M_af[,i]
@@ -277,6 +248,7 @@ attributable_risk <- function(x, basis, exp, cases, tot = TRUE, dir = "back", av
   # measures. I don't see it that relevant (any user can do it easily) and for
   # me is more clean the code and output without that. But maybe i'm bias
   # and people will find it useful.
+  # RE: I think that it goes with the package. We provide summaries for everything, so it would be strange to not provide them for this function.
 
   ansum <- afsum <-  matrix(nrow = nrow(an), ncol = ncol(cpred$allfit.summary))
   colnames(ansum) <- colnames(afsum) <- colnames(cpred$allfit.summary)
