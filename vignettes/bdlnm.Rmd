@@ -231,7 +231,7 @@ Calculate the fraction and number of deaths attributable to temperature in all t
 
 ```{r}
 tictoc::tic()
-ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back")
+attr <- attributable(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back")
 tictoc::toc()
 
 str(ar)
@@ -241,18 +241,18 @@ Or with the forward one:
 
 ```{r}
 tictoc::tic()
-ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "forw")
+attr <- attributable(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "forw")
 tictoc::toc()
 
-str(ar)
+str(attr)
 ```
 
 We can also calculate the attributable number corresponding to each day:
 
 ```{r}
 tictoc::tic()
-ar <- attributable_risk(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back", tot = FALSE)
+attr <- attributable(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back", tot = FALSE)
 tictoc::toc()
 
-str(ar)
+str(attr)
 ```

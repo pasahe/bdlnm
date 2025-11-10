@@ -2,7 +2,7 @@
 
 S3method(plot,bcrosspred)
 S3method(plot,min.risk)
-export(attributable_risk)
+export(attributable)
 export(bcrosspred)
 export(bdlnm)
 export(minimum_risk)
