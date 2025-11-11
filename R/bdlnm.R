@@ -208,6 +208,12 @@ bdlnm <- function(formula,
 
   # Combine posterior latent vectors into a matrix (columns = samples)
   coef <- do.call(cbind, lapply(posterior, function (x) x$latent))
+  # TODO: WE HAVE TO RETHINK A BIT THIS, USERS SHOULD BE ABLE TO GET ANY
+  # COEFFICIENTS THEY WANT (e.g. seas of strate case-crossover) AND NOT ONLY
+  # CB.
+  # OR we allow users to run the inla model without any function. and we create
+  # a function to extract cb coefficient (ensuring that they used de control.
+  # compute = TRUE) or here we allow them to also extract other coefficients
 
   if (is.null(ncol(coef))) {
     # If only one sample, ensure matrix form
