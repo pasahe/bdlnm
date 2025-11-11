@@ -128,6 +128,7 @@ bcrosspred <- function(x,
     )
   }
 
+  # TODO: The next line works with onebasis?
   lagfun <- switch(type, cb = attr(basis, "arglag")$fun, one = NULL)
   # check on lagfun 'integer'
   if (bylag != 1L && !is.null(lagfun) && identical(lagfun, "integer")) {
@@ -265,7 +266,11 @@ bcrosspred <- function(x,
   }
 
   # Create the estimated lag-specific effects (each sample in each column)
-  matfit <- array(Xpred %*% coef, dim = c(length(predvar), length(predlag), n_sample), dimnames = list(predvar, paste0("lag", predlag), paste0("sample", seq_len(n_sample))))
+  matfit <- array(Xpred %*% coef,
+                  dim = c(length(predvar), length(predlag), n_sample),
+                  dimnames = list(predvar,
+                                  paste0("lag", predlag),
+                                  paste0("sample", seq_len(n_sample))))
 
   ## ----------------------
   ## Overall & cumulative
@@ -287,7 +292,11 @@ bcrosspred <- function(x,
   }
 
   # convert to array
-  cumfit <- array(cumfit, dim = c(length(predvar), length(predlag), n_sample), dimnames = list(predvar, paste0("lag", predlag), paste0("sample", seq_len(n_sample))))
+  cumfit <- array(cumfit,
+                  dim = c(length(predvar), length(predlag), n_sample),
+                  dimnames = list(predvar,
+                                  paste0("lag", predlag),
+                                  paste0("sample", seq_len(n_sample))))
 
   allfit <- Xpredall %*% coef
   rownames(allfit) <- predvar
