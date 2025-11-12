@@ -78,15 +78,17 @@ bcrosspred <- function(x,
 
   check_bdlnm(x)
 
-  #Get model and coefficient
+  #Get model and coefficients
   model <- x$model
-  coef <- x$coef
+
+  #Get only CB coefficients
+  coef <- extract_coef(x$coefficients, basis)
 
   #Get model link
   if (is.null(model.link)) model.link <- get_link(model)
 
   #Get number of posterior samples
-  n_sample <- ncol(coef)
+  n_sample <- attr(x, "n_sim")
 
   # Basis type:
   if (inherits(basis, "crossbasis")) {
@@ -128,7 +130,6 @@ bcrosspred <- function(x,
     )
   }
 
-  # TODO: The next line works with onebasis?
   lagfun <- switch(type, cb = attr(basis, "arglag")$fun, one = NULL)
   # check on lagfun 'integer'
   if (bylag != 1L && !is.null(lagfun) && identical(lagfun, "integer")) {
@@ -142,15 +143,6 @@ bcrosspred <- function(x,
     cli::cli_abort("{.arg ci.level} must be a single numeric value strictly between 0 and 1.")
   }
 
-  # Check on basis
-  #Number of parameters of the crossbasis
-  npar <- ncol(basis)
-
-  if (nrow(coef) != npar || any(is.na(coef))) {
-    cli::cli_abort(
-      "Basis not consistent with the number of estimated coefficients given by the model: expected {.val {npar}} rows in {.arg coef} (number of parameters of {.arg basis}), got {.val {nrow(coef)}}."
-    )
-  }
 
   ## -----------------------
   ## Construct prediction grid (at / predvar / predlag) & centering
@@ -334,27 +326,21 @@ bcrosspred <- function(x,
   ## -----------------------
   ## summaries
   ## -----------------------
+  coefsum <- extract_coef(x$coefficients.summary, basis)
 
+  # recalculate quantiles if another ci.level is provided
   quantiles <- c((1 - ci.level) / 2, 0.5, 1 - (1 - ci.level) / 2)
-  sumcols <- c("mean", "sd", paste0(quantiles, "quant"), "mode")
+  quantiles_orig <- as.numeric(gsub("[^0-9.]", "", grep("quant", colnames(coefsum), value = TRUE)))
+  ci_compute <- !identical(quantiles, quantiles_orig)
 
-  #coefficients summary
-  coefsum <- matrix(nrow = nrow(res$coefficients), ncol = length(sumcols))
-  rownames(coefsum) <- rownames(res$coefficients)
-  colnames(coefsum) <- sumcols
-
-  coefsum[, "mean"] <- apply(res$coefficients, 1, mean)
-  coefsum[, "sd"] <- apply(res$coefficients, 1, stats::sd)
-
-  for (q in quantiles) {
-    coefsum[, paste0(q, "quant")] <- apply(res$coefficients, 1, stats::quantile, probs = q)
+  if(ci_compute) {
+    for (i in seq_along(quantiles)) {
+      colnames(coefsum)[colnames(coefsum) == paste0(quantiles_orig[i], "quant")] <- paste0(quantiles[i], "quant")
+      coefsum[, paste0(quantiles[i], "quant")] <- apply(coef, 1, stats::quantile, probs = quantiles[i])
+    }
   }
 
-  #calculate mode (using default kernel density estimate, revisar...)
-  coefsum[, "mode"] <- apply(res$coefficients, 1, function(v) {
-    dv <- stats::density(v)
-    with(dv, x[which.max(y)])
-  })
+  sumcols <- colnames(coefsum)
 
   res$coefficients.summary <- coefsum
 

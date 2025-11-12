@@ -70,7 +70,7 @@ minimum_risk <- function(x, basis, at = NULL, from = NULL, to = NULL, by = NULL)
   lag <- attr(basis,"lag")
 
   # determine number of posterior samples
-  n_sample <- ncol(x$coef) # TODO: Maybe you can save in the mod object mod$n_sim (more elegant?)
+  n_sample <- attr(x, "n_sim")
 
   # Set at if not provided
   if (is.null(at)) {

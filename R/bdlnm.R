@@ -7,6 +7,7 @@
 #' @param family Family name passed to [INLA::inla] (default `"gaussian"`).
 #' @param data A data frame used for the model fitted with [INLA::inla].
 #' @param sample.arg List containing the arguments passed to [INLA::inla.posterior.sample]. Default sets `n = 1000` as the number of samples and `seed = 0L` (set the seed at 'random').
+#' @param ci.level Numeric in `(0,1)` giving the credible interval level (default `0.95`).
 #' @param ... Additional arguments passed to [INLA::inla].
 #'
 #' @returns A list with components:
@@ -57,6 +58,7 @@ bdlnm <- function(formula,
                   family = "gaussian",
                   data,
                   sample.arg = list(n = 1000, seed = 0L),
+                  ci.level = 0.95,
                   ...) {
 
   # ----------------------------
@@ -162,21 +164,10 @@ bdlnm <- function(formula,
   }
 
   names_sel <- rownames(model$summary.fixed)
+
   if (is.null(names_sel)) {
     cli::cli_abort(
       "Could not determine fixed-effect names from the fitted {.pkg INLA} model: {.code rownames(model$summary.fixed)} is {.val NULL}."
-    )
-  }
-
-  #Revisar per onebasis si tmb té colnames
-  basis_cols <- colnames(basis)
-
-  # Intersection between model fixed names and basis column names
-  names_sel <- names_sel[names_sel %in% basis_cols]
-
-  if (length(names_sel) == 0L) {
-    cli::cli_abort(
-      "No matching coefficient names found between the fitted {.pkg INLA} model fixed effects and the basis columns. Make sure the {.arg basis} columns are included in the {.arg formula}."
     )
   }
 
@@ -208,20 +199,42 @@ bdlnm <- function(formula,
 
   # Combine posterior latent vectors into a matrix (columns = samples)
   coef <- do.call(cbind, lapply(posterior, function (x) x$latent))
-  # TODO: WE HAVE TO RETHINK A BIT THIS, USERS SHOULD BE ABLE TO GET ANY
-  # COEFFICIENTS THEY WANT (e.g. seas of strate case-crossover) AND NOT ONLY
-  # CB.
-  # OR we allow users to run the inla model without any function. and we create
-  # a function to extract cb coefficient (ensuring that they used de control.
-  # compute = TRUE) or here we allow them to also extract other coefficients
 
   if (is.null(ncol(coef))) {
     # If only one sample, ensure matrix form
     coef <- matrix(coef, ncol = 1L)
   }
+  rownames(coef) <- gsub("\\:1$", "", rownames(coef))
   colnames(coef) <- paste0("sample", seq_len(ncol(coef)))
 
-  res <- list(model = model, coef = coef)
+  ## -----------------------
+  ## summaries
+  ## -----------------------
+
+  quantiles <- c((1 - ci.level) / 2, 0.5, 1 - (1 - ci.level) / 2)
+  sumcols <- c("mean", "sd", paste0(quantiles, "quant"), "mode")
+
+  # sampled coefficients summary
+  coefsum <- matrix(nrow = nrow(coef), ncol = length(sumcols))
+  rownames(coefsum) <- rownames(coef)
+  colnames(coefsum) <- sumcols
+
+  coefsum[, "mean"] <- apply(coef, 1, mean)
+  coefsum[, "sd"] <- apply(coef, 1, stats::sd)
+
+  for (q in quantiles) {
+    coefsum[, paste0(q, "quant")] <- apply(coef, 1, stats::quantile, probs = q)
+  }
+
+  #calculate mode (using default kernel density estimate, revisar...)
+  coefsum[, "mode"] <- apply(coef, 1, function(v) {
+    dv <- stats::density(v)
+    with(dv, x[which.max(y)])
+  })
+
+  res <- list(model = model, coefficients = coef, coefficients.summary = coefsum)
+
+  attr(res, "n_sim") <- sample.arg$n
 
   #Revisar si cal que fem una classe per això
   # class(res) <- c("bdlnm")
