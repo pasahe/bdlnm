@@ -116,7 +116,7 @@ attributable <- function(x, basis, exp, cases = NULL, tot = TRUE, dir = "back", 
   ## -----------------------
 
   # get number of samples
-  n_sample <- ncol(x$coef)
+  n_sample <- attr(x, "n_sim")
 
   # get lags
   lag <- attr(basis,"lag")

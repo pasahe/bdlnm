@@ -1,5 +1,36 @@
 ### Util functions for the R package bdlnm
 
+# Function to select only the coefficients from the basis from all the posterior samples
+extract_coef <- function (coef, basis) {
+
+  # get estimated coefficients name
+  names_sel <- rownames(coef)
+
+  #Revisar per onebasis si tmb té colnames
+  basis_cols <- colnames(basis)
+
+  # intersection between model fixed names and basis column names
+  names_sel <- names_sel[names_sel %in% basis_cols]
+
+  if (length(names_sel) == 0L) {
+    cli::cli_abort(
+      "No matching coefficient names found between the fitted {.fun bdlnm()} model fixed effects and the provided basis columns. Make sure the {.arg basis} columns are included in the {.arg formula} of the previously {.fun bdlnm()} fitted model."
+    )
+  }
+
+  if(length(names_sel) != length(basis_cols)) {
+    cli::cli_abort(
+      "Not all parameters of the provided basis are in the estimated coefficients from the fitted {.fun bdlnm()} model. Make sure the provided {.arg basis} is the same of the basis provided previously in the {.fun bdlnm()} fitted model."
+    )
+  }
+
+  # extract only selected basis coefficients
+  coef_cb <- coef[names_sel,]
+
+  return(coef_cb)
+
+}
+
 # Verify that an object is the expected result from bdlnm().
 check_bdlnm <- function(x) {
 
@@ -7,12 +38,12 @@ check_bdlnm <- function(x) {
     cli::cli_abort("The object returned by {.fn bdlnm} must be provided as the {.arg x} argument.")
   }
 
-  if (!is.list(x) || is.null(x$model) || is.null(x$coef)) {
+  if (!is.list(x) || is.null(x$model) || is.null(x$coefficients) || is.null(x$coefficients.summary)) {
     cli::cli_abort("{.arg x} must be the list returned by {.fn bdlnm}: it should contain the fitted INLA model {.val $model} and the posterior samples matrix {.val $coef}.")
   }
 
   model <- x$model
-  coef <- x$coef
+  coef <- x$coefficients
 
   # check model
   if (!inherits(model, "inla")) {
@@ -28,7 +59,7 @@ check_bdlnm <- function(x) {
 
   # check coefficients
   if (!is.matrix(coef) || !is.numeric(coef)) {
-    cli::cli_abort("{.arg x$coef} must be a numeric matrix of posterior samples as returned by {.fn INLA::inla.posterior.sample} (columns = samples).")
+    cli::cli_abort("{.arg x$coefficients} must be a numeric matrix of posterior samples as returned by {.fn INLA::inla.posterior.sample} (columns = samples).")
   }
 
 }

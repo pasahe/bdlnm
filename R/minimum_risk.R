@@ -70,7 +70,7 @@ minimum_risk <- function(x, basis, at = NULL, from = NULL, to = NULL, by = NULL)
   lag <- attr(basis,"lag")
 
   # determine number of posterior samples
-  n_sample <- ncol(x$coef)
+  n_sample <- attr(x, "n_sim")
 
   # Set at if not provided
   if (is.null(at)) {
@@ -107,10 +107,7 @@ minimum_risk <- function(x, basis, at = NULL, from = NULL, to = NULL, by = NULL)
   ## ---------------------------
 
   # define the matrix of temperatures and lags in which predictions will be made
-  predvar <- if (is.matrix(at))
-    rownames(at)
-  else
-    at
+  predvar <- if (is.matrix(at)) rownames(at) else at
 
   predlag <- seq(from = lag[1], to = lag[2], by = 1)
 

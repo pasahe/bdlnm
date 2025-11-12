@@ -10,6 +10,7 @@ bdlnm(
   family = "gaussian",
   data,
   sample.arg = list(n = 1000, seed = 0L),
+  ci.level = 0.95,
   ...
 )
 }
@@ -23,6 +24,8 @@ bdlnm(
 \item{data}{A data frame used for the model fitted with \link[INLA:inla]{INLA::inla}.}
 
 \item{sample.arg}{List containing the arguments passed to \link[INLA:posterior.sample]{INLA::inla.posterior.sample}. Default sets \code{n = 1000} as the number of samples and \code{seed = 0L} (set the seed at 'random').}
+
+\item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}).}
 
 \item{...}{Additional arguments passed to \link[INLA:inla]{INLA::inla}.}
 }
