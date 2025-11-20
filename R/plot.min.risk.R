@@ -1,9 +1,9 @@
 #' Plot posterior distribution of minimum-risk exposure values
 #'
-#' Plot the posterior distribution of the minimum-risk exposure values returned by `minimum_risk()`.
+#' Plot the posterior distribution of the minimum-risk exposure values returned by `minimum_effect()`.
 #'
-#'  Plot an histogram showing the posterior distribution of the minimum-risk exposure values returned by `minimum_risk()`. The original prediction grid will be used as axis breaks. A dashed red vertical line marks the posterior median (0.5 quantile when available).
-#' @param x Object of class `min.risk` as returned by [minimum_risk].
+#'  Plot an histogram showing the posterior distribution of the minimum-risk exposure values returned by `minimum_effect()`. The original prediction grid will be used as axis breaks. A dashed red vertical line marks the posterior median (0.5 quantile when available).
+#' @param x Object of class `min.risk` as returned by [minimum_effect].
 #' @param line.arg List of graphical arguments for the plotting of the median vertical line passed to [graphics::abline].
 #' @param ... Additional graphical parameters passed to [hist].
 #'
@@ -44,7 +44,7 @@
 #'  family = "poisson")
 #'
 #'  # Find minimum risk exposure value
-#'  mmt <- minimum_risk(mod, cb, at = temp)
+#'  mmt <- minimum_effect(mod, cb, at = temp)
 #'
 #'  # Plot
 #'  plot(mmt, xlab = "Temperature (ºC)",
@@ -58,7 +58,7 @@ plot.min.risk <- function(x, line.arg = NULL, ...) {
   ## ---------------------------
 
   if (missing(x) || !inherits(x, "min.risk")) {
-    cli::cli_abort("{.arg x} must be an object of class {.cls min.risk} as returned by {.fn minimum_risk}.")
+    cli::cli_abort("{.arg x} must be an object of class {.cls min.risk} as returned by {.fn minimum_effect}.")
   }
 
   ## ---------------------------

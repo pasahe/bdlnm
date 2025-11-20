@@ -81,14 +81,11 @@ bcrosspred <- function(x,
   #Get model and coefficients
   model <- x$model
 
-  #Get only CB coefficients
-  coef <- extract_coef(x$coefficients, basis)
-
-  #Get model link
-  if (is.null(model.link)) model.link <- get_link(model)
-
-  #Get number of posterior samples
-  n_sample <- attr(x, "n_sim")
+  if (missing(basis)) {
+    cli::cli_abort(
+      "A basis of class {.cls 'crossbasis'} or {.cls 'onebasis'} must be provided to {.arg basis}."
+    )
+  }
 
   # Basis type:
   if (inherits(basis, "crossbasis")) {
@@ -100,6 +97,16 @@ bcrosspred <- function(x,
       "Unsupported {.arg basis} class. Expected {.cls 'crossbasis'} or {.cls 'onebasis'}."
     )
   }
+
+  #Get only CB coefficients
+  coef <- extract_coef(x$coefficients, basis)
+
+  #Get model link
+  if (is.null(model.link)) model.link <- get_link(model)
+
+  #Get number of posterior samples
+  n_sample <- attr(x, "n_sim")
+
 
   #Get default lag
   origlag <- switch(type, cb  = attr(basis, "lag"), one = c(0, 0))

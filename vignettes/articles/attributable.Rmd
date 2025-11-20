@@ -1,0 +1,107 @@
+---
+title: "attributable"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(bdlnm)
+library(dlnm)
+library(dplyr)
+library(stats)
+library(splines)
+```
+
+This article is a short tutorial to calculate attributable measures using the `attributable()` function. We will use the built-in `london` dataset, but this time filtered for only the year `2012` to reduce the computational time of calculations. 
+
+```{r}
+# filter london dataset to run faster
+slondon <- london |>
+  filter(year >= 2012)
+
+slondon
+```
+
+First, we have to prepare the data, build the DLNM crossbasis, fit the B-DLNM model and obtain the minimum mortality temperature value to center the risks in order to calculate properly attributable measures. 
+
+```{r warning=FALSE}
+# Exposure-response and lag-response spline parameters
+dlnm_var <- list(
+  var_prc = c(10, 75, 90),
+  var_fun = "ns",
+  lag_fun = "ns",
+  max_lag = 21,
+  lagnk = 3
+)
+
+# Cross-basis parameters
+argvar <- list(fun = dlnm_var$var_fun,
+               knots = quantile(slondon$tmean,
+                                dlnm_var$var_prc/100, na.rm = TRUE),
+               Bound = range(slondon$tmean, na.rm = TRUE))
+
+arglag <- list(fun = dlnm_var$lag_fun,
+               knots = logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
+
+# Create crossbasis
+cb <- crossbasis(slondon$tmean, lag = dlnm_var$max_lag, argvar, arglag)
+
+# Seasonality of mortality time series
+seas <- ns(slondon$date, df = round(8 * length(slondon$date) / 365.25))
+
+# Prediction values (equidistant points)
+temp <- round(seq(min(slondon$tmean), max(slondon$tmean), by = 0.1), 1)
+
+# Model
+
+mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
+           basis = cb,
+           data = slondon,
+           family = "poisson",
+           sample.arg = list(seed = 432))
+
+# Predict
+cpred <- bcrosspred(mod, cb, at = temp)
+
+# compute centering (MMT) using minimum_effect
+mmt <- minimum_effect(mod, cb, at = temp)
+cen <- mmt$min.summary[["0.5quant"]]
+cen
+```
+
+The MMT value in which values will be centered is `cen`ºC. Now, we can calculate attributable number and fractions.
+
+We can calculate it with the backwards algorithm:
+
+```{r}
+# tictoc::tic()
+attr <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
+# tictoc::toc()
+
+str(ar)
+```
+
+Or with the forward one:
+
+```{r}
+# tictoc::tic()
+attr <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "forw")
+# tictoc::toc()
+
+str(attr)
+```
+
+We can also calculate the attributable number corresponding to each day:
+
+```{r}
+# tictoc::tic()
+attr <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back", tot = FALSE)
+# tictoc::toc()
+
+str(attr)
+```

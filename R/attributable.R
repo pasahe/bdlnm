@@ -4,8 +4,11 @@
 #'
 #' @param x A fitted object returned by [bdlnm] (list with components `model` and `coef`).
 #' @param basis A DLNM crossbasis object produced by `dlnm`. It has to be of class [dlnm::crossbasis].
-#' @param exp Numeric vector of exposure values (one per observed time point) at which to compute attributable numbers and fractions. The vector must represent a continuous time series with no gaps between time points.
-#' @param cases Numeric vector of counts of the modelled outcome (one per observed time point). Has to be measured in the same continuous time scale as `exp`. If `NULL` only attributable fractions can be calculated.
+#' @param data A dataframe containing the time index representing the time point and the time series of exposure values and number of cases. Ensure that the continuous time series are provided continuously without gaps for attributable measures to be calculated properly. It can also include a column with a `0/1` indicator that filters the calculation of attributable measures for specific time periods.
+#' @param name_date A character with the name of the column with the date of time series measurement (optional).
+#' @param name_exposure A character with the name of the column with the time series exposure values.
+#' @param name_cases A character with the name of the column with the time series case values. If not provided, only attributable fractions per time point can be calculated.
+#' @param name_filter A character with the name of the column with the indicator that can filter the time points in which to calculate attributable measures (optional).
 #' @param tot Logical; if TRUE (default) returns total attributable number / fraction across the time series. If FALSE returns values for each time point.
 #' @param dir Character; "back" (default) or "forw" direction in the lag dimension for calculating attributable numbers and fractions.
 #' @param cen Numeric scalar; centering value for predictions. If missing the function will attempt to read it from attr(basis, "argvar")$cen.
@@ -20,47 +23,60 @@
 #' @export
 #'
 #' @examples
-#' # Set exposure-response and lag-response spline parameters
-#'  dlnm_var <- list(
-#'    var_prc = c(10, 75, 90),
-#'    var_fun = "ns",
-#'    lag_fun = "ns",
-#'    max_lag = 21,
-#'    lagnk = 3
-#'  )
+#'
+#' # Filter the dataset to reduce computational time:
+#'
+#' slondon <- london[london$year >= 2012,]
+#'
+#' # Exposure-response and lag-response spline parameters
+#' dlnm_var <- list(
+#'   var_prc = c(10, 75, 90),
+#'   var_fun = "ns",
+#'   lag_fun = "ns",
+#'   max_lag = 21,
+#'   lagnk = 3
+#' )
+#'
+#' # Cross-basis parameters
+#' argvar <- list(fun = dlnm_var$var_fun,
+#'                knots = stats::quantile(slondon$tmean,
+#'                                 dlnm_var$var_prc/100, na.rm = TRUE),
+#'                Bound = range(slondon$tmean, na.rm = TRUE))
+#'
+#' arglag <- list(fun = dlnm_var$lag_fun,
+#'                knots = dlnm::logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
+#'
+#' # Create crossbasis
+#' cb <- dlnm::crossbasis(slondon$tmean, lag = dlnm_var$max_lag, argvar, arglag)
+#'
+#' # Seasonality of mortality time series
+#' seas <- splines::ns(slondon$date, df = round(8 * length(slondon$date) / 365.25))
+#'
+#' # Prediction values (equidistant points)
+#' temp <- round(seq(min(slondon$tmean), max(slondon$tmean), by = 0.1), 1)
+#'
+#' # Model
+#'
+#' mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
+#'             basis = cb,
+#'              data = slondon,
+#'              family = "poisson",
+#'              sample.arg = list(seed = 432))
+#'
+#' # Predict
+#' cpred <- bcrosspred(mod, cb, at = temp)
+#'
+#' # compute centering (MMT) using minimum_effect
+#' mmt <- minimum_effect(mod, cb, at = temp)
+#' cen <- mmt$min.summary[["0.5quant"]]
+#'
+#' # Attributable numbers and fractions (using the backwards algorithm):
+#' ar <- attributable(mod, cb, slondon, name_date = "date",
+#' name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 #'
 #'
-#' # Set cross-basis parameters
-#'  argvar <- list(fun = dlnm_var$var_fun,
-#'                 knots = stats::quantile(london$tmean,
-#'                                  dlnm_var$var_prc/100, na.rm = TRUE),
-#'                 Bound = range(london$tmean, na.rm = TRUE))
 #'
-#'  arglag <- list(fun = dlnm_var$lag_fun,
-#'                 knots = dlnm::logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
-#'
-#'  # Create crossbasis
-#'  cb <- dlnm::crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
-#'
-#'  # Seasonality of mortality time series
-#'  seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
-#'
-#'  # Prediction values (equidistant points)
-#'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
-#'
-#'  # Fit the model
-#'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
-#'
-#'  # Center at Minimum Mortality Temperature (MMT)
-#'  mmt <- minimum_risk(mod, cb, at = temp)
-#'  cen <- mmt$min.summary[["0.5quant"]]
-#'
-#'  # Attributable numbers and fractions (using the backwards algorithm):
-#'  ar <- attributable(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back")
-#'
-#'
-#'
-attributable <- function(x, basis, exp, cases = NULL, tot = TRUE, dir = "back", cen, range = NULL) {
+attributable <- function(x, basis, data, name_date = NULL, name_exposure, name_cases = NULL, name_filter = NULL, tot = TRUE, dir = "back", cen, range = NULL) {
 
   ## -----------------------
   ## Basic checks
@@ -71,29 +87,110 @@ attributable <- function(x, basis, exp, cases = NULL, tot = TRUE, dir = "back", 
 
   # basis
   if (missing(basis) || !inherits(basis, "crossbasis")) {
-    cli::cli_abort("{.arg basis} must be an object of class {.cls 'crossbasis'}.")
+    cli::cli_abort("{.arg basis} must be an object of class {.cls crossbasis}.")
   }
 
-  # exp
-  if (missing(exp) || !is.numeric(exp)) {
-    cli::cli_abort("{.arg exp} must be a numeric vector of exposure values (one per observed time point).")
+  # data
+  if (missing(data)) {
+    cli::cli_abort("{.arg data} must be provided: a data.frame containing the time index and temporal series of exposures and (optionally) cases.")
   }
 
-  # cases
-  if (!is.null(cases)) {
-    if(!is.numeric(cases)) cli::cli_abort("{.arg cases} must be a numeric vector of counts (one per observed time point).")
+  if (!inherits(data, "data.frame")) {
+    cli::cli_abort("{.arg data} must be a {.cls data.frame}.")
+  }
+
+  # name_exposure (required)
+  if (missing(name_exposure) || !is.character(name_exposure) || length(name_exposure) != 1L) {
+    cli::cli_abort("{.arg name_exposure} must be a single string with the name of the exposure column in {.arg data}.")
+  }
+
+  if (!name_exposure %in% colnames(data)) {
+    cli::cli_abort("Exposure column {.val {name_exposure}} not found in {.arg data}.")
+  }
+
+  exp <- data[[name_exposure]]
+
+  # name_date (optional)
+  if (!is.null(name_date)) {
+    if (!is.character(name_date) || length(name_date) != 1L) {
+      cli::cli_abort("{.arg name_date} must be a single string naming the date column in {.arg data}.")
+    }
+    if (!name_date %in% colnames(data)) {
+      cli::cli_abort("Date column {.val {name_date}} not found in {.arg data}.")
+    }
+
+    date <- data[[name_date]]
+
   } else {
-    cli::cli_warn("Only attributable fractions can be calculated as {.arg cases} is not provided.")
+
+    cli::cli_warn(c("Ensure that {.arg data} contains time series measured continuously without gaps to properly calculate attributable measures.",
+                    "i" = "If you have only seasonal observations (for example, summers only), expand your data to the full sequence inserting NA for missing exposures/cases."))
+
+    date <- NULL
   }
 
-  if (length(cases) != length(exp)) {
-    cli::cli_abort("Length mismatch: {.arg exp} and {.arg cases} must have the same length.")
+  # name_cases (optional)
+  if (!is.null(name_cases)) {
+    if (!is.character(name_cases) || length(name_cases) != 1L) {
+      cli::cli_abort("{.arg name_cases} must be a single string naming the cases column in {.arg data}.")
+    }
+    if (!name_cases %in% colnames(data)) {
+      cli::cli_abort("Cases column {.val {name_cases}} not found in {.arg data}.")
+    }
+    cases <- data[[name_cases]]
+  } else {
+    cli::cli_warn("Only attributable fractions per time point can be calculated as {.arg name_cases} is not provided.")
+    cases <- NULL
+    tot <- FALSE
+  }
+
+  # name_filter (optional)
+  if (!is.null(name_filter)) {
+    if (!is.character(name_filter) || length(name_filter) != 1L) {
+      cli::cli_abort("{.arg name_filter} must be a single string naming the filter column in {.arg data}.")
+    }
+    if (!name_filter %in% colnames(data)) {
+      cli::cli_abort("Filter column {.val {name_filter}} not found in {.arg data}.")
+    }
+    filter <- data[[name_filter]]
+    cli::cli_warn("Attributable fractions and numbers will only be calculated for time points filtered by {.val {name_filter}}")
+  } else {
+    filter <- NULL
+  }
+
+  # validate exposure and cases types
+  if (!is.numeric(exp)) {
+    cli::cli_abort("Exposure column {.val {name_exposure}} must be numeric.")
+  }
+  if (!is.null(cases) && !is.numeric(cases)) {
+    cli::cli_abort("Cases column {.val {name_cases}} must be numeric.")
+  }
+
+  # validate date type
+  if (!is.null(date) && !inherits(date, "Date") && !inherits(date, "POSIXt")) {
+    cli::cli_abort("Date column {.val {name_date}} must be of class {.cls Date} or {.cls POSIXt}.")
+  }
+
+  # validate filter
+  if(!is.null(filter) && (!is.numeric(filter) | !all(filter %in% c(0, 1)))) {
+    cli::cli_abort("Filter column {.val {name_filter}} must contain only {.val 0} and {.val 1}.")
+  }
+
+  # enforce continuity: require consecutive indices (no gaps).
+  # Here we require diff == 1 relative to the integer time index.
+  if (!is.null(date) && !all(diff(date) == 1L)) {
+    cli::cli_abort(c(
+      "The provided date ({.val {name_date}}) is not continuous: gaps were detected.",
+      "i" = "Attributable measures require a continuous time series without missing time points.",
+      "i" = "If you have only seasonal observations (for example, summers only), expand your data to the full sequence inserting NA for missing exposures/cases."
+    ))
   }
 
   # direction
   if (! dir %in% c("back", "forw")) {
-    cli::cli_abort("{.arg cases} must be one of: {.val 'back'}, {.val 'forw'}.")
+    cli::cli_abort("{.arg dir} must be one of: {.val 'back'}, {.val 'forw'}.")
   }
+
 
   # define centering value
 
@@ -172,15 +269,17 @@ attributable <- function(x, basis, exp, cases = NULL, tot = TRUE, dir = "back", 
         M_an[,i] <- rowSums(an_sample)
       }
 
+
       # total if requested
-      # how to calculate total AF if cases are not provided? Is it possible?
-      if(tot && !is.null(cases)) {
-        isna <- is.na(M_an[, i])
-        an[1L, i] <- sum(M_an[!isna, i])
-        af[1L, i] <- if(sum(rowMeans(lagged_cases)[!isna]) > 0) an[1L, i]/sum(rowMeans(lagged_cases)[!isna]) else NA
+      if(tot) {
+        ind <- if(is.null(filter)) !is.na(M_an[, i]) else !is.na(M_an[, i]) & (filter == 1)
+        an[1L, i] <- sum(M_an[ind, i])
+        af[1L, i] <- if(sum(cases[ind]) > 0) an[1L, i]/sum(cases[ind]) else NA
       } else {
         an[, i] <- M_an[,i]
         af[, i] <- exp(rowSums(log(rr_sample)))
+        # insert missings if time point is not selected
+        if(!is.null(filter)) an[filter == 0, ] <- NA
       }
     }
 
@@ -208,41 +307,55 @@ attributable <- function(x, basis, exp, cases = NULL, tot = TRUE, dir = "back", 
       if(!is.null(cases)) M_an[,i] <- M_af[,i] * cases
 
       # total if requested
-      if(tot && !is.null(cases)) {
-        isna <- is.na(M_an[, i])
-        an[1L, i] <- sum(M_an[!isna, i], na.rm = TRUE)
-        af[1L, i] <- if(sum(cases[!isna]) > 0) an[,i]/sum(cases[!isna]) else NA
+      if(tot) {
+        ind <- if(is.null(filter)) !is.na(M_an[, i]) else !is.na(M_an[, i]) & (filter == 1)
+        an[1L, i] <- sum(M_an[ind, i])
+        af[1L, i] <- if(sum(cases[ind]) > 0) an[1L, i]/sum(cases[ind]) else NA
       } else {
         an[, i] <- M_an[,i]
         af[, i] <- M_af[,i]
+        # insert missings if time point is not selected
+        if(!is.null(filter)) an[filter == 0, ] <- NA
       }
 
     }
 
   }
 
-  #Remove rows with NA (will be in the beginning or in the end depending on the algorithm type)
+  #Remove rows with NA (will be in the beginning or in the end depending on the algorithm type, and also if a filter is specified)
   if(!tot) {
-    rownames(an) <- rownames(af) <- paste0("day", seq_along(exp))
+    if(!is.null(date)) {
+      rownames(an) <- rownames(af) <- as.character(date)
+    } else {
+      rownames(an) <- rownames(af) <- paste0("time", seq_along(exp))
+    }
     colnames(an) <- colnames(af) <- paste0("sample", seq_len(n_sample))
-    an <- an[!rowSums(is.na(an)),]
-    af <- af[!rowSums(is.na(af)),]
+
+    if(!is.null(cases)) {
+      ind <- !rowSums(is.na(an))
+    } else {
+      ind <- !rowSums(is.na(af))
+    }
+
+    an <- an[ind,]
+    af <- af[ind,]
+
   }
 
   ## -----------------------
   ## summaries
   ## -----------------------
 
-  ansum <- afsum <-  matrix(nrow = nrow(an), ncol = ncol(cpred$allfit.summary))
+  ansum <- afsum <-  matrix(nrow = nrow(af), ncol = ncol(cpred$allfit.summary))
   rownames(ansum) <- rownames(afsum) <- rownames(an)
   colnames(ansum) <- colnames(afsum) <- colnames(cpred$allfit.summary)
+
+  quant_cols <- grep("quant$", colnames(cpred$allfit.summary), value = TRUE)
+  quant_val <- as.numeric(gsub("quant$", "", quant_cols))
 
   if(!is.null(cases)) {
     ansum[,"mean"] <- apply(an, 1, mean)
     ansum[,"sd"] <- apply(an, 1, stats::sd)
-
-    quant_cols <- grep("quant$", colnames(cpred$allfit.summary), value = TRUE)
-    quant_val <- as.numeric(gsub("quant$", "", quant_cols))
 
     for(i in seq_along(quant_cols)) {
       ansum[, quant_cols[i]] <- apply(an, 1, function (x) stats::quantile(x, quant_val[i]))

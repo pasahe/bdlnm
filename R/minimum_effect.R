@@ -48,9 +48,9 @@
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
 #'
 #'  # Find minimum risk exposure value
-#'  mmt <- minimum_risk(mod, cb, at = temp)
+#'  mmt <- minimum_effect(mod, cb, at = temp)
 #'
-minimum_risk <- function(x, basis, at = NULL, from = NULL, to = NULL, by = NULL) {
+minimum_effect <- function(x, basis, at = NULL, from = NULL, to = NULL, by = NULL) {
 
   ## ---------------------------
   ## Basic checks

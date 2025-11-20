@@ -55,8 +55,8 @@
 #'
 bdlnm <- function(formula,
                   basis,
-                  family = "gaussian",
                   data,
+                  family = "gaussian",
                   sample.arg = list(n = 1000, seed = 0L),
                   ci.level = 0.95,
                   ...) {
@@ -68,7 +68,7 @@ bdlnm <- function(formula,
     cli::cli_abort("A {.arg data} data.frame must be provided.")
   }
 
-  if (is.null(basis)) {
+  if (missing(basis)) {
     cli::cli_abort(
       "A basis of class {.cls 'crossbasis'} or {.cls 'onebasis'} must be provided to {.arg basis}."
     )
@@ -82,6 +82,12 @@ bdlnm <- function(formula,
   } else {
     cli::cli_abort(
       "Unsupported class for {.arg basis}. Expected {.cls 'crossbasis'} or {.cls 'onebasis'}."
+    )
+  }
+
+  if (!is.list(sample.arg)) {
+    cli::cli_abort(
+      "{.arg sample.arg} must be a {.val list}."
     )
   }
 

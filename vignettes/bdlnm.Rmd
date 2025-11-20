@@ -78,17 +78,17 @@ temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 Fit the bayesian DLNM model with the function `bdlnm()`. We will use a Poisson model:
 
 ```{r}
-tictoc::tic()
+# tictoc::tic()
 mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
-tictoc::toc()
+# tictoc::toc()
 ```
 
 We can set a seed for reproducibility:
 
 ```{r}
-tictoc::tic()
+# tictoc::tic()
 mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson", sample.arg = list(seed = 5243))
-tictoc::toc()
+# tictoc::toc()
 ```
 
 # Minimum mortality temperature
@@ -96,9 +96,9 @@ tictoc::toc()
 Let's get the minimum mortality temperature (MMT), defined as the value at which the overall mortality risk is minimized:
 
 ```{r}
-tictoc::tic()
-mmt <- minimum_risk(mod, cb, at = temp)
-tictoc::toc()
+# tictoc::tic()
+mmt <- minimum_effect(mod, cb, at = temp)
+# tictoc::toc()
 
 str(mmt)
 
@@ -126,17 +126,17 @@ cen
 Predict the risk at the quantile temperature values:
 
 ```{r}
-tictoc::tic()
+# tictoc::tic()
 cpred <- bcrosspred(mod, cb, at = temp)
-tictoc::toc()
+# tictoc::toc()
 ```
 
 We can repeat it centering the risk at the MMT median values obtained before:
 
 ```{r}
-tictoc::tic()
+# tictoc::tic()
 cpred <- bcrosspred(mod, cb, at = temp, cen = cen)
-tictoc::toc()
+# tictoc::toc()
 ```
 
 Let's see the `str` of the generated prediction:
@@ -223,36 +223,4 @@ Or the exposure-response at lag 0:
 ```{r fig.width = 7, fig.height = 6}
 plot(cpred , "slices", lag = 0, col=4, ylab="RR",
      main=paste0("Association at Lag 0"))
-```
-
-# Attributable number
-
-Calculate the fraction and number of deaths attributable to temperature in all the period. We can calculate it with the backwards algorithm:
-
-```{r}
-tictoc::tic()
-attr <- attributable(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back")
-tictoc::toc()
-
-str(ar)
-```
-
-Or with the forward one:
-
-```{r}
-tictoc::tic()
-attr <- attributable(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "forw")
-tictoc::toc()
-
-str(attr)
-```
-
-We can also calculate the attributable number corresponding to each day:
-
-```{r}
-tictoc::tic()
-attr <- attributable(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back", tot = FALSE)
-tictoc::toc()
-
-str(attr)
 ```

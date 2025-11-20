@@ -7,8 +7,8 @@
 bdlnm(
   formula,
   basis,
-  family = "gaussian",
   data,
+  family = "gaussian",
   sample.arg = list(n = 1000, seed = 0L),
   ci.level = 0.95,
   ...
@@ -19,9 +19,9 @@ bdlnm(
 
 \item{basis}{A DLNM basis object produced by \code{dlnm}. It can be one of \link[dlnm:crossbasis]{dlnm::crossbasis} or \link[dlnm:onebasis]{dlnm::onebasis}.}
 
-\item{family}{Family name passed to \link[INLA:inla]{INLA::inla} (default \code{"gaussian"}).}
-
 \item{data}{A data frame used for the model fitted with \link[INLA:inla]{INLA::inla}.}
+
+\item{family}{Family name passed to \link[INLA:inla]{INLA::inla} (default \code{"gaussian"}).}
 
 \item{sample.arg}{List containing the arguments passed to \link[INLA:posterior.sample]{INLA::inla.posterior.sample}. Default sets \code{n = 1000} as the number of samples and \code{seed = 0L} (set the seed at 'random').}
 

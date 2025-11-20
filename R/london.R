@@ -9,6 +9,7 @@
 #' @format ## `london`
 #' A tibble with 8.279 rows and 7 columns:
 #' \describe{
+#'   \item{time}{Date index}
 #'   \item{date}{Date}
 #'   \item{year}{Year}
 #'   \item{dow}{Day of the week}

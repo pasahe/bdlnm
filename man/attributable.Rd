@@ -7,8 +7,11 @@
 attributable(
   x,
   basis,
-  exp,
-  cases = NULL,
+  data,
+  name_date = NULL,
+  name_exposure,
+  name_cases = NULL,
+  name_filter = NULL,
   tot = TRUE,
   dir = "back",
   cen,
@@ -20,9 +23,15 @@ attributable(
 
 \item{basis}{A DLNM crossbasis object produced by \code{dlnm}. It has to be of class \link[dlnm:crossbasis]{dlnm::crossbasis}.}
 
-\item{exp}{Numeric vector of exposure values (one per observed time point) at which to compute attributable numbers and fractions. The vector must represent a continuous time series with no gaps between time points.}
+\item{data}{A dataframe containing the time index representing the time point and the time series of exposure values and number of cases. Ensure that the continuous time series are provided continuously without gaps for attributable measures to be calculated properly. It can also include a column with a \code{0/1} indicator that filters the calculation of attributable measures for specific time periods.}
 
-\item{cases}{Numeric vector of counts of the modelled outcome (one per observed time point). Has to be measured in the same continuous time scale as \code{exp}. If \code{NULL} only attributable fractions can be calculated.}
+\item{name_date}{A character with the name of the column with the date of time series measurement (optional).}
+
+\item{name_exposure}{A character with the name of the column with the time series exposure values.}
+
+\item{name_cases}{A character with the name of the column with the time series case values. If not provided, only attributable fractions per time point can be calculated.}
+
+\item{name_filter}{A character with the name of the column with the indicator that can filter the time points in which to calculate attributable measures (optional).}
 
 \item{tot}{Logical; if TRUE (default) returns total attributable number / fraction across the time series. If FALSE returns values for each time point.}
 
@@ -45,43 +54,56 @@ A list with elements:
 It computes the attributable number (AN) and fraction (AF) from a fitted B-DLNM returned by \code{bdlnm()}.
 }
 \examples{
-# Set exposure-response and lag-response spline parameters
- dlnm_var <- list(
-   var_prc = c(10, 75, 90),
-   var_fun = "ns",
-   lag_fun = "ns",
-   max_lag = 21,
-   lagnk = 3
- )
 
+# Filter the dataset to reduce computational time:
 
-# Set cross-basis parameters
- argvar <- list(fun = dlnm_var$var_fun,
-                knots = stats::quantile(london$tmean,
-                                 dlnm_var$var_prc/100, na.rm = TRUE),
-                Bound = range(london$tmean, na.rm = TRUE))
+slondon <- london[london$year >= 2012,]
 
- arglag <- list(fun = dlnm_var$lag_fun,
-                knots = dlnm::logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
+# Exposure-response and lag-response spline parameters
+dlnm_var <- list(
+  var_prc = c(10, 75, 90),
+  var_fun = "ns",
+  lag_fun = "ns",
+  max_lag = 21,
+  lagnk = 3
+)
 
- # Create crossbasis
- cb <- dlnm::crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
+# Cross-basis parameters
+argvar <- list(fun = dlnm_var$var_fun,
+               knots = stats::quantile(slondon$tmean,
+                                dlnm_var$var_prc/100, na.rm = TRUE),
+               Bound = range(slondon$tmean, na.rm = TRUE))
 
- # Seasonality of mortality time series
- seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
+arglag <- list(fun = dlnm_var$lag_fun,
+               knots = dlnm::logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
 
- # Prediction values (equidistant points)
- temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
+# Create crossbasis
+cb <- dlnm::crossbasis(slondon$tmean, lag = dlnm_var$max_lag, argvar, arglag)
 
- # Fit the model
- mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+# Seasonality of mortality time series
+seas <- splines::ns(slondon$date, df = round(8 * length(slondon$date) / 365.25))
 
- # Center at Minimum Mortality Temperature (MMT)
- mmt <- minimum_risk(mod, cb, at = temp)
- cen <- mmt$min.summary[["0.5quant"]]
+# Prediction values (equidistant points)
+temp <- round(seq(min(slondon$tmean), max(slondon$tmean), by = 0.1), 1)
 
- # Attributable numbers and fractions (using the backwards algorithm):
- ar <- attributable(mod, cb, london$tmean, london$mort_75plus, cen = cen, dir = "back")
+# Model
+
+mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
+            basis = cb,
+             data = slondon,
+             family = "poisson",
+             sample.arg = list(seed = 432))
+
+# Predict
+cpred <- bcrosspred(mod, cb, at = temp)
+
+# compute centering (MMT) using minimum_effect
+mmt <- minimum_effect(mod, cb, at = temp)
+cen <- mmt$min.summary[["0.5quant"]]
+
+# Attributable numbers and fractions (using the backwards algorithm):
+ar <- attributable(mod, cb, slondon, name_date = "date",
+name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 
 
 

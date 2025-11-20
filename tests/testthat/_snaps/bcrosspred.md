@@ -1,33 +1,16 @@
-# error if no models nor coefficients are supplied
+# bcrosspred errors when some argument is missing or invalid
 
-    Code
-      bcrosspred(bdlnm:::cb_london, at = temp)
-    Condition
-      Error in `bcrosspred()`:
-      ! At least 'model' or 'coef' must be provided
+    The object returned by `bdlnm()` must be provided as the `x` argument.
 
-# error if both model and coefficients are supplied
+---
 
-    Code
-      bcrosspred(bdlnm:::cb_london, mod = bdlnm:::mod_london, coef = bdlnm:::coef_london,
-      at = temp)
-    Condition
-      Error in `bcrosspred()`:
-      ! argument 2 matches multiple formal arguments
+    `x` must be the list returned by `bdlnm()`: it should contain the fitted INLA model "$model" and the posterior samples matrix "$coef".
 
-# error if another kind of model is supplied
+---
 
-    Code
-      bcrosspred(bdlnm:::cb_london, mod = mod_2, at = temp)
-    Condition
-      Error in `bcrosspred()`:
-      ! argument 2 matches multiple formal arguments
+    Unsupported `basis` class. Expected <'crossbasis'> or <'onebasis'>.
 
-# error if 'coef' is provided without a ' model.link'
+---
 
-    Code
-      bcrosspred(bdlnm:::cb_london, coef = bdlnm:::coef_london, at = temp)
-    Condition
-      Error in `bcrosspred()`:
-      ! 'model.link' has to be provided if a model is not supplied.
+    Unsupported `basis` class. Expected <'crossbasis'> or <'onebasis'>.
 

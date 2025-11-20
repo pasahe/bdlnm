@@ -7,17 +7,17 @@
 \method{plot}{min.risk}(x, line.arg = NULL, ...)
 }
 \arguments{
-\item{x}{Object of class \code{min.risk} as returned by \link{minimum_risk}.}
+\item{x}{Object of class \code{min.risk} as returned by \link{minimum_effect}.}
 
 \item{line.arg}{List of graphical arguments for the plotting of the median vertical line passed to \link[graphics:abline]{graphics::abline}.}
 
 \item{...}{Additional graphical parameters passed to \link{hist}.}
 }
 \description{
-Plot the posterior distribution of the minimum-risk exposure values returned by \code{minimum_risk()}.
+Plot the posterior distribution of the minimum-risk exposure values returned by \code{minimum_effect()}.
 }
 \details{
-Plot an histogram showing the posterior distribution of the minimum-risk exposure values returned by \code{minimum_risk()}. The original prediction grid will be used as axis breaks. A dashed red vertical line marks the posterior median (0.5 quantile when available).
+Plot an histogram showing the posterior distribution of the minimum-risk exposure values returned by \code{minimum_effect()}. The original prediction grid will be used as axis breaks. A dashed red vertical line marks the posterior median (0.5 quantile when available).
 }
 \examples{
 
@@ -54,7 +54,7 @@ Plot an histogram showing the posterior distribution of the minimum-risk exposur
  family = "poisson")
 
  # Find minimum risk exposure value
- mmt <- minimum_risk(mod, cb, at = temp)
+ mmt <- minimum_effect(mod, cb, at = temp)
 
  # Plot
  plot(mmt, xlab = "Temperature (ºC)",
