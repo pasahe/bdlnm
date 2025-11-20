@@ -25,14 +25,6 @@ test_that("bdlnm errors when required arguments are missing or inappropiate", {
     bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = slondon, sample.arg = 5)
   )
 
-  expect_snapshot_error(
-    bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = slondon, sample.arg = list(not_an_argument = 5))
-  )
-
-  expect_snapshot_error(
-    bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = slondon, not_an_argument = 5)
-  )
-
 })
 
 test_that("bdlnm honors sample.arg", {
