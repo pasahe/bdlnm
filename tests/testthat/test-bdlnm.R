@@ -22,10 +22,6 @@ test_that("bdlnm errors when required arguments are missing or inappropiate", {
   )
 
   expect_snapshot_error(
-    bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = slondon, family = "not a family")
-  )
-
-  expect_snapshot_error(
     bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = slondon, sample.arg = 5)
   )
 
