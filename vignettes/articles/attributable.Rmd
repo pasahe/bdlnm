@@ -1,5 +1,5 @@
 ---
-title: "attributable"
+title: "Attributable measures"
 ---
 
 ```{r, include = FALSE}
@@ -15,17 +15,10 @@ library(dlnm)
 library(dplyr)
 library(stats)
 library(splines)
+library(utils)
 ```
 
-This article is a short tutorial to calculate attributable measures using the `attributable()` function. We will use the built-in `london` dataset, but this time filtered for only the year `2012` to reduce the computational time of calculations. 
-
-```{r}
-# filter london dataset to run faster
-slondon <- london |>
-  filter(year >= 2012)
-
-slondon
-```
+This article is a short tutorial to calculate attributable measures using the `attributable()` function. We will use the built-in `london` dataset.
 
 First, we have to prepare the data, build the DLNM crossbasis, fit the B-DLNM model and obtain the minimum mortality temperature value to center the risks in order to calculate properly attributable measures. 
 
@@ -41,27 +34,27 @@ dlnm_var <- list(
 
 # Cross-basis parameters
 argvar <- list(fun = dlnm_var$var_fun,
-               knots = quantile(slondon$tmean,
+               knots = quantile(london$tmean,
                                 dlnm_var$var_prc/100, na.rm = TRUE),
-               Bound = range(slondon$tmean, na.rm = TRUE))
+               Bound = range(london$tmean, na.rm = TRUE))
 
 arglag <- list(fun = dlnm_var$lag_fun,
                knots = logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
 
 # Create crossbasis
-cb <- crossbasis(slondon$tmean, lag = dlnm_var$max_lag, argvar, arglag)
+cb <- crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
 
 # Seasonality of mortality time series
-seas <- ns(slondon$date, df = round(8 * length(slondon$date) / 365.25))
+seas <- ns(london$date, df = round(8 * length(london$date) / 365.25))
 
 # Prediction values (equidistant points)
-temp <- round(seq(min(slondon$tmean), max(slondon$tmean), by = 0.1), 1)
+temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
 # Model
 
 mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
            basis = cb,
-           data = slondon,
+           data = london,
            family = "poisson",
            sample.arg = list(seed = 432))
 
@@ -80,17 +73,17 @@ We can calculate it with the backwards algorithm:
 
 ```{r}
 # tictoc::tic()
-attr <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
+attr <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 # tictoc::toc()
 
-str(ar)
+str(attr)
 ```
 
 Or with the forward one:
 
 ```{r}
 # tictoc::tic()
-attr <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "forw")
+attr <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "forw")
 # tictoc::toc()
 
 str(attr)
@@ -100,8 +93,27 @@ We can also calculate the attributable number corresponding to each day:
 
 ```{r}
 # tictoc::tic()
-attr <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back", tot = FALSE)
+attr <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back", tot = FALSE)
 # tictoc::toc()
 
 str(attr)
 ```
+
+Finally, we can also filter for some specific time points. For example, imagine we only want attributable measures calculated for the summer of `2012`.
+
+```{r}
+slondon <- london |> 
+  mutate(
+    summer = case_when(
+      date >= as.Date("2012-06-01") & date <= as.Date("2012-08-31") ~ 1,
+      .default = 0
+    )
+  )
+
+# tictoc::tic()
+attr <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", name_filter = "summer", cen = cen, dir = "forw", tot = FALSE)
+# tictoc::toc()
+
+str(attr)
+```
+

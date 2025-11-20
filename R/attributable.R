@@ -177,6 +177,10 @@ attributable <- function(x, basis, data, name_date = NULL, name_exposure, name_c
     cli::cli_abort("Filter column {.val {name_filter}} must contain only {.val 0} and {.val 1}.")
   }
 
+  if(!is.null(filter) && all(filter == 0)) {
+    cli::cli_abort("Filter column  {.val {name_filter}} must contain some row equal to {.val 1}, corresponding to the filtered time points.")
+  }
+
   # enforce continuity: require consecutive indices (no gaps).
   # Here we require diff == 1 relative to the integer time index.
   if (!is.null(date) && !all(diff(date) == 1L)) {

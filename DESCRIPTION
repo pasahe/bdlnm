@@ -7,8 +7,8 @@ Authors@R: c(
     person(given = "Marcos", family = "Quijal", email = "marcos.quijal@isglobal.org", role = c("aut")),
     person(given = "Joan", family = "Ballester", email = "joan.ballester@isglobal.org", role = c("aut")),
     person(given = "Cristian", family = "Tebé", email = "ctebe@igtp.cat", role = c("ctb")),
-    person(given = c("Miguel", "A."), family = c("Martínez", "Beneito"), email = "miguel.a.martinez@uv.es", role = c("aut", "ths")),
-    person(given = "Marc", family = c("Marí", "Dell'Olmo"), email = "mmari@aspb.cat", role = c("aut", "ths"))
+    person(given = "Miguel A.", family = "Martínez Beneito", email = "miguel.a.martinez@uv.es", role = c("aut", "ths")),
+    person(given = "Marc", family = "Marí Dell'Olmo", email = "mmari@aspb.cat", role = c("aut", "ths"))
   )
 Description: Collection of functions for Bayesian distributed lag linear and non-linear models. 
 License: GPL (>= 3)

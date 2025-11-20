@@ -21,6 +21,7 @@ library(bdlnm)
 library(dlnm)
 library(INLA)
 library(splines)
+library(utils)
 ```
 
 # london dataset
@@ -28,7 +29,7 @@ library(splines)
 We will use the built-in dataset, `london` which contains daily temperature and mortality data from 2000 to 2012. Using Distributed Non-Linear Models (DLNM) we will estimate the effect of the temperature exposure to mortality in the population with more than 75 years old, taking 21 days of lags.
 
 ```{r}
-london
+head(london)
 ```
 
 # Set DLNM parameters
