@@ -30,12 +30,12 @@ Imports:
     graphics,
     grDevices,
     stats,
-    utils,
-    sn
+    utils
 Suggests:
   INLA (>= 23.4.24),
   knitr,
   rmarkdown,
-  testthat (>= 3.0.0)
+  testthat (>= 3.0.0),
+  sn
 Additional_repositories: https://inla.r-inla-download.org/R/stable
 Config/Needs/website: rmarkdown
