@@ -99,19 +99,19 @@ attr <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean
 str(attr)
 ```
 
-Finally, we can also filter for some specific time points. For example, imagine we only want attributable measures calculated for the summer of `2012`.
+Finally, we can also filter for some specific time points. For example, imagine we only want attributable measures calculated for summers.
 
 ```{r}
 slondon <- london |> 
   mutate(
     summer = case_when(
-      date >= as.Date("2012-06-01") & date <= as.Date("2012-08-31") ~ 1,
+      lubridate::month(date) >= 6 & lubridate::month(date) <= 8 ~ 1,
       .default = 0
     )
   )
 
 # tictoc::tic()
-attr <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", name_filter = "summer", cen = cen, dir = "forw", tot = FALSE)
+attr <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", name_filter = "summer", cen = cen, dir = "back", tot = FALSE)
 # tictoc::toc()
 
 str(attr)

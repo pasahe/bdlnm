@@ -11,7 +11,7 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 status](https://www.r-pkg.org/badges/version/bdlnm)](https://CRAN.R-project.org/package=bdlnm)
 [![R-CMD-check](https://github.com/pasahe/bdlnm/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pasahe/bdlnm/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
-coverage](https://codecov.io/gh/pasahe/bdlnm/graph/badge.svg?token=EXX0AMK19O)](https://app.codecov.io/gh/pasahe/bdlnm)
+coverage](https://codecov.io/gh/pasahe/bdlnm/graph/badge.svg)](https://app.codecov.io/gh/pasahe/bdlnm)
 <!-- badges: end -->
 
 The goal of bdlnm is to provide a collection of functions for
@@ -22,11 +22,19 @@ distributed lag linear (DLMs) and non-linear (DLNMs) bayesian models.
 You can install the development version of bdlnm like so:
 
 ``` r
-pak::pkg_install("pasahe/bdlnm")
+devtools::install_github("pasahe/bdlnm")
 ```
 
 Because this is a private repository, you have to get installation
 permissions.
+
+> At least the stable version of INLA 23.4.24 (or newest) must be
+> installed previously. You can install the newest stable INLA version
+> by:
+
+``` r
+install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
+```
 
 <!-- ## Example -->
 
@@ -39,23 +47,3 @@ permissions.
 <!-- ## basic example code -->
 
 <!-- ``` -->
-
-<!-- What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so: -->
-
-<!-- ```{r cars} -->
-
-<!-- summary(cars) -->
-
-<!-- ``` -->
-
-<!-- You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date. `devtools::build_readme()` is handy for this. -->
-
-<!-- You can also embed plots, for example: -->
-
-<!-- ```{r pressure, echo = FALSE} -->
-
-<!-- plot(pressure) -->
-
-<!-- ``` -->
-
-<!-- In that case, don't forget to commit and push the resulting figure files, so they display on GitHub and CRAN. -->

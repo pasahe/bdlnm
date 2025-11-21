@@ -29,16 +29,16 @@ The goal of bdlnm is to provide a collection of functions for distributed lag li
 You can install the development version of bdlnm like so:
 
 ``` r
-# install the R-INLA package
-install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
-
 devtools::install_github("pasahe/bdlnm")
 ```
 
 Because this is a private repository, you have to get installation permissions.
 
->  At least the stable version of INLA 23.4.24 (or newest) must be installed previously.
+>  At least the stable version of INLA 23.4.24 (or newest) must be installed previously. You can install the newest stable INLA version by:
 
+``` r
+install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
+```
 
 <!-- ## Example -->
 
