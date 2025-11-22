@@ -18,7 +18,7 @@ library(splines)
 library(utils)
 ```
 
-This article is a short tutorial to calculate attributable measures using the `attributable()` function. We will use the built-in `london` dataset.
+This article is a short tutorial to calculate attributable measures using the `attributable()` function. We will use the built-in `london` dataset. 
 
 First, we have to prepare the data, build the DLNM crossbasis, fit the B-DLNM model and obtain the minimum mortality temperature value to center the risks in order to calculate properly attributable measures. 
 

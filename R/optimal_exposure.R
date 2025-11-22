@@ -1,15 +1,16 @@
-#' Minimum-risk exposure value estimation
+#' Optimal effect exposure value estimation
 #'
-#' The function finds the exposure value that minimises the overall effect for each posterior sample, together with a small summary of these minima. This exposure value is called Minimum Mortality Temperature (MMT) in case of the relationship between temperature and mortality.
+#' The function finds the exposure value that optimizes the overall effect for each posterior sample, together with a small summary of these values. The user can decide to choose the optimal exposure as the value that has either the minimum or the maximum estimated effect. In case of finding the minimum exposure effect in the context of the relationship between temperature and mortality, this value is called Minimum Mortality Temperature (MMT).
 #'
-#' @param x A fitted object returned by [bdlnm] (list with components `model` and `coef`).
+#' @param object A fitted `"bdlnm"` class object returned by [bdlnm].
 #' @param basis A DLNM basis object produced by `dlnm`. It can be one of [dlnm::crossbasis] or [dlnm::onebasis].
 #' @param at Values (or matrix) of the predictor at which to predict; can be `NULL` and reconstructed from `from`, `to`, `by` and the basis attributes.
 #' @param from,to,by Optional numeric used to construct `at` when not provided.
+#' @param which Character string specifying if the optimal exposure value is chosen as the one that minimizes the effect or as the one that maximizes it. By default is `"min"`.
 #'
-#' @returns A list of class `min.risk` containing:
-#'  - `min`: numeric vector with the minimum-exposure value for each posterior sample
-#'  - `min.summary`: data frame with summary statistics for the minima
+#' @returns A list of class `optimal_exposure` containing:
+#'  - `est`: numeric vector with the optimal exposure value for each posterior sample
+#'  - `summary`: data frame with summary statistics for these optimal values
 #'
 #'  The returned object has attribute `xvar` containing the exposure grid used.
 #'
@@ -48,16 +49,16 @@
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
 #'
 #'  # Find minimum risk exposure value
-#'  mmt <- minimum_effect(mod, cb, at = temp)
+#'  mmt <- optimal_exposure(mod, cb, at = temp)
 #'
-minimum_effect <- function(x, basis, at = NULL, from = NULL, to = NULL, by = NULL) {
+optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, by = NULL, which = "min") {
 
   ## ---------------------------
   ## Basic checks
   ## ---------------------------
 
   # check object
-  check_bdlnm(x)
+  check_bdlnm(object)
 
   # check basis
   if(missing(basis) || !inherits(basis, "crossbasis")) {
@@ -70,7 +71,7 @@ minimum_effect <- function(x, basis, at = NULL, from = NULL, to = NULL, by = NUL
   lag <- attr(basis,"lag")
 
   # determine number of posterior samples
-  n_sample <- attr(x, "n_sim")
+  n_sample <- attr(object, "n_sim")
 
   # Set at if not provided
   if (is.null(at)) {
@@ -102,6 +103,10 @@ minimum_effect <- function(x, basis, at = NULL, from = NULL, to = NULL, by = NUL
     }
   }
 
+  if(! which %in% c("min", "max")){
+    cli::cli_abort("{.arg which} has to be either {.val min} or {.val max}.")
+  }
+
   ## ---------------------------
   ## Predict using bcrosspred()
   ## ---------------------------
@@ -113,48 +118,56 @@ minimum_effect <- function(x, basis, at = NULL, from = NULL, to = NULL, by = NUL
 
   # prediction
   cpred <- tryCatch({
-    suppressWarnings(bcrosspred(x, basis, at = at))
+    suppressWarnings(bcrosspred(object, basis, at = at))
   }, error = function(e) {
     cli::cli_abort("Failed to compute predictions via bcrosspred: {conditionMessage(e)}")
   })
 
   ## ---------------------------
-  ## Find the minimum
+  ## Find the optimal
   ## ---------------------------
 
-  # each column of allfit corresponds to a posterior sample; find index of min
-  min_index <- apply(cpred$allfit, 2, which.min)
-  min_values <- predvar[min_index]
+  # each column of allfit corresponds to a posterior sample; find index of optimal
+  if(which == "min") {
+    which.fun <- which.min
+  } else {
+    which.fun <- which.max
+  }
 
-  names(min_values) <- paste0("sample", seq_len(n_sample))
+  opt_index <- apply(cpred$allfit, 2, which.fun)
+  opt_values <- predvar[opt_index]
+
+  names(opt_values) <- paste0("sample", seq_len(n_sample))
 
   ## -----------------------
   ## summaries
   ## -----------------------
 
-  minsum <- matrix(nrow = 1, ncol = ncol(cpred$allfit.summary))
-  colnames(minsum) <- colnames(cpred$allfit.summary)
+  optsum <- numeric(ncol(cpred$allfit.summary))
+  names(optsum) <- colnames(cpred$allfit.summary)
 
-  minsum[,"mean"] <- mean(min_values)
-  minsum[,"sd"] <- stats::sd(min_values)
+  optsum["mean"] <- mean(opt_values)
+  optsum["sd"] <- stats::sd(opt_values)
 
   quant_cols <- grep("quant$", colnames(cpred$allfit.summary), value = TRUE)
   quant_val <- as.numeric(gsub("quant$", "", quant_cols))
 
   for(i in seq_along(quant_cols)) {
-    minsum[, quant_cols[i]] <- stats::quantile(min_values, quant_val[i])
+    optsum[quant_cols[i]] <- stats::quantile(opt_values, quant_val[i])
   }
 
   # approximate mode as most frequent observed value among samples
-  minsum[, "mode"] <- unique(min_values)[which.max(tabulate(match(min_values, unique(min_values))))]
+  optsum["mode"] <- unique(opt_values)[which.max(tabulate(match(opt_values, unique(opt_values))))]
 
   #
-  res <- list(min = min_values, min.summary = as.data.frame(minsum))
+  res <- list(est = opt_values, summary = optsum)
 
   attr(res, "xvar") <- predvar
 
-  #Define a class in order to do a plot
-  class(res) <- "min.risk"
+  attr(res, "which") <- which
+
+  #Define a class in order to do a plot method
+  class(res) <- "optimal_exposure"
 
   return(res)
 }

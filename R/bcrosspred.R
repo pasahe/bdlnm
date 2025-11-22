@@ -2,7 +2,7 @@
 #'
 #' It produces lag-specific, overall and (optionally) cumulative predictions from an object produced by `bdlnm()`.
 #'
-#' @param x A fitted object returned by [bdlnm] (list with components `model` and `coef`).
+#' @param object A fitted `"bdlnm"` class object returned by [bdlnm].
 #' @param basis A DLNM basis object produced by `dlnm`. It can be one of [dlnm::crossbasis] or [dlnm::onebasis].
 #' @param model.link Optional character; model link (if `NULL` it is
 #'   inferred from the fitted model).
@@ -59,27 +59,16 @@
 #'  cpred <- bcrosspred(mod, cb, at = temp)
 #'
 
-bcrosspred <- function(x,
-                       basis,
-                       model.link = NULL,
-                       at = NULL,
-                       from = NULL,
-                       to = NULL,
-                       by = NULL,
-                       lag = NULL,
-                       bylag = 1L,
-                       cen = NULL,
-                       ci.level = 0.95,
-                       cumul = FALSE) {
+bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL, to = NULL, by = NULL, lag = NULL, bylag = 1L, cen = NULL, ci.level = 0.95, cumul = FALSE) {
 
   ## -----------------------
   ## Basic checks
   ## -----------------------
 
-  check_bdlnm(x)
+  check_bdlnm(object)
 
   #Get model and coefficients
-  model <- x$model
+  model <- object$model
 
   if (missing(basis)) {
     cli::cli_abort(
@@ -99,13 +88,13 @@ bcrosspred <- function(x,
   }
 
   #Get only CB coefficients
-  coef <- extract_coef(x$coefficients, basis)
+  coef <- extract_coef(object$coefficients, basis)
 
   #Get model link
   if (is.null(model.link)) model.link <- get_link(model)
 
   #Get number of posterior samples
-  n_sample <- attr(x, "n_sim")
+  n_sample <- attr(object, "n_sim")
 
 
   #Get default lag
@@ -333,7 +322,7 @@ bcrosspred <- function(x,
   ## -----------------------
   ## summaries
   ## -----------------------
-  coefsum <- extract_coef(x$coefficients.summary, basis)
+  coefsum <- extract_coef(object$coefficients.summary, basis)
 
   # recalculate quantiles if another ci.level is provided
   quantiles <- c((1 - ci.level) / 2, 0.5, 1 - (1 - ci.level) / 2)

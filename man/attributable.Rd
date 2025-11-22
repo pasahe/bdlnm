@@ -5,7 +5,7 @@
 \title{Calculate attributable number and fractions from Bayesian distributed-lag models (B-DLNM).}
 \usage{
 attributable(
-  x,
+  object,
   basis,
   data,
   name_date = NULL,
@@ -19,13 +19,13 @@ attributable(
 )
 }
 \arguments{
-\item{x}{A fitted object returned by \link{bdlnm} (list with components \code{model} and \code{coef}).}
+\item{object}{A fitted \code{"bdlnm"} class object returned by \link{bdlnm}.}
 
 \item{basis}{A DLNM crossbasis object produced by \code{dlnm}. It has to be of class \link[dlnm:crossbasis]{dlnm::crossbasis}.}
 
-\item{data}{A dataframe containing the time index representing the time point and the time series of exposure values and number of cases. Ensure that the continuous time series are provided continuously without gaps for attributable measures to be calculated properly. It can also include a column with a \code{0/1} indicator that filters the calculation of attributable measures for specific time periods.}
+\item{data}{A dataframe containing the time series of exposure values (see \code{name_exposure}) and number of cases (see \code{name_cases}). Ensure that the time series are provided on a regular basis for attributable measures to be calculated properly. It can also include a column with the measured time point (see \code{name_date}) or a column with a \code{0/1} indicator that filters the calculation of attributable measures for specific time periods (see \code{name_filter}).}
 
-\item{name_date}{A character with the name of the column with the date of time series measurement (optional).}
+\item{name_date}{A character with the name of the column with the date (class \code{Date} or \code{POSICXt}) of the time series measurement (optional).}
 
 \item{name_exposure}{A character with the name of the column with the time series exposure values.}
 
@@ -57,8 +57,6 @@ It computes the attributable number (AN) and fraction (AF) from a fitted B-DLNM 
 
 # Filter the dataset to reduce computational time:
 
-slondon <- london[london$year >= 2012,]
-
 # Exposure-response and lag-response spline parameters
 dlnm_var <- list(
   var_prc = c(10, 75, 90),
@@ -70,39 +68,39 @@ dlnm_var <- list(
 
 # Cross-basis parameters
 argvar <- list(fun = dlnm_var$var_fun,
-               knots = stats::quantile(slondon$tmean,
+               knots = stats::quantile(london$tmean,
                                 dlnm_var$var_prc/100, na.rm = TRUE),
-               Bound = range(slondon$tmean, na.rm = TRUE))
+               Bound = range(london$tmean, na.rm = TRUE))
 
 arglag <- list(fun = dlnm_var$lag_fun,
                knots = dlnm::logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
 
 # Create crossbasis
-cb <- dlnm::crossbasis(slondon$tmean, lag = dlnm_var$max_lag, argvar, arglag)
+cb <- dlnm::crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
 
 # Seasonality of mortality time series
-seas <- splines::ns(slondon$date, df = round(8 * length(slondon$date) / 365.25))
+seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
 
 # Prediction values (equidistant points)
-temp <- round(seq(min(slondon$tmean), max(slondon$tmean), by = 0.1), 1)
+temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
 # Model
 
 mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
             basis = cb,
-             data = slondon,
+             data = london,
              family = "poisson",
              sample.arg = list(seed = 432))
 
 # Predict
 cpred <- bcrosspred(mod, cb, at = temp)
 
-# compute centering (MMT) using minimum_effect
-mmt <- minimum_effect(mod, cb, at = temp)
-cen <- mmt$min.summary[["0.5quant"]]
+# compute centering (MMT) using optimal_exposure
+mmt <- optimal_exposure(mod, cb, at = temp)
+cen <- mmt$summary[["0.5quant"]]
 
 # Attributable numbers and fractions (using the backwards algorithm):
-ar <- attributable(mod, cb, slondon, name_date = "date",
+ar <- attributable(mod, cb, london, name_date = "date",
 name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 
 

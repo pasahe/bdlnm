@@ -1,6 +1,6 @@
 #' London temperature and mortality data
 #'
-#' The dataset includes observed daily mean temperature and total number of deaths in London between 2000 and 2012. Mortality data is stratified for <75 years and 75+ years age groups.
+#' The dataset includes observed daily mean temperature and total number of deaths in London between 2000 and 2011. Mortality data is stratified for <75 years and 75+ years age groups.
 #'
 #' @docType data
 #' @keywords datasets

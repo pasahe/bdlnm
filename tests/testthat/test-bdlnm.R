@@ -5,9 +5,9 @@ test_that("ensure bdlnm returned expected structure", {
   expect_equal(attr(mod, "n_sim"), n_sim)
   expect_equal(class(mod$model), "inla")
   expect_equal(class(mod$coefficients), c("matrix", "array"))
-  expect_equal(dim(mod$coefficients), c(32, n_sim))
+  expect_equal(dim(mod$coefficients), c(35, n_sim))
   expect_equal(class(mod$coefficients.summary), c("matrix", "array"))
-  expect_equal(dim(mod$coefficients.summary), c(32, 6L))
+  expect_equal(dim(mod$coefficients.summary), c(35, 6L))
 
 })
 

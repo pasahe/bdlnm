@@ -32,34 +32,34 @@ extract_coef <- function (coef, basis) {
 }
 
 # Verify that an object is the expected result from bdlnm().
-check_bdlnm <- function(x) {
+check_bdlnm <- function(object) {
 
-  if(is.null(x)) {
-    cli::cli_abort("The object returned by {.fn bdlnm} must be provided as the {.arg x} argument.")
+  if(is.null(object)) {
+    cli::cli_abort("The object returned by {.fn bdlnm} must be provided as the {.arg object} argument.")
   }
 
-  if (!is.list(x) || is.null(x$model) || is.null(x$coefficients) || is.null(x$coefficients.summary)) {
-    cli::cli_abort("{.arg x} must be the list returned by {.fn bdlnm}: it should contain the fitted INLA model {.val $model} and the posterior samples matrix {.val $coef}.")
+  if (!inherits(object, "bdlnm") || is.null(object$model) || is.null(object$coefficients) || is.null(object$coefficients.summary)) {
+    cli::cli_abort("{.arg object} must be an object of class {.cls bdlnm} returned by {.fn bdlnm}.")
   }
 
-  model <- x$model
-  coef <- x$coefficients
+  model <- object$model
+  coef <- object$coefficients
 
   # check model
   if (!inherits(model, "inla")) {
-    cli::cli_abort("{.arg x$model} must be an {.cls inla} model (object returned by {.fn INLA::inla}).")
+    cli::cli_abort("{.arg object$model} must be an {.cls inla} model (object returned by {.fn INLA::inla}).")
   } else {
     if (!is.null(model$.args) && !is.null(model$.args$control.compute)) {
-      if(!model$.args$control.compute$config) cli::cli_abort("{.arg x$model} must be fitted with {.arg control.compute = list(config = TRUE)} so that {.fn INLA::inla.posterior.sample} can be run afterwards.")
+      if(!model$.args$control.compute$config) cli::cli_abort("{.arg object$model} must be fitted with {.arg control.compute = list(config = TRUE)} so that {.fn INLA::inla.posterior.sample} can be run afterwards.")
     } else {
-      cli::cli_abort("{.code $.args$control.compute} cannot be extracted from {.arg x$model}.")
+      cli::cli_abort("{.code $.args$control.compute} cannot be extracted from {.arg object$model}.")
     }
 
   }
 
   # check coefficients
   if (!is.matrix(coef) || !is.numeric(coef)) {
-    cli::cli_abort("{.arg x$coefficients} must be a numeric matrix of posterior samples as returned by {.fn INLA::inla.posterior.sample} (columns = samples).")
+    cli::cli_abort("{.arg object$coefficients} must be a numeric matrix of posterior samples as returned by {.fn INLA::inla.posterior.sample} (columns = samples).")
   }
 
 }

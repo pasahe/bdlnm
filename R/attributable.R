@@ -2,10 +2,10 @@
 #'
 #' It computes the attributable number (AN) and fraction (AF) from a fitted B-DLNM returned by `bdlnm()`.
 #'
-#' @param x A fitted object returned by [bdlnm] (list with components `model` and `coef`).
+#' @param object A fitted `"bdlnm"` class object returned by [bdlnm].
 #' @param basis A DLNM crossbasis object produced by `dlnm`. It has to be of class [dlnm::crossbasis].
-#' @param data A dataframe containing the time index representing the time point and the time series of exposure values and number of cases. Ensure that the continuous time series are provided continuously without gaps for attributable measures to be calculated properly. It can also include a column with a `0/1` indicator that filters the calculation of attributable measures for specific time periods.
-#' @param name_date A character with the name of the column with the date of time series measurement (optional).
+#' @param data A dataframe containing the time series of exposure values (see `name_exposure`) and number of cases (see `name_cases`). Ensure that the time series are provided on a regular basis for attributable measures to be calculated properly. It can also include a column with the measured time point (see `name_date`) or a column with a `0/1` indicator that filters the calculation of attributable measures for specific time periods (see `name_filter`).
+#' @param name_date A character with the name of the column with the date (class `Date` or `POSICXt`) of the time series measurement (optional).
 #' @param name_exposure A character with the name of the column with the time series exposure values.
 #' @param name_cases A character with the name of the column with the time series case values. If not provided, only attributable fractions per time point can be calculated.
 #' @param name_filter A character with the name of the column with the indicator that can filter the time points in which to calculate attributable measures (optional).
@@ -27,8 +27,6 @@
 #'
 #' # Filter the dataset to reduce computational time:
 #'
-#' slondon <- london[london$year >= 2012,]
-#'
 #' # Exposure-response and lag-response spline parameters
 #' dlnm_var <- list(
 #'   var_prc = c(10, 75, 90),
@@ -40,51 +38,51 @@
 #'
 #' # Cross-basis parameters
 #' argvar <- list(fun = dlnm_var$var_fun,
-#'                knots = stats::quantile(slondon$tmean,
+#'                knots = stats::quantile(london$tmean,
 #'                                 dlnm_var$var_prc/100, na.rm = TRUE),
-#'                Bound = range(slondon$tmean, na.rm = TRUE))
+#'                Bound = range(london$tmean, na.rm = TRUE))
 #'
 #' arglag <- list(fun = dlnm_var$lag_fun,
 #'                knots = dlnm::logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
 #'
 #' # Create crossbasis
-#' cb <- dlnm::crossbasis(slondon$tmean, lag = dlnm_var$max_lag, argvar, arglag)
+#' cb <- dlnm::crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
 #'
 #' # Seasonality of mortality time series
-#' seas <- splines::ns(slondon$date, df = round(8 * length(slondon$date) / 365.25))
+#' seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
 #'
 #' # Prediction values (equidistant points)
-#' temp <- round(seq(min(slondon$tmean), max(slondon$tmean), by = 0.1), 1)
+#' temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
 #' # Model
 #'
 #' mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
 #'             basis = cb,
-#'              data = slondon,
+#'              data = london,
 #'              family = "poisson",
 #'              sample.arg = list(seed = 432))
 #'
 #' # Predict
 #' cpred <- bcrosspred(mod, cb, at = temp)
 #'
-#' # compute centering (MMT) using minimum_effect
-#' mmt <- minimum_effect(mod, cb, at = temp)
-#' cen <- mmt$min.summary[["0.5quant"]]
+#' # compute centering (MMT) using optimal_exposure
+#' mmt <- optimal_exposure(mod, cb, at = temp)
+#' cen <- mmt$summary[["0.5quant"]]
 #'
 #' # Attributable numbers and fractions (using the backwards algorithm):
-#' ar <- attributable(mod, cb, slondon, name_date = "date",
+#' ar <- attributable(mod, cb, london, name_date = "date",
 #' name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 #'
 #'
 #'
-attributable <- function(x, basis, data, name_date = NULL, name_exposure, name_cases = NULL, name_filter = NULL, tot = TRUE, dir = "back", cen, range = NULL) {
+attributable <- function(object, basis, data, name_date = NULL, name_exposure, name_cases = NULL, name_filter = NULL, tot = TRUE, dir = "back", cen, range = NULL) {
 
   ## -----------------------
   ## Basic checks
   ## -----------------------
 
-  # x
-  check_bdlnm(x)
+  # object
+  check_bdlnm(object)
 
   # basis
   if (missing(basis) || !inherits(basis, "crossbasis")) {
@@ -124,8 +122,8 @@ attributable <- function(x, basis, data, name_date = NULL, name_exposure, name_c
 
   } else {
 
-    cli::cli_warn(c("Ensure that {.arg data} contains time series measured continuously without gaps to properly calculate attributable measures.",
-                    "i" = "If you have only seasonal observations (for example, summers only), expand your data to the full sequence inserting NA for missing exposures/cases."))
+    cli::cli_warn(c("Ensure that {.arg data} contains time series measured on a regular basis (e.g., every day) to properly calculate attributable measures.",
+                    "i" = "If you have only seasonal observations (e.g., summers only), expand your data to the full sequence inserting NA for missing exposures/cases."))
 
     date <- NULL
   }
@@ -181,14 +179,35 @@ attributable <- function(x, basis, data, name_date = NULL, name_exposure, name_c
     cli::cli_abort("Filter column  {.val {name_filter}} must contain some row equal to {.val 1}, corresponding to the filtered time points.")
   }
 
-  # enforce continuity: require consecutive indices (no gaps).
-  # Here we require diff == 1 relative to the integer time index.
-  if (!is.null(date) && !all(diff(date) == 1L)) {
-    cli::cli_abort(c(
-      "The provided date ({.val {name_date}}) is not continuous: gaps were detected.",
-      "i" = "Attributable measures require a continuous time series without missing time points.",
-      "i" = "If you have only seasonal observations (for example, summers only), expand your data to the full sequence inserting NA for missing exposures/cases."
-    ))
+  # Here we require differences to be constant in time. Time can be on a seconds, minutes, hourly, daily, weekly, monthly, yearly basis.
+  if (!is.null(date)) {
+
+    # Check if it's sorted
+    if(any(diff(date) < 1)) {
+      cli::cli_abort("The provided date ({.val {name_date}}) is not ordered in time.")
+    }
+
+    #Let's check regularity with different units
+    is_regular <- length(unique(diff(date, units = "secs"))) == 1 ||
+      length(unique(diff(date, units = "mins"))) == 1 ||
+      length(unique(diff(date, units = "hours"))) == 1 ||
+      length(unique(diff(date, units = "days"))) == 1 ||
+      length(unique(diff(date, units = "weeks"))) == 1
+
+    #Let's check if it's on a monthly or yearly basis:
+    month_basis <- seq(date[1L], date[length(date)], by = "month")
+    is_month_basis <- length(month_basis) == length(date) && all(month_basis == date)
+
+    year_basis <- seq(date[1L], date[length(date)], by = "year")
+    is_year_basis <- length(year_basis) == length(date) && all(year_basis == date)
+
+    if(!is_regular && !is_month_basis && !is_year_basis) {
+      cli::cli_abort(c(
+        "The provided date ({.val {name_date}}) is not provided on a regular basis: time steps between dates are not equal.",
+        "i" = "If you have only seasonal observations (e.g., summers only), expand your data to the full sequence inserting NA for missing exposures/cases."
+      ))
+    }
+
   }
 
   # direction
@@ -218,7 +237,7 @@ attributable <- function(x, basis, data, name_date = NULL, name_exposure, name_c
   ## -----------------------
 
   # get number of samples
-  n_sample <- attr(x, "n_sim")
+  n_sample <- attr(object, "n_sim")
 
   # get lags
   lag <- attr(basis,"lag")
@@ -226,7 +245,7 @@ attributable <- function(x, basis, data, name_date = NULL, name_exposure, name_c
 
   # obtain centered predictions at the exposure values
   cpred <- tryCatch(
-    suppressMessages(bcrosspred(x, basis, at = exp, cen = cen)),
+    suppressMessages(bcrosspred(object, basis, at = exp, cen = cen)),
     error = function(e) cli::cli_abort("Failed computing predictions with {.fn bcrosspred}: {conditionMessage(e)}")
   )
 
@@ -236,7 +255,7 @@ attributable <- function(x, basis, data, name_date = NULL, name_exposure, name_c
     cp_rr <- cpred$matRRfit
   } else {
     # if there is no RR available in the model we can not calculate attributable numbers
-    cli::cli_abort("An attributable fraction cannot be computed because predicted effects are not on the relative-risk scale. Ensure the link of the {.arg x} model is {.val 'log'} or {.val 'logit'}.")
+    cli::cli_abort("An attributable fraction cannot be computed because predicted effects are not on the relative-risk scale. Ensure the link of the {.arg object} model is {.val 'log'} or {.val 'logit'}.")
 
   }
 

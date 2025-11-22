@@ -98,27 +98,27 @@ Let's get the minimum mortality temperature (MMT), defined as the value at which
 
 ```{r}
 # tictoc::tic()
-mmt <- minimum_effect(mod, cb, at = temp)
+mmt <- optimal_exposure(mod, cb, at = temp)
 # tictoc::toc()
 
 str(mmt)
 
-mmt$min |> 
+mmt$est |> 
   head()
 
-mmt$min.summary
+mmt$summary
 ```
 
 We can plot the posterior distribution of the posterior distribution sample of the MMT estimates:
 
 ```{r fig.width = 7}
-plot(mmt, xlab = "Temperature (ºC)", main = paste0("MMT (Median = ", round(mmt$min.summary[["0.5quant"]], 1), "ºC)"))
+plot(mmt, xlab = "Temperature (ºC)", main = paste0("MMT (Median = ", round(mmt$summary[["0.5quant"]], 1), "ºC)"))
 ```
 
 To make the predictions, we will center the risk at the median of these values:
 
 ```{r}
-cen <- mmt$min.summary[["0.5quant"]] 
+cen <- mmt$summary[["0.5quant"]] 
 cen
 ```
 

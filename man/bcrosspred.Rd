@@ -5,7 +5,7 @@
 \title{Generate predicted effects from Bayesian distributed-lag models (B-DLNM).}
 \usage{
 bcrosspred(
-  x,
+  object,
   basis,
   model.link = NULL,
   at = NULL,
@@ -20,7 +20,7 @@ bcrosspred(
 )
 }
 \arguments{
-\item{x}{A fitted object returned by \link{bdlnm} (list with components \code{model} and \code{coef}).}
+\item{object}{A fitted \code{"bdlnm"} class object returned by \link{bdlnm}.}
 
 \item{basis}{A DLNM basis object produced by \code{dlnm}. It can be one of \link[dlnm:crossbasis]{dlnm::crossbasis} or \link[dlnm:onebasis]{dlnm::onebasis}.}
 

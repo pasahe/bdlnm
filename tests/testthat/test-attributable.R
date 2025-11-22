@@ -96,3 +96,29 @@ test_that("attributable works when cases = NULL (only AF returned)", {
   expect_equal(dim(ar3$af.summary), c(n_row, 6))
 
 })
+
+
+test_that("attributable gives error when time series are not ordered or not provided on a regular basis", {
+
+  slondon2 <- slondon[order(slondon$tmean),]
+  expect_snapshot_error(attributable(mod, cb, slondon2, "date", "tmean", "mort_75plus", cen = cen))
+
+  slondon2 <- slondon[-2,]
+  expect_snapshot_error(attributable(mod, cb, slondon2, "date", "tmean", "mort_75plus", cen = cen))
+
+  # Works if date is provided on a weekly basis
+  slondon2 <- slondon
+  slondon2$date <- seq(as.Date("1900-01-01"), as.Date("2010-01-01"), by = "week")[seq_len(nrow(slondon2))]
+  expect_silent(attributable(mod, cb, slondon2, "date", "tmean", "mort_75plus", cen = cen))
+
+  # Works if date is provided on a monthly basis
+  slondon2 <- slondon
+  slondon2$date <- seq(as.Date("1900-01-01"), as.Date("2010-01-01"), by = "month")[seq_len(nrow(slondon2))]
+  expect_silent(attributable(mod, cb, slondon2, "date", "tmean", "mort_75plus", cen = cen))
+
+  # Works if date is provided on a yearly basis
+  slondon2 <- slondon
+  slondon2$date <- seq(as.Date("1500-01-01"), as.Date("2010-01-01"), by = "year")[seq_len(nrow(slondon2))]
+  expect_silent(attributable(mod, cb, slondon2, "date", "tmean", "mort_75plus", cen = cen))
+
+})

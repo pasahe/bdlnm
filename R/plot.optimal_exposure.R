@@ -1,9 +1,9 @@
-#' Plot posterior distribution of minimum-risk exposure values
+#' Plot posterior distribution of optimal effect exposure values
 #'
-#' Plot the posterior distribution of the minimum-risk exposure values returned by `minimum_effect()`.
+#' Plot the posterior distribution of the optimal effect exposure values returned by `optimal_exposure()`.
 #'
-#'  Plot an histogram showing the posterior distribution of the minimum-risk exposure values returned by `minimum_effect()`. The original prediction grid will be used as axis breaks. A dashed red vertical line marks the posterior median (0.5 quantile when available).
-#' @param x Object of class `min.risk` as returned by [minimum_effect].
+#'  Plot an histogram showing the posterior distribution of the optimal effect exposure values returned by `optimal_exposure()`. The original prediction grid will be used as axis breaks. A dashed red vertical line marks the posterior median of these values.
+#' @param x x of class `optimal_exposure` as returned by [optimal_exposure].
 #' @param line.arg List of graphical arguments for the plotting of the median vertical line passed to [graphics::abline].
 #' @param ... Additional graphical parameters passed to [hist].
 #'
@@ -44,21 +44,21 @@
 #'  family = "poisson")
 #'
 #'  # Find minimum risk exposure value
-#'  mmt <- minimum_effect(mod, cb, at = temp)
+#'  mmt <- optimal_exposure(mod, cb, at = temp)
 #'
 #'  # Plot
 #'  plot(mmt, xlab = "Temperature (ºC)",
-#'  main = paste0("MMT (Median = ", round(mmt$min.summary[["0.5quant"]], 1), "ºC)"))
+#'  main = paste0("MMT (Median = ", round(mmt$summary[["0.5quant"]], 1), "ºC)"))
 #'
 #'
-plot.min.risk <- function(x, line.arg = NULL, ...) {
+plot.optimal_exposure <- function(x, line.arg = NULL, ...) {
 
   ## ---------------------------
   ## Basic checks
   ## ---------------------------
 
-  if (missing(x) || !inherits(x, "min.risk")) {
-    cli::cli_abort("{.arg x} must be an object of class {.cls min.risk} as returned by {.fn minimum_effect}.")
+  if (missing(x) || !inherits(x, "optimal_exposure")) {
+    cli::cli_abort("{.arg x} must be an x of class {.cls optimal_exposure} as returned by {.fn optimal_exposure}.")
   }
 
   ## ---------------------------
@@ -66,13 +66,15 @@ plot.min.risk <- function(x, line.arg = NULL, ...) {
   ## ---------------------------
 
   # by default set the following arguments
+  which <- attr(x, "which")
+
   plot.arg <- list(
-    x = x$min,
+    x = x$est,
     breaks = attr(x, "xvar"),
     xaxt = "n",
     xlab = "Exposure",
-    main = paste0("Minimum risk values (Median = ", x$min.summary[,"0.5quant"], ")"),
-    xlim = c(floor(min(x$min)), ceiling(max(x$min)))
+    main = paste0(which, "effect values (Median = ", x$summary[["0.5quant"]], ")"),
+    xlim = c(floor(min(x$est)), ceiling(max(x$est)))
   )
 
   # merge with user arguments
@@ -96,7 +98,7 @@ plot.min.risk <- function(x, line.arg = NULL, ...) {
   # merge with user arguments
   line.arg <- utils::modifyList(line.arg.def, line.arg)
 
-  line.arg <- c(list(v = x$min.summary[, "0.5quant"]), line.arg)
+  line.arg <- c(list(v = x$summary[["0.5quant"]]), line.arg)
 
   # draw median line
   do.call(graphics::abline, line.arg)

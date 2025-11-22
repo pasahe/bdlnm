@@ -6,7 +6,7 @@ test_that("bcrosspred basic structure", {
   expect_equal(names(cpred), c("predvar", "cen", "lag", "bylag", "coefficients", "matfit", "allfit", "matRRfit", "allRRfit", "coefficients.summary", "matfit.summary", "allfit.summary", "matRRfit.summary", "allRRfit.summary", "ci.level", "model.class", "model.link"))
 
   expect_equal(cpred$predvar, temp)
-  expect_equal(cpred$cen, 10)
+  expect_equal(cpred$cen, 12.5)
   expect_equal(cpred$lag, attr(cb, "lag"))
   expect_equal(cpred$bylag, 1)
   expect_equal(dim(cpred$coefficients), c(20, n_sim))
@@ -35,6 +35,6 @@ test_that("bcrosspred errors when some argument is missing or invalid", {
 
   expect_warning(cpred2 <- bcrosspred(mod, cb))
 
-  expect_equal(length(cpred2$predvar), 54)
+  expect_equal(length(cpred2$predvar), 48)
 
 })

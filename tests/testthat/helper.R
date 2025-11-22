@@ -1,7 +1,7 @@
 # Use data internal for tests:
 
 # filter london dataset to run faster
-slondon <- london[london$year >= 2012,]
+slondon <- london[london$year >= 2011,]
 
 # Exposure-response and lag-response spline parameters
 dlnm_var <- list(
@@ -45,6 +45,6 @@ mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
 # Predict
 cpred <- bcrosspred(mod, cb, at = temp)
 
-# compute centering (MMT) using minimum_effect
-mmt <- minimum_effect(mod, cb, at = temp)
-cen <- mmt$min.summary[["0.5quant"]]
+# compute centering (MMT) using optimal_exposure
+mmt <- optimal_exposure(mod, cb, at = temp)
+cen <- mmt$summary[["0.5quant"]]

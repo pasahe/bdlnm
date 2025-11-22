@@ -10,9 +10,9 @@
 #' @param ci.level Numeric in `(0,1)` giving the credible interval level (default `0.95`).
 #' @param ... Additional arguments passed to [INLA::inla].
 #'
-#' @returns A list with components:
+#' @returns An object of class `"bdlnm"` with components:
 #' - `model`: The fitted `INLA` model.
-#' - `coef`: A matrix with posterior samples for the basis coefficients
+#' - `coefficients`: A matrix with posterior samples for the basis coefficients
 #'
 #' @details
 #' If the basis indicates some lag, the first `max(lags)` rows of `data` are set to `NA` to omit the basis first missing rows for model fitting.
@@ -242,8 +242,8 @@ bdlnm <- function(formula,
 
   attr(res, "n_sim") <- sample.arg$n
 
-  #Revisar si cal que fem una classe per això
-  # class(res) <- c("bdlnm")
-  res
+  class(res) <- c("bdlnm")
+
+  return(res)
 
 }

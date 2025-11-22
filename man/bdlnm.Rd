@@ -30,10 +30,10 @@ bdlnm(
 \item{...}{Additional arguments passed to \link[INLA:inla]{INLA::inla}.}
 }
 \value{
-A list with components:
+An object of class \code{"bdlnm"} with components:
 \itemize{
 \item \code{model}: The fitted \code{INLA} model.
-\item \code{coef}: A matrix with posterior samples for the basis coefficients
+\item \code{coefficients}: A matrix with posterior samples for the basis coefficients
 }
 }
 \description{

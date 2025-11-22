@@ -1,10 +1,10 @@
 # bcrosspred errors when some argument is missing or invalid
 
-    The object returned by `bdlnm()` must be provided as the `x` argument.
+    The object returned by `bdlnm()` must be provided as the `object` argument.
 
 ---
 
-    `x` must be the list returned by `bdlnm()`: it should contain the fitted INLA model "$model" and the posterior samples matrix "$coef".
+    `object` must be an object of class <bdlnm> returned by `bdlnm()`.
 
 ---
 

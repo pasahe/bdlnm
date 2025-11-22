@@ -27,7 +27,7 @@ A tibble with 8.279 rows and 7 columns:
 data(london)
 }
 \description{
-The dataset includes observed daily mean temperature and total number of deaths in London between 2000 and 2012. Mortality data is stratified for <75 years and 75+ years age groups.
+The dataset includes observed daily mean temperature and total number of deaths in London between 2000 and 2011. Mortality data is stratified for <75 years and 75+ years age groups.
 }
 \references{
 Vicedo-Cabrera AM, Sera F, Armstrong B, Gasparrini A. A hands-on tutorial on a modelling framework for projections of climate change impacts on health. Epidemiology. 2019;30(3):321-329. DOI: 10.1097/EDE.0000000000000982. PMID: 30829832.
