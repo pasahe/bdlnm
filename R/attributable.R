@@ -293,12 +293,25 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
         M_an[,i] <- rowSums(an_sample)
       }
 
-
       # total if requested
       if(tot) {
         ind <- if(is.null(filter)) !is.na(M_an[, i]) else !is.na(M_an[, i]) & (filter == 1)
-        an[1L, i] <- sum(M_an[ind, i])
-        af[1L, i] <- if(sum(cases[ind]) > 0) an[1L, i]/sum(cases[ind]) else NA
+
+        if(sum(ind) == length(cases)) cli::cli_abort(c(
+          "All time points are excluded by the filter or have a missing attributable number.",
+          "i" = "Remember that if the number of cases is missing in some of the lags of a time point, an attributable number for that time point will be missing.")
+        )
+
+        sum_cases <- sum(rowMeans(lagged_cases)[ind])
+
+        if(sum_cases == 0) cli::cli_abort(c(
+          "The number of cases aggregated in the filtered time points with a non-missing attributable number is zero.",
+          "i" = "Remember that if the number of cases is missing in some of the lags of a time point, an attributable number for that time point will be missing.")
+        )
+
+
+        af[1L, i] <- sum(M_an[ind, i])/sum_cases
+        an[1L, i] <- af[1L, i] * sum(cases, na.rm = TRUE)
       } else {
         an[, i] <- M_an[,i]
         af[, i] <- exp(rowSums(log(rr_sample)))
@@ -333,8 +346,21 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
       # total if requested
       if(tot) {
         ind <- if(is.null(filter)) !is.na(M_an[, i]) else !is.na(M_an[, i]) & (filter == 1)
-        an[1L, i] <- sum(M_an[ind, i])
-        af[1L, i] <- if(sum(cases[ind]) > 0) an[1L, i]/sum(cases[ind]) else NA
+
+        if(sum(ind) == length(cases)) cli::cli_abort(c(
+          "All time points are excluded by the filter or have a missing attributable number.",
+          "i" = "Remember that if the number of cases is missing in some of the lags of a time point, an attributable number for that time point will be missing.")
+        )
+
+        sum_cases <- sum(cases[ind])
+
+        if(sum_cases == 0) cli::cli_abort(c(
+          "The number of cases aggregated in the filtered time points with a non-missing attributable number is zero.",
+          "i" = "Remember that if the number of cases is missing in some of the lags of a time point, an attributable number for that time point will be missing.")
+        )
+
+        af[1L, i] <- sum(M_an[ind, i])/sum_cases
+        an[1L, i] <- af[1L, i] * sum(cases, na.rm = TRUE)
       } else {
         an[, i] <- M_an[,i]
         af[, i] <- M_af[,i]

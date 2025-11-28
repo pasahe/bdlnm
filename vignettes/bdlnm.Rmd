@@ -214,9 +214,8 @@ plot(cpred, "contour", xlab = "Temperature (ºC)", ylab = "Lag", main="Contour p
 Let's plot the lag-response effect for a high temperature (99th percentile):
 
 ```{r fig.width = 7, fig.height = 6}
-htemp <- 23
-plot(cpred , "slices", var = htemp, col=3, ylab="RR",
-     main=paste0("Association for a high temperature (", htemp, "ºC)"))
+htemp <- round(quantile(london$tmean, 0.99), 1)
+plot(cpred , "slices", ci = "bars", type = "p", pch = 19, var = htemp, ylab="RR", main=paste0("Association for a high temperature (", htemp, "ºC)"))
 ```
 
 Or the exposure-response at lag 0:
