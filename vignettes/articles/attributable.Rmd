@@ -61,9 +61,9 @@ mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
 # Predict
 cpred <- bcrosspred(mod, cb, at = temp)
 
-# compute centering (MMT) using minimum_effect
-mmt <- minimum_effect(mod, cb, at = temp)
-cen <- mmt$min.summary[["0.5quant"]]
+# compute centering (MMT) using optimal_exposure
+mmt <- optimal_exposure(mod, cb, at = temp)
+cen <- mmt$summary[["0.5quant"]]
 cen
 ```
 

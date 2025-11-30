@@ -75,7 +75,7 @@
 #'
 #'
 #'
-attributable <- function(object, basis, data, name_date = NULL, name_exposure, name_cases = NULL, name_filter = NULL, tot = TRUE, dir = "back", cen, range = NULL) {
+attributable <- function(object, basis, data, name_date = NULL, name_exposure, name_cases = NULL, name_filter = NULL, tot = TRUE, dir = "back", cen, range = NULL, methods = "gasparrini") {
 
   ## -----------------------
   ## Basic checks
@@ -286,11 +286,11 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
       rr_sample <- cp_rr[match(exp, cpred$predvar),,i]
       af_sample <- (rr_sample - 1) / rr_sample
 
+      M_af[,i] <- exp(rowSums(log(rr_sample)))
+
       if(!is.null(cases)) {
-        # multiply element-wise by lagged cases
-        an_sample <- af_sample * lagged_cases
-        # sum across lags to get AN per time point
-        M_an[,i] <- rowSums(an_sample)
+        # average of lagged cases
+        M_an[,i] <- M_af[,i] * rowMeans(lagged_cases)
       }
 
       # total if requested
@@ -314,7 +314,7 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
         an[1L, i] <- af[1L, i] * sum(cases, na.rm = TRUE)
       } else {
         an[, i] <- M_an[,i]
-        af[, i] <- exp(rowSums(log(rr_sample)))
+        af[, i] <- M_af[,i]
         # insert missings if time point is not selected
         if(!is.null(filter)) an[filter == 0, ] <- NA
       }
