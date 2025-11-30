@@ -4,13 +4,13 @@ test_that("attributable returns expected structure and summaries (backwards, tot
 
   # basic structure
   expect_type(ar, "list")
-  expect_equal(names(ar), c("af", "an", "af.summary", "an.summary"))
+  expect_equal(names(ar), c("af", "an", "aftotal", "antotal", "af.summary", "an.summary", "aftotal.summary", "antotal.summary"))
 
   # sample count and names
-  expect_equal(length(ar$an), n_sim)
-  expect_equal(length(ar$af), n_sim)
-  expect_equal(names(ar$an), paste0("sample", seq_len(n_sim)))
-  expect_equal(names(ar$af), paste0("sample", seq_len(n_sim)))
+  expect_equal(dim(ar$an), c(344, n_sim))
+  expect_equal(dim(ar$af), c(344, n_sim))
+  expect_equal(colnames(ar$an), paste0("sample", seq_len(n_sim)))
+  expect_equal(colnames(ar$af), paste0("sample", seq_len(n_sim)))
 
   # summaries present and contain mean, sd and at least one quantile + mode
   expect_true(all(c("mean", "sd", "mode") %in% colnames(ar$an.summary)))
@@ -25,13 +25,13 @@ test_that("attributable returns expected structure and summaries (forward, tot =
 
   # basic structure
   expect_type(ar, "list")
-  expect_equal(names(ar), c("af", "an", "af.summary", "an.summary"))
+  expect_equal(names(ar), c("af", "an", "aftotal", "antotal", "af.summary", "an.summary", "aftotal.summary", "antotal.summary"))
 
   # sample count and names
-  expect_equal(length(ar$an), n_sim)
-  expect_equal(length(ar$af), n_sim)
-  expect_equal(names(ar$an), paste0("sample", seq_len(n_sim)))
-  expect_equal(names(ar$af), paste0("sample", seq_len(n_sim)))
+  expect_equal(dim(ar$an), c(344, n_sim))
+  expect_equal(dim(ar$af), c(344, n_sim))
+  expect_equal(colnames(ar$an), paste0("sample", seq_len(n_sim)))
+  expect_equal(colnames(ar$af), paste0("sample", seq_len(n_sim)))
 
   # summaries present and contain mean, sd and at least one quantile + mode
   expect_true(all(c("mean", "sd", "mode") %in% colnames(ar$an.summary)))
@@ -40,9 +40,9 @@ test_that("attributable returns expected structure and summaries (forward, tot =
   expect_true(any(grepl("quant$", colnames(ar$af.summary))))
 })
 
-test_that("attributable returns time-series matrices when tot = FALSE (backward)", {
+test_that("attributable returns time-series matrices (backward)", {
 
-  expect_silent(ar2 <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen, tot = FALSE))
+  expect_silent(ar2 <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen))
 
   # should return matrices (or vectors if trimmed) for af/an
   n_row <- nrow(slondon) - dlnm_var$max_lag
@@ -62,7 +62,7 @@ test_that("attributable returns time-series matrices when tot = FALSE (backward)
 
 test_that("attributable returns time-series matrices when tot = FALSE (forward)", {
 
-  expect_silent(ar2 <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen, tot = FALSE, dir = "forw"))
+  expect_silent(ar2 <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen, dir = "forw"))
 
   # should return matrices (or vectors if trimmed) for af/an
   n_row <- nrow(slondon) - dlnm_var$max_lag
@@ -85,7 +85,7 @@ test_that("attributable works when cases = NULL (only AF returned)", {
 
   # Expect a warning (informing that only AF will be calculated)
   expect_warning(
-    ar3 <- attributable(mod, cb, slondon, "date", "tmean", cen = cen, tot = TRUE)
+    ar3 <- attributable(mod, cb, slondon, "date", "tmean", cen = cen)
   )
 
   n_row <- nrow(slondon) - dlnm_var$max_lag

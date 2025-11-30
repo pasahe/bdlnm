@@ -12,10 +12,10 @@ attributable(
   name_exposure,
   name_cases = NULL,
   name_filter = NULL,
-  tot = TRUE,
   dir = "back",
   cen,
-  range = NULL
+  range = NULL,
+  average = TRUE
 )
 }
 \arguments{
@@ -33,21 +33,25 @@ attributable(
 
 \item{name_filter}{A character with the name of the column with the indicator that can filter the time points in which to calculate attributable measures (optional).}
 
-\item{tot}{Logical; if TRUE (default) returns total attributable number / fraction across the time series. If FALSE returns values for each time point.}
-
 \item{dir}{Character; "back" (default) or "forw" direction in the lag dimension for calculating attributable numbers and fractions.}
 
 \item{cen}{Numeric scalar; centering value for predictions. If missing the function will attempt to read it from attr(basis, "argvar")$cen.}
 
 \item{range}{Optional numeric vector of range 2. It gives the exposure value range for which attributable numbers and fractions will be calculated.}
+
+\item{average}{Logical (default is TRUE). When TRUE the function uses average (lag-averaged) contributions to calculate attributable risks. Only applied in the forward perspective.}
 }
 \value{
 A list with elements:
 \itemize{
-\item \code{af}: attributable fraction (AF)
-\item \code{an}: attributable number (AN)
-\item \code{af.summary}: data frame with summary statistics for AF
-\item \code{an.summary}: data frame with summary statistics for AN
+\item \code{af}: attributable fraction (AF) per time point
+\item \code{an}: attributable number (AN) per time point
+\item \code{aftotal}: total attributable fraction (AF) across all period
+\item \code{antotal}: total attributable number (AN) across all period
+\item \code{af.summary}: data frame with summary statistics for AF per time point
+\item \code{an.summary}: data frame with summary statistics for AN per time point
+\item \code{aftotal.summary}: data frame with summary statistics for total AF
+\item \code{antotal.summary}: data frame with summary statistics for total AN
 }
 }
 \description{

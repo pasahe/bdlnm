@@ -69,14 +69,14 @@ cen
 
 The MMT value in which values will be centered is `cen`ºC. Now, we can calculate attributable number and fractions.
 
-We can calculate it with the backwards algorithm:
-
 ```{r}
-# tictoc::tic()
-attr <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
-# tictoc::toc()
+tictoc::tic()
+attr_bck <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
+tictoc::toc()
 
-str(attr)
+tictoc::tic()
+attr_frw <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "forw")
+tictoc::toc()
 ```
 
 Or with the forward one:

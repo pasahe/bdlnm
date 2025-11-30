@@ -9,17 +9,20 @@
 #' @param name_exposure A character with the name of the column with the time series exposure values.
 #' @param name_cases A character with the name of the column with the time series case values. If not provided, only attributable fractions per time point can be calculated.
 #' @param name_filter A character with the name of the column with the indicator that can filter the time points in which to calculate attributable measures (optional).
-#' @param tot Logical; if TRUE (default) returns total attributable number / fraction across the time series. If FALSE returns values for each time point.
 #' @param dir Character; "back" (default) or "forw" direction in the lag dimension for calculating attributable numbers and fractions.
 #' @param cen Numeric scalar; centering value for predictions. If missing the function will attempt to read it from attr(basis, "argvar")$cen.
 #' @param range Optional numeric vector of range 2. It gives the exposure value range for which attributable numbers and fractions will be calculated.
+#' @param average Logical (default is TRUE). When TRUE the function uses average (lag-averaged) contributions to calculate attributable risks. Only applied in the forward perspective.
 #'
 #' @return A list with elements:
-#'   - `af`: attributable fraction (AF)
-#'   - `an`: attributable number (AN)
-#'   - `af.summary`: data frame with summary statistics for AF
-#'   - `an.summary`: data frame with summary statistics for AN
-#'
+#'   - `af`: attributable fraction (AF) per time point
+#'   - `an`: attributable number (AN) per time point
+#'   - `aftotal`: total attributable fraction (AF) across all period
+#'   - `antotal`: total attributable number (AN) across all period
+#'   - `af.summary`: data frame with summary statistics for AF per time point
+#'   - `an.summary`: data frame with summary statistics for AN per time point
+#'   - `aftotal.summary`: data frame with summary statistics for total AF
+#'   - `antotal.summary`: data frame with summary statistics for total AN
 #'
 #' @export
 #'
@@ -75,7 +78,7 @@
 #'
 #'
 #'
-attributable <- function(object, basis, data, name_date = NULL, name_exposure, name_cases = NULL, name_filter = NULL, tot = TRUE, dir = "back", cen, range = NULL, methods = "gasparrini") {
+attributable <- function(object, basis, data, name_date = NULL, name_exposure, name_cases = NULL, name_filter = NULL, dir = "back", cen, range = NULL, average = TRUE) {
 
   ## -----------------------
   ## Basic checks
@@ -137,6 +140,7 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
       cli::cli_abort("Cases column {.val {name_cases}} not found in {.arg data}.")
     }
     cases <- data[[name_cases]]
+    tot <- TRUE
   } else {
     cli::cli_warn("Only attributable fractions per time point can be calculated as {.arg name_cases} is not provided.")
     cases <- NULL
@@ -264,13 +268,9 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
   ## -----------------------
 
   # initialize matrices
-  M_an <- M_af <- matrix(nrow = length(exp), ncol = n_sample)
-
-  if(!tot) {
-    an <- af <- M_an
-  } else {
-    an <- af <- matrix(nrow = 1L, ncol = n_sample)
-  }
+  M_an <- M_af <- matrix(nrow = length(exp), ncol = n_sample) # per time
+  an <- af <- numeric(n_sample) # total
+  names(an) <- names(af) <- paste0("sample", seq_len(n_sample))
 
   # forward perspective: contributions from the current day to future days
   if(dir == "forw") {
@@ -286,14 +286,20 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
       rr_sample <- cp_rr[match(exp, cpred$predvar),,i]
       af_sample <- (rr_sample - 1) / rr_sample
 
-      M_af[,i] <- exp(rowSums(log(rr_sample)))
+      all_sample <- exp(rowSums(log(rr_sample)))
+      M_af[,i] <- (all_sample - 1)/all_sample
 
       if(!is.null(cases)) {
-        # average of lagged cases
-        M_an[,i] <- M_af[,i] * rowMeans(lagged_cases)
+        if(average) {
+          # average of lagged cases
+          M_an[,i] <- M_af[,i] * rowMeans(lagged_cases)
+        } else {
+          # multiply element-wise by lagged cases and sum by row
+          M_an[,i] <- rowSums(af_sample * lagged_cases)
+        }
       }
 
-      # total if requested
+      # total if allowed
       if(tot) {
         ind <- if(is.null(filter)) !is.na(M_an[, i]) else !is.na(M_an[, i]) & (filter == 1)
 
@@ -310,14 +316,12 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
         )
 
 
-        af[1L, i] <- sum(M_an[ind, i])/sum_cases
-        an[1L, i] <- af[1L, i] * sum(cases, na.rm = TRUE)
-      } else {
-        an[, i] <- M_an[,i]
-        af[, i] <- M_af[,i]
-        # insert missings if time point is not selected
-        if(!is.null(filter)) an[filter == 0, ] <- NA
+        af[i] <- sum(M_an[ind, i])/sum_cases
+        an[i] <- af[i] * sum(cases, na.rm = TRUE)
       }
+
+      # insert missings if time point is not selected
+      if(!is.null(filter)) M_an[filter == 0, ] <- NA
     }
 
   # backward perspective: contributions from past exposures to current day
@@ -343,7 +347,7 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
 
       if(!is.null(cases)) M_an[,i] <- M_af[,i] * cases
 
-      # total if requested
+      # total if allowed
       if(tot) {
         ind <- if(is.null(filter)) !is.na(M_an[, i]) else !is.na(M_an[, i]) & (filter == 1)
 
@@ -359,96 +363,135 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
           "i" = "Remember that if the number of cases is missing in some of the lags of a time point, an attributable number for that time point will be missing.")
         )
 
-        af[1L, i] <- sum(M_an[ind, i])/sum_cases
-        an[1L, i] <- af[1L, i] * sum(cases, na.rm = TRUE)
-      } else {
-        an[, i] <- M_an[,i]
-        af[, i] <- M_af[,i]
-        # insert missings if time point is not selected
-        if(!is.null(filter)) an[filter == 0, ] <- NA
+        af[i] <- sum(M_an[ind, i])/sum_cases
+        an[i] <- af[i] * sum(cases, na.rm = TRUE)
       }
+
+      # insert missings if time point is not selected
+      if(!is.null(filter)) M_an[filter == 0, ] <- NA
 
     }
 
   }
 
   #Remove rows with NA (will be in the beginning or in the end depending on the algorithm type, and also if a filter is specified)
-  if(!tot) {
-    if(!is.null(date)) {
-      rownames(an) <- rownames(af) <- as.character(date)
-    } else {
-      rownames(an) <- rownames(af) <- paste0("time", seq_along(exp))
-    }
-    colnames(an) <- colnames(af) <- paste0("sample", seq_len(n_sample))
+   if(!is.null(date)) {
+     rownames(M_an) <- rownames(M_af) <- as.character(date)
+   } else {
+     rownames(M_an) <- rownames(M_af) <- paste0("time", seq_along(exp))
+   }
+   colnames(M_an) <- colnames(M_af) <- paste0("sample", seq_len(n_sample))
 
-    if(!is.null(cases)) {
-      ind <- !rowSums(is.na(an))
-    } else {
-      ind <- !rowSums(is.na(af))
-    }
+   if(!is.null(cases)) {
+     ind <- !rowSums(is.na(M_an))
+   } else {
+     ind <- !rowSums(is.na(M_af))
+   }
 
-    an <- an[ind,]
-    af <- af[ind,]
+   M_an <- M_an[ind,]
+   M_af <- M_af[ind,]
 
-  }
 
   ## -----------------------
   ## summaries
   ## -----------------------
 
-  ansum <- afsum <-  matrix(nrow = nrow(af), ncol = ncol(cpred$allfit.summary))
-  rownames(ansum) <- rownames(afsum) <- rownames(an)
-  colnames(ansum) <- colnames(afsum) <- colnames(cpred$allfit.summary)
+  #per time
+  M_ansum <- M_afsum <-  matrix(nrow = nrow(M_af), ncol = ncol(cpred$allfit.summary))
+  rownames(M_ansum) <- rownames(M_afsum) <- rownames(M_an)
+  colnames(M_ansum) <- colnames(M_afsum) <- colnames(cpred$allfit.summary)
 
   quant_cols <- grep("quant$", colnames(cpred$allfit.summary), value = TRUE)
   quant_val <- as.numeric(gsub("quant$", "", quant_cols))
 
   if(!is.null(cases)) {
-    ansum[,"mean"] <- apply(an, 1, mean)
-    ansum[,"sd"] <- apply(an, 1, stats::sd)
+    M_ansum[,"mean"] <- apply(M_an, 1, mean)
+    M_ansum[,"sd"] <- apply(M_an, 1, stats::sd)
 
     for(i in seq_along(quant_cols)) {
-      ansum[, quant_cols[i]] <- apply(an, 1, function (x) stats::quantile(x, quant_val[i]))
+      M_ansum[, quant_cols[i]] <- apply(M_an, 1, function (x) stats::quantile(x, quant_val[i]))
     }
 
     #calculate mode (using default kernel density estimate, revisar...)
-    ansum[, "mode"] <- apply(an, 1, function(v) {
+    M_ansum[, "mode"] <- apply(M_an, 1, function(v) {
       dv <- stats::density(v)
       with(dv, x[which.max(y)])
     })
   }
 
-  afsum[, "mode"] <- apply(af, 1, function(v) {
+  M_afsum[, "mode"] <- apply(M_af, 1, function(v) {
     dv <- stats::density(v)
     with(dv, x[which.max(y)])
   })
 
-  afsum[, "mean"] <- apply(af, 1, mean)
-  afsum[, "sd"] <- apply(af, 1, stats::sd)
+  M_afsum[, "mean"] <- apply(M_af, 1, mean)
+  M_afsum[, "sd"] <- apply(M_af, 1, stats::sd)
 
   for(i in seq_along(quant_cols)) {
-    afsum[, quant_cols[i]] <- apply(af, 1, function (x) stats::quantile(x, quant_val[i]))
+    M_afsum[, quant_cols[i]] <- apply(M_af, 1, function (x) stats::quantile(x, quant_val[i]))
   }
 
-  # an and af has to be a row-vector (tot=TRUE)
+  #total (if allowed)
   if(tot) {
-    an <- an[1L,]
-    af <- af[1L,]
-    names(an) <- names(af) <- paste0("sample", seq_len(n_sample))
+    ansum <- afsum <-  numeric(ncol(cpred$allfit.summary))
+    names(ansum) <- names(afsum) <- colnames(cpred$allfit.summary)
+
+    quant_cols <- grep("quant$", colnames(cpred$allfit.summary), value = TRUE)
+    quant_val <- as.numeric(gsub("quant$", "", quant_cols))
+
+    if(!is.null(cases)) {
+      ansum["mean"] <- mean(an)
+      ansum["sd"] <- stats::sd(an)
+
+      for(i in seq_along(quant_cols)) {
+        ansum[quant_cols[i]] <- stats::quantile(an, quant_val[i])
+      }
+
+      #calculate mode (using default kernel density estimate, revisar...)
+      dv <- stats::density(an)
+      ansum["mode"] <- with(dv, x[which.max(y)])
+    }
+
+    #calculate mode (using default kernel density estimate, revisar...)
+    dv <- stats::density(af)
+    afsum["mode"] <- with(dv, x[which.max(y)])
+
+    afsum["mean"] <- mean(af)
+    afsum["sd"] <- stats::sd(af)
+
+    for(i in seq_along(quant_cols)) {
+      afsum[quant_cols[i]] <- stats::quantile(af, quant_val[i])
+    }
+
   }
 
   # Return results as data.frames for summaries
   if(!is.null(cases)) {
-    res <- list(
-      af = af,
-      an = an,
-      af.summary = as.data.frame(afsum, stringsAsFactors = FALSE),
-      an.summary = as.data.frame(ansum, stringsAsFactors = FALSE)
-    )
+
+    if(tot) {
+      res <- list(
+        af = M_af,
+        an = M_an,
+        aftotal = af,
+        antotal = an,
+        af.summary = M_afsum,
+        an.summary = M_ansum,
+        aftotal.summary = afsum,
+        antotal.summary = ansum
+      )
+    } else {
+      res <- list(
+        af = M_af,
+        an = M_an,
+        af.summary = M_afsum,
+        an.summary = M_ansum
+      )
+    }
+
   } else {
     res <- list(
-      af = af,
-      af.summary = as.data.frame(afsum, stringsAsFactors = FALSE)
+      af = M_af,
+      af.summary = as.data.frame(M_afsum, stringsAsFactors = FALSE)
     )
   }
 
