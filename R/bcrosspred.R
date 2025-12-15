@@ -225,7 +225,6 @@ bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL,
   ## Prediction of lag-specific effects
   ## -----------------------
 
-  #Revisar aquest tros (amb l'exemple, per entendre-ho bé)
   #Create the matrix of transformed centered exposure-lags values
 
   varvec <- if (is.matrix(at)) as.numeric(at) else rep(at, length(predlag))

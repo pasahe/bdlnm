@@ -1,4 +1,4 @@
-test_that("attributable returns expected structure and summaries (backwards, tot = TRUE)", {
+test_that("attributable returns expected structure and summaries (backwards)", {
 
   expect_silent(ar <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen))
 
@@ -7,8 +7,8 @@ test_that("attributable returns expected structure and summaries (backwards, tot
   expect_equal(names(ar), c("af", "an", "aftotal", "antotal", "af.summary", "an.summary", "aftotal.summary", "antotal.summary"))
 
   # sample count and names
-  expect_equal(dim(ar$an), c(344, n_sim))
-  expect_equal(dim(ar$af), c(344, n_sim))
+  expect_equal(dim(ar$an), c(nrow(slondon), n_sim))
+  expect_equal(dim(ar$af), c(nrow(slondon), n_sim))
   expect_equal(colnames(ar$an), paste0("sample", seq_len(n_sim)))
   expect_equal(colnames(ar$af), paste0("sample", seq_len(n_sim)))
 
@@ -17,9 +17,14 @@ test_that("attributable returns expected structure and summaries (backwards, tot
   expect_true(any(grepl("quant$", colnames(ar$an.summary))))
   expect_true(all(c("mean", "sd", "mode") %in% colnames(ar$af.summary)))
   expect_true(any(grepl("quant$", colnames(ar$af.summary))))
+
+  #NA at the beginning
+  expect_equal(names(which(is.na(ar$af.summary[,"0.5quant"]))), as.character(slondon$date[1:21]))
+  expect_equal(names(which(is.na(ar$an.summary[,"0.5quant"]))), as.character(slondon$date[1:21]))
+
 })
 
-test_that("attributable returns expected structure and summaries (forward, tot = TRUE)", {
+test_that("attributable returns expected structure and summaries (forward)", {
 
   expect_silent(ar <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen, dir = "forw"))
 
@@ -28,8 +33,8 @@ test_that("attributable returns expected structure and summaries (forward, tot =
   expect_equal(names(ar), c("af", "an", "aftotal", "antotal", "af.summary", "an.summary", "aftotal.summary", "antotal.summary"))
 
   # sample count and names
-  expect_equal(dim(ar$an), c(344, n_sim))
-  expect_equal(dim(ar$af), c(344, n_sim))
+  expect_equal(dim(ar$an), c(nrow(slondon), n_sim))
+  expect_equal(dim(ar$af), c(nrow(slondon), n_sim))
   expect_equal(colnames(ar$an), paste0("sample", seq_len(n_sim)))
   expect_equal(colnames(ar$af), paste0("sample", seq_len(n_sim)))
 
@@ -38,48 +43,39 @@ test_that("attributable returns expected structure and summaries (forward, tot =
   expect_true(any(grepl("quant$", colnames(ar$an.summary))))
   expect_true(all(c("mean", "sd", "mode") %in% colnames(ar$af.summary)))
   expect_true(any(grepl("quant$", colnames(ar$af.summary))))
+
+  #NA at the end
+  expect_equal(sum(is.na(ar$af.summary[,"0.5quant"])), 0)
+  expect_equal(names(which(is.na(ar$an.summary[,"0.5quant"]))), as.character(sort(rev(slondon$date)[1:21])))
+
 })
 
-test_that("attributable returns time-series matrices (backward)", {
 
-  expect_silent(ar2 <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen))
+test_that("attributable returns filtered time-series matrices when filter is specified", {
 
-  # should return matrices (or vectors if trimmed) for af/an
-  n_row <- nrow(slondon) - dlnm_var$max_lag
-  expect_equal(dim(ar2$af), c(n_row , n_sim))
-  expect_equal(dim(ar2$an), c(n_row, n_sim))
+  # filter only for summer
+  summer_dates <- slondon$date[slondon$date >= as.Date("2011-06-01") & slondon$date <= as.Date("2011-09-30")]
+  slondon$summer <- ifelse(slondon$date %in% summer_dates, 1, 0)
+
+  expect_warning(ar2 <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", "summer", cen = cen))
+
+  expect_equal(dim(ar2$af), c(length(summer_dates), n_sim))
+  expect_equal(dim(ar2$an), c(length(summer_dates), n_sim))
 
   expect_equal(colnames(ar2$an), paste0("sample", seq_len(n_sim)))
   expect_equal(colnames(ar2$af), paste0("sample", seq_len(n_sim)))
 
-  row_dates <- as.character(slondon$date[(dlnm_var$max_lag + 1):nrow(slondon)])
-  expect_equal(rownames(ar2$an), row_dates)
-  expect_equal(rownames(ar2$af), row_dates)
-  expect_equal(rownames(ar2$an.summary), row_dates)
-  expect_equal(rownames(ar2$af.summary), row_dates)
+  expect_equal(rownames(ar2$an), as.character(summer_dates))
+  expect_equal(rownames(ar2$af), as.character(summer_dates))
+  expect_equal(rownames(ar2$an.summary), as.character(summer_dates))
+  expect_equal(rownames(ar2$af.summary), as.character(summer_dates))
+
+  # no missings
+  expect_equal(sum(is.na(ar2$af.summary[,"0.5quant"])), 0)
+  expect_equal(sum(is.na(ar2$an.summary[,"0.5quant"])), 0)
+
 
 })
-
-test_that("attributable returns time-series matrices when tot = FALSE (forward)", {
-
-  expect_silent(ar2 <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen, dir = "forw"))
-
-  # should return matrices (or vectors if trimmed) for af/an
-  n_row <- nrow(slondon) - dlnm_var$max_lag
-  expect_equal(dim(ar2$af), c(n_row , n_sim))
-  expect_equal(dim(ar2$an), c(n_row, n_sim))
-
-  expect_equal(colnames(ar2$an), paste0("sample", seq_len(n_sim)))
-  expect_equal(colnames(ar2$af), paste0("sample", seq_len(n_sim)))
-
-  row_dates <- as.character(slondon$date[1:(nrow(slondon) - dlnm_var$max_lag)])
-  expect_equal(rownames(ar2$an), row_dates)
-  expect_equal(rownames(ar2$af), row_dates)
-  expect_equal(rownames(ar2$an.summary), row_dates)
-  expect_equal(rownames(ar2$af.summary), row_dates)
-
-})
-
 
 test_that("attributable works when cases = NULL (only AF returned)", {
 
@@ -88,12 +84,10 @@ test_that("attributable works when cases = NULL (only AF returned)", {
     ar3 <- attributable(mod, cb, slondon, "date", "tmean", cen = cen)
   )
 
-  n_row <- nrow(slondon) - dlnm_var$max_lag
-
   expect_type(ar3, "list")
   expect_equal(names(ar3), c("af", "af.summary"))
-  expect_equal(dim(ar3$af), c(n_row, n_sim))
-  expect_equal(dim(ar3$af.summary), c(n_row, 6))
+  expect_equal(dim(ar3$af), c(nrow(slondon), n_sim))
+  expect_equal(dim(ar3$af.summary), c(nrow(slondon), 6))
 
 })
 

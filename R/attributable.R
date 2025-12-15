@@ -320,8 +320,6 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
         an[i] <- af[i] * sum(cases, na.rm = TRUE)
       }
 
-      # insert missings if time point is not selected
-      if(!is.null(filter)) M_an[filter == 0, ] <- NA
     }
 
   # backward perspective: contributions from past exposures to current day
@@ -367,14 +365,10 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
         an[i] <- af[i] * sum(cases, na.rm = TRUE)
       }
 
-      # insert missings if time point is not selected
-      if(!is.null(filter)) M_an[filter == 0, ] <- NA
-
     }
 
   }
 
-  #Remove rows with NA (will be in the beginning or in the end depending on the algorithm type, and also if a filter is specified)
    if(!is.null(date)) {
      rownames(M_an) <- rownames(M_af) <- as.character(date)
    } else {
@@ -382,19 +376,20 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
    }
    colnames(M_an) <- colnames(M_af) <- paste0("sample", seq_len(n_sample))
 
-   if(!is.null(cases)) {
-     ind <- !rowSums(is.na(M_an))
-   } else {
-     ind <- !rowSums(is.na(M_af))
-   }
+   # Remove rows if filter is specified
+   if(!is.null(filter)) {
 
-   M_an <- M_an[ind,]
-   M_af <- M_af[ind,]
+     M_an <- M_an[filter == 1, ]
+     M_af <- M_af[filter == 1, ]
+
+   }
 
 
   ## -----------------------
   ## summaries
   ## -----------------------
+
+  # only calculate summaries in points without missing values
 
   #per time
   M_ansum <- M_afsum <-  matrix(nrow = nrow(M_af), ncol = ncol(cpred$allfit.summary))
@@ -404,31 +399,37 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
   quant_cols <- grep("quant$", colnames(cpred$allfit.summary), value = TRUE)
   quant_val <- as.numeric(gsub("quant$", "", quant_cols))
 
+  # AF don't have the same missings as AN (e.g, in forward perspective we have non-missing AF in the last days whereas we have missing AN)
+  ind_af <- !rowSums(is.na(M_af))
+
   if(!is.null(cases)) {
-    M_ansum[,"mean"] <- apply(M_an, 1, mean)
-    M_ansum[,"sd"] <- apply(M_an, 1, stats::sd)
+
+    ind_an <- !rowSums(is.na(M_an))
+
+    M_ansum[ind_an, "mean"] <- apply(M_an[ind_an,], 1, mean)
+    M_ansum[ind_an, "sd"] <- apply(M_an[ind_an,], 1, stats::sd)
 
     for(i in seq_along(quant_cols)) {
-      M_ansum[, quant_cols[i]] <- apply(M_an, 1, function (x) stats::quantile(x, quant_val[i]))
+      M_ansum[ind_an, quant_cols[i]] <- apply(M_an[ind_an,], 1, function (x) stats::quantile(x, quant_val[i]))
     }
 
     #calculate mode (using default kernel density estimate, revisar...)
-    M_ansum[, "mode"] <- apply(M_an, 1, function(v) {
+    M_ansum[ind_an, "mode"] <- apply(M_an[ind_an,], 1, function(v) {
       dv <- stats::density(v)
       with(dv, x[which.max(y)])
     })
   }
 
-  M_afsum[, "mode"] <- apply(M_af, 1, function(v) {
+  M_afsum[ind_af, "mode"] <- apply(M_af[ind_af,], 1, function(v) {
     dv <- stats::density(v)
     with(dv, x[which.max(y)])
   })
 
-  M_afsum[, "mean"] <- apply(M_af, 1, mean)
-  M_afsum[, "sd"] <- apply(M_af, 1, stats::sd)
+  M_afsum[ind_af, "mean"] <- apply(M_af[ind_af,], 1, mean)
+  M_afsum[ind_af, "sd"] <- apply(M_af[ind_af,], 1, stats::sd)
 
   for(i in seq_along(quant_cols)) {
-    M_afsum[, quant_cols[i]] <- apply(M_af, 1, function (x) stats::quantile(x, quant_val[i]))
+    M_afsum[ind_af, quant_cols[i]] <- apply(M_af[ind_af,], 1, function (x) stats::quantile(x, quant_val[i]))
   }
 
   #total (if allowed)
