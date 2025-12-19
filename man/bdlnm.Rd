@@ -30,17 +30,42 @@ bdlnm(
 \item{...}{Additional arguments passed to \link[INLA:inla]{INLA::inla}.}
 }
 \value{
-An object of class \code{"bdlnm"} with components:
+A S3 object of class \code{"bdlnm"} with the following components:
 \itemize{
-\item \code{model}: The fitted \code{INLA} model.
-\item \code{coefficients}: A matrix with posterior samples for the basis coefficients
+\item \code{model}: The fitted \code{INLA} model returned by \code{\link[INLA:inla]{INLA::inla()}}.
+\item \code{coefficients}: a matrix where each column is a posterior sample draw returned by \code{INLA::inla.posterior.sample} (columns are named \code{sample1}, \code{sample2}, ...) and each row is a different model coefficient.
+\item \code{coefficients.summary}: a matrix with summary statistics for the posterior samples stored in \code{coefficients}. Each column is a statistic (\code{mean}, \code{sd}, requested quantiles and mode) and each row is a different model coefficients.
 }
 }
 \description{
-Fit a distributed lag non-linear model (DLNM) that includes a basis object from \code{dlnm}. It uses \code{INLA} to fit the bayesian model and to extract posterior samples of the basis coefficients.
+Fit a distributed lag non-linear model (DLNM) using a bayesian framework. It uses \code{INLA} to fit the bayesian model and to extract posterior samples of the model coefficients. Review the package vignette for detailed examples.
 }
 \details{
-If the basis indicates some lag, the first \code{max(lags)} rows of \code{data} are set to \code{NA} to omit the basis first missing rows for model fitting.
+The function fits a Bayesian distributed lag non-linear model (B-DLNM) by calling \code{\link[INLA:inla]{INLA::inla()}} and then it draws posterior samples of model coefficient by calling \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. Here are some considerations to take in account:
+\subsection{Basis and lag handling:}{
+
+If the supplied \code{basis} has a non-zero lag attribute, the function inserts \code{NA} rows in the first \code{max(lag)} observations of \code{data} before fitting. This removes observations for which the model is undefined (no available lags) and matches the behaviour expected by the DLNM construction.
+}
+
+\subsection{INLA options:}{
+
+Additional arguments supplied via \code{...} are forwarded to \code{\link[INLA:inla]{INLA::inla()}}. See its documentation to see all available arguments. Internally, the function ensures that \code{control.compute = list(config = TRUE)} in order to enable posterior sample drawing with \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}.
+}
+
+\subsection{Posterior sample options:}{
+
+Additional arguments supplied via \code{sample.arg} are forwarded to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. See its documentation to see all available arguments. By default, \code{sample.arg = list(n = 1000, seed = 0L)}, so that the number of samples is \code{1000} and the seed is set at random. For reproducible draws, you need to set a \code{seed} in \code{sample.arg}.
+}
+
+\subsection{Summary coefficient calculation:}{
+
+The function computes posterior summaries for each coefficient: mean, standard deviation, credible-interval quantiles (the mid and the lower/upper tails according to \code{ci.level}) and an approximate mode obtained from a kernel density estimate.
+}
+
+\subsection{Requirements:}{
+
+The \code{INLA} package must be installed from the R-INLA repository (https://www.r-inla.org/); if not available the function aborts with a short instruction on how to install it.
+}
 }
 \examples{
 
@@ -76,4 +101,19 @@ If the basis indicates some lag, the first \code{max(lags)} rows of \code{data} 
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
 
 
+}
+\references{
+Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
+
+Havard Rue, Sara Martino, and Nicholas Chopin (2009), Approximate Bayesian Inference for Latent Gaussian Models Using Integrated Nested Laplace Approximations (with discussion), Journal of the Royal Statistical Society B, 71, 319-392.
+}
+\seealso{
+\code{\link[=bcrosspred]{bcrosspred()}} for prediction of exposure–lag–response associations for a \code{bdlnm} object,
+
+\code{\link[=attributable]{attributable()}} for calculation of attributable fractions and numbers for a \code{bdlnm} object,
+
+\code{\link[=optimal_exposure]{optimal_exposure()}} for estimation of exposure values that optimise the predicted effect for a \code{bdlnm} object.
+}
+\author{
+Pau Satorra, Marcos Quijal.
 }

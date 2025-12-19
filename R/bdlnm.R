@@ -1,21 +1,47 @@
-#' Fit a bayesian distributed lag non-linear model (B-DLNM)
+#' Fit a Bayesian distributed lag non-linear model (B-DLNM)
 #'
-#' Fit a distributed lag non-linear model (DLNM) that includes a basis object from `dlnm`. It uses `INLA` to fit the bayesian model and to extract posterior samples of the basis coefficients.
+#' Fit a distributed lag non-linear model (DLNM) using a Bayesian framework. The function calls [INLA::inla()] to fit the model and then draws posterior samples of the model latent field with [INLA::inla.posterior.sample()]. See the package vignette for worked examples and recommended workflows.
 #'
-#' @param formula A model formula (as for [INLA::inla]).
-#' @param basis A DLNM basis object produced by `dlnm`. It can be one of [dlnm::crossbasis] or [dlnm::onebasis].
-#' @param family Family name passed to [INLA::inla] (default `"gaussian"`).
-#' @param data A data frame used for the model fitted with [INLA::inla].
-#' @param sample.arg List containing the arguments passed to [INLA::inla.posterior.sample]. Default sets `n = 1000` as the number of samples and `seed = 0L` (set the seed at 'random').
-#' @param ci.level Numeric in `(0,1)` giving the credible interval level (default `0.95`).
-#' @param ... Additional arguments passed to [INLA::inla].
+#' @param formula A model formula (as for [INLA::inla()]).
+#' @param basis A DLNM basis object produced by `dlnm`. It must be of class `"crossbasis"` ([bdlnm::crossbasis()]) or `"onebasis"` ([bdlnm::onebasis()]).
+#' @param data A data frame used for the model fitted with [INLA::inla()].
+#' @param family Character. Family name passed to [INLA::inla()] (default `"gaussian"`).
+#' @param sample.arg List of arguments passed to [INLA::inla.posterior.sample()]. Default to `list(n = 1000, seed = 0L)` (draws `1000` posterior samples, set the seed at random). For reproducible sampling, set a non-zero `seed` in `sample.arg`.
+#' @param ci.level Numeric in `(0,1)` giving the credible interval level (default `0.95`). Credible interval quantiles are computed from the posterior samples.
+#' @param ... Additional arguments passed to [INLA::inla()].
 #'
-#' @returns An object of class `"bdlnm"` with components:
-#' - `model`: The fitted `INLA` model.
-#' - `coefficients`: A matrix with posterior samples for the basis coefficients
+#' @section Basis and lag handling:
+#' If the supplied `basis` has a non-zero lag attribute, the function inserts `NA` rows in the first (if lag > 0) or last (if lag < 0) `max(lag)` observations of `data` before fitting. This removes observations for which the basis is undefined.
 #'
-#' @details
-#' If the basis indicates some lag, the first `max(lags)` rows of `data` are set to `NA` to omit the basis first missing rows for model fitting.
+#' @section INLA options:
+#' Additional arguments supplied via `...` are forwarded to [INLA::inla()] (see documentation for all available arguments). Internally, the function ensures that `control.compute = list(config = TRUE)` in order to enable posterior sample drawing with [INLA::inla.posterior.sample()].
+#'
+#' @section Posterior sample options:
+#' Additional arguments supplied via `sample.arg` are forwarded to [INLA::inla.posterior.sample()] (see documentation for all available arguments). By default, the number of samples is `1000`, be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric `seed` in `sample.arg`.
+#'
+#' @section coefficient summaries:
+#' For all the model coefficient samples the function computes mean, standard deviation, the lower/median/upper credible interval quantiles (according to `ci.level`) and approximate mode obtained from a kernel density estimate.
+#'
+#' @section Requirements:
+#' The [INLA] package must be installed from the R-INLA repository (https://www.r-inla.org/); if not available the function aborts with a short instruction on how to install it.
+#'
+#' @returns An S3 object of class `"bdlnm"` with the following components:
+#' - `model`: the fitted `INLA` model returned by [INLA::inla()].
+#' - `coefficients`: a matrix whose columns are posterior sample draws returned by [INLA::inla.posterior.sample()] (named `sample1`, `sample2`, ...) and whose rows are all model coefficients.
+#' - `coefficients.summary`: a matrix of summary statistics for all the posterior samples stored in `coefficients` (mean, sd, quantiles, mode).
+#'
+#' @author Pau Satorra, Marcos Quijal.
+#'
+#'
+#'@references
+#'
+#' Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
+#'
+#' Havard Rue, Sara Martino, and Nicholas Chopin (2009), Approximate Bayesian Inference for Latent Gaussian Models Using Integrated Nested Laplace Approximations (with discussion), Journal of the Royal Statistical Society B, 71, 319-392.
+#'
+#' @seealso [bcrosspred()] to predict exposure–lag–response associations for a `bdlnm` object,
+#' @seealso [attributable()] to calculate attributable fractions and numbers for a `bdlnm` object,
+#' @seealso [optimal_exposure()] to estimate exposure values that optimise the predicted effect for a `bdlnm` object.
 #'
 #' @examples
 #'
