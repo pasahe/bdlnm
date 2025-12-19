@@ -1,20 +1,37 @@
-#' Optimal effect exposure value estimation
+#' Calculate the exposure value that minimizes or maximizes the effect
 #'
-#' The function finds the exposure value that optimizes the overall effect for each posterior sample, together with a small summary of these values. The user can decide to choose the optimal exposure as the value that has either the minimum or the maximum estimated effect. In case of finding the minimum exposure effect in the context of the relationship between temperature and mortality, this value is called Minimum Mortality Temperature (MMT).
+#' Find exposure values that optimize the overall effect for each posterior sample drawn from a Bayesian distributed lag non-linear model ([bdlnm()]). The function returns the exposure value that minimizes or maximizes the overall cumulative effect (summed across lags) for each posterior sample, together with simple summary statistics (mean, sd, credible-interval quantiles and mode). When used to find the minimum effect in temperature–mortality analyses this optimal exposure value is commonly called the Minimum Mortality Temperature (MMT).
 #'
-#' @param object A fitted `"bdlnm"` class object returned by [bdlnm].
-#' @param basis A DLNM basis object produced by `dlnm`. It can be one of [dlnm::crossbasis] or [dlnm::onebasis].
-#' @param at Values (or matrix) of the predictor at which to predict; can be `NULL` and reconstructed from `from`, `to`, `by` and the basis attributes.
+#' @param object A fitted `"bdlnm"` object returned by [bdlnm()].
+#' @param basis A DLNM basis object produced by `dlnm`. It must be of class `"crossbasis"` ([dlnm::crossbasis()]) or `"onebasis"` ([dlnm::onebasis()]).
+#' @param at Numeric vector (or matrix) of exposure values at which to compute predictions. If `NULL` the function reconstructs a grid using `from`, `to`, `by` together with the `basis` attributes.
 #' @param from,to,by Optional numeric used to construct `at` when not provided.
-#' @param which Character string specifying if the optimal exposure value is chosen as the one that minimizes the effect or as the one that maximizes it. By default is `"min"`.
+#' @param which Selection criterion to calculate the optimal exposure: `"min"` (default) chooses the exposure with the minimum overall cumulative effect, `"max"` chooses the exposure with maximum overall cumulative effect.
 #'
-#' @returns A list of class `optimal_exposure` containing:
-#'  - `est`: numeric vector with the optimal exposure value for each posterior sample
-#'  - `summary`: data frame with summary statistics for these optimal values
+#' @details
 #'
-#'  The returned object has attribute `xvar` containing the exposure grid used.
+#' The function internally calls [bcrosspred()] to compute the posterior distribution of the overall exposure effect for the grid specified by `at` (or reconstructed using `from`, `to`, `by` and the attributes of `basis`). For each posterior sample the function calculates the exposure value that optimizes (minimizes or maximizes) the overall cumulative effect and then summarizes these optimal values across samples using mean, sd, credible-interval quantiles and the mode (most frequent observed value).
 #'
-#' @export
+#' If `basis` is a `crossbasis`, the function works on the overall cumulative effect of each exposure summed across all the lags, stored by [bcrosspred()] in `$allfit`. If `basis` is a `onebasis` instead, then the function uses the exposure effect stored in `$matfit`.
+#'
+#' In the presence of a non-linear association between exposure and response, this optimal exposure value can be used as the reference exposure value for estimating effects. Therefore, it can be passed to the [bcrosspred()] and [attributable()] functions as the centre exposure value. However, be aware that, in the presence of uncertainty, the optimal exposure range across all samples can be wide, so providing one summary statistic (e.g. the median) as the center reference value can be misleading. It is recommended to visualize the distribution of these optimal exposure values using [plot.optimal_exposure()] before using an optimal exposure value as the center.
+#'
+#' @return An S3 object of class `"optimal_exposure"` containing:
+#'  - `est`: numeric vector with the optimal exposure value for each posterior sample (named sample1, sample2, ...).
+#'  - `summary`: a one-row data frame with summary statistics for the optimal values across all samples (mean, sd, quantiles, mode).
+#'
+#' @author Pau Satorra, Marcos Quijal.
+#'
+#' @references
+#'
+#' Gasparrini A (2011). Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software, 43(8), 1–20.
+#'
+#' Armstrong B. Models for the relationship between ambient temperature and daily mortality. Epidemiology. 2006;17(6):624-31.
+#'
+#' @seealso [plot.optimal_exposure()] to plot the optimal exposure values stored in a `"optimal_exposure"` object.
+#' @seealso [bdlnm()] to fit a Bayesian distributed lag non-linear model.
+#' @seealso [bcrosspred()] to predict exposure–lag–response associations for a B-DLNM,
+#' @seealso [attributable()] to calculate attributable fractions and numbers for a B-DLNM,
 #'
 #' @examples
 #' # Set exposure-response and lag-response spline parameters
@@ -50,6 +67,8 @@
 #'
 #'  # Find minimum risk exposure value
 #'  mmt <- optimal_exposure(mod, cb, at = temp)
+#'
+#'  @export
 #'
 optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, by = NULL, which = "min") {
 

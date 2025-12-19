@@ -2,7 +2,7 @@
 % Please edit documentation in R/optimal_exposure.R
 \name{optimal_exposure}
 \alias{optimal_exposure}
-\title{Optimal effect exposure value estimation}
+\title{Calculate the exposure value that minimizes or maximizes the effect}
 \usage{
 optimal_exposure(
   object,
@@ -15,27 +15,32 @@ optimal_exposure(
 )
 }
 \arguments{
-\item{object}{A fitted \code{"bdlnm"} class object returned by \link{bdlnm}.}
+\item{object}{A fitted \code{"bdlnm"} object returned by \code{\link[=bdlnm]{bdlnm()}}.}
 
-\item{basis}{A DLNM basis object produced by \code{dlnm}. It can be one of \link[dlnm:crossbasis]{dlnm::crossbasis} or \link[dlnm:onebasis]{dlnm::onebasis}.}
+\item{basis}{A DLNM basis object produced by \code{dlnm}. It must be of class \code{"crossbasis"} (\code{\link[dlnm:crossbasis]{dlnm::crossbasis()}}) or \code{"onebasis"} (\code{\link[dlnm:onebasis]{dlnm::onebasis()}}).}
 
-\item{at}{Values (or matrix) of the predictor at which to predict; can be \code{NULL} and reconstructed from \code{from}, \code{to}, \code{by} and the basis attributes.}
+\item{at}{Numeric vector (or matrix) of exposure values at which to compute predictions. If \code{NULL} the function reconstructs a grid using \code{from}, \code{to}, \code{by} together with the \code{basis} attributes.}
 
 \item{from, to, by}{Optional numeric used to construct \code{at} when not provided.}
 
-\item{which}{Character string specifying if the optimal exposure value is chosen as the one that minimizes the effect or as the one that maximizes it. By default is \code{"min"}.}
+\item{which}{Selection criterion to calculate the optimal exposure: \code{"min"} (default) chooses the exposure with the minimum overall cumulative effect, \code{"max"} chooses the exposure with maximum overall cumulative effect.}
 }
 \value{
-A list of class \code{optimal_exposure} containing:
+An S3 object of class \code{"optimal_exposure"} containing:
 \itemize{
-\item \code{est}: numeric vector with the optimal exposure value for each posterior sample
-\item \code{summary}: data frame with summary statistics for these optimal values
+\item \code{est}: numeric vector with the optimal exposure value for each posterior sample (named sample1, sample2, ...).
+\item \code{summary}: a one-row data frame with summary statistics for the optimal values across all samples (mean, sd, quantiles, mode).
 }
-
-The returned object has attribute \code{xvar} containing the exposure grid used.
 }
 \description{
-The function finds the exposure value that optimizes the overall effect for each posterior sample, together with a small summary of these values. The user can decide to choose the optimal exposure as the value that has either the minimum or the maximum estimated effect. In case of finding the minimum exposure effect in the context of the relationship between temperature and mortality, this value is called Minimum Mortality Temperature (MMT).
+Find exposure values that optimize the overall effect for each posterior sample drawn from a Bayesian distributed lag non-linear model (\code{\link[=bdlnm]{bdlnm()}}). The function returns the exposure value that minimizes or maximizes the overall cumulative effect (summed across lags) for each posterior sample, together with simple summary statistics (mean, sd, credible-interval quantiles and mode). When used to find the minimum effect in temperature–mortality analyses this optimal exposure value is commonly called the Minimum Mortality Temperature (MMT).
+}
+\details{
+The function internally calls \code{\link[=bcrosspred]{bcrosspred()}} to compute the posterior distribution of the overall exposure effect for the grid specified by \code{at} (or reconstructed using \code{from}, \code{to}, \code{by} and the attributes of \code{basis}). For each posterior sample the function calculates the exposure value that optimizes (minimizes or maximizes) the overall cumulative effect and then summarizes these optimal values across samples using mean, sd, credible-interval quantiles and the mode (most frequent observed value).
+
+If \code{basis} is a \code{crossbasis}, the function works on the overall cumulative effect of each exposure summed across all the lags, stored by \code{\link[=bcrosspred]{bcrosspred()}} in \verb{$allfit}. If \code{basis} is a \code{onebasis} instead, then the function uses the exposure effect stored in \verb{$matfit}.
+
+In the presence of a non-linear association between exposure and response, this optimal exposure value can be used as the reference exposure value for estimating effects. Therefore, it can be passed to the \code{\link[=bcrosspred]{bcrosspred()}} and \code{\link[=attributable]{attributable()}} functions as the centre exposure value. However, be aware that, in the presence of uncertainty, the optimal exposure range across all samples can be wide, so providing one summary statistic (e.g. the median) as the center reference value can be misleading. It is recommended to visualize the distribution of these optimal exposure values using \code{\link[=plot.optimal_exposure]{plot.optimal_exposure()}} before using an optimal exposure value as the center.
 }
 \examples{
 # Set exposure-response and lag-response spline parameters
@@ -72,4 +77,23 @@ The function finds the exposure value that optimizes the overall effect for each
  # Find minimum risk exposure value
  mmt <- optimal_exposure(mod, cb, at = temp)
 
+ @export
+
+}
+\references{
+Gasparrini A (2011). Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software, 43(8), 1–20.
+
+Armstrong B. Models for the relationship between ambient temperature and daily mortality. Epidemiology. 2006;17(6):624-31.
+}
+\seealso{
+\code{\link[=plot.optimal_exposure]{plot.optimal_exposure()}} to plot the optimal exposure values stored in a \code{"optimal_exposure"} object.
+
+\code{\link[=bdlnm]{bdlnm()}} to fit a Bayesian distributed lag non-linear model.
+
+\code{\link[=bcrosspred]{bcrosspred()}} to predict exposure–lag–response associations for a B-DLNM,
+
+\code{\link[=attributable]{attributable()}} to calculate attributable fractions and numbers for a B-DLNM,
+}
+\author{
+Pau Satorra, Marcos Quijal.
 }

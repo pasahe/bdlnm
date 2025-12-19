@@ -17,13 +17,13 @@ bdlnm(
 \arguments{
 \item{formula}{A model formula (as for \code{\link[INLA:inla]{INLA::inla()}}).}
 
-\item{basis}{A DLNM basis object produced by \code{dlnm}. It must be of class \code{"crossbasis"} (\code{\link[=crossbasis]{crossbasis()}}) or \code{"onebasis"} (\code{\link[=onebasis]{onebasis()}}).}
+\item{basis}{A DLNM basis object produced by \code{dlnm}. It must be of class \code{"crossbasis"} (\code{\link[dlnm:crossbasis]{dlnm::crossbasis()}}) or \code{"onebasis"} (\code{\link[dlnm:onebasis]{dlnm::onebasis()}}).}
 
-\item{data}{A data frame used for the model fitted with \code{\link[INLA:inla]{INLA::inla()}}.}
+\item{data}{A data frame containing the variables referenced in \code{formula} used by \code{\link[INLA:inla]{INLA::inla()}}.}
 
 \item{family}{Character. Family name passed to \code{\link[INLA:inla]{INLA::inla()}} (default \code{"gaussian"}).}
 
-\item{sample.arg}{List of arguments passed to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. Default to \code{list(n = 1000, seed = 0L)} (draws \code{1000} posterior samples, set the seed at random). For reproducible sampling, set a non-zero \code{seed} in \code{sample.arg}.}
+\item{sample.arg}{List of arguments passed to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. Defaults to \code{list(n = 1000, seed = 0L)} (draws \code{1000} posterior samples; seed at random). For reproducible sampling set a non-zero numeric \code{seed}.}
 
 \item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}). Credible interval quantiles are computed from the posterior samples.}
 
@@ -40,24 +40,29 @@ An S3 object of class \code{"bdlnm"} with the following components:
 \description{
 Fit a distributed lag non-linear model (DLNM) using a Bayesian framework. The function calls \code{\link[INLA:inla]{INLA::inla()}} to fit the model and then draws posterior samples of the model latent field with \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. See the package vignette for worked examples and recommended workflows.
 }
-\section{INLA options}{
+\section{Distributed lag non-linear model}{
+
+Distributed lag non-linear models (DLNMs) describe simultaneous non-linear and delayed (lagged) dependencies, commonly called exposure-lag-response associations. This modelling framework is based on the definition of a cross-basis (a bi-dimensional space of functions) built with \code{\link[dlnm:crossbasis]{dlnm::crossbasis()}} that encondes the dependency along the space of the predictor (exposure-response) and along lags (lag-response). This cross-basis matrix has to be supplied in the \code{basis} argument and included in \code{formula}. A basis object built with \code{\link[dlnm:onebasis]{dlnm::onebasis()}} can be used instead, when we want to simplify the modelling of a uni-dimensional exposure-response relationship.
+}
+
+\section{INLA}{
+
+Models are fit using Integrated Nested Laplace approximation (INLA) via \code{\link[INLA:inla]{INLA::inla()}}. INLA is a method for approximate Bayesian inference. In the last years it has established itself as an alternative to other methods such as Markov chain Monte Carlo because of its speed and ease of use via the R-INLA package (\href{https://www.r-inla.org/what-is-inla}{What is INLA?}).
 
 Additional arguments supplied via \code{...} are forwarded to \code{\link[INLA:inla]{INLA::inla()}} (see documentation for all available arguments). Internally, the function ensures that \code{control.compute = list(config = TRUE)} in order to enable posterior sample drawing with \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}.
 }
 
-\section{Posterior sample options}{
+\section{Posterior samples}{
+
+
+After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a cross-basis built from an exposure basis with C parameters and a lag basis with L parameters, there will be C × L cross-basis associated coefficients (named e.g. v1.l1, ..., vC.lL). For a \code{"onebasis"} object the coefficients follow the simpler form b1, ... bC.
 
 Additional arguments supplied via \code{sample.arg} are forwarded to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}} (see documentation for all available arguments). By default, the number of samples is \code{1000}, be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric \code{seed} in \code{sample.arg}.
 }
 
-\section{coefficient summaries}{
-
-For all the model coefficient samples the function computes mean, standard deviation, the lower/median/upper credible interval quantiles (according to \code{ci.level}) and approximate mode obtained from a kernel density estimate.
-}
-
 \section{Requirements}{
 
-The \link{INLA} package must be installed from the R-INLA repository (https://www.r-inla.org/); if not available the function aborts with a short instruction on how to install it.
+The \link{INLA} package must be installed from the R-INLA repository (\href{https://www.r-inla.org/}{R-INLA Project}); if not available the function aborts with a short instruction on how to install it.
 }
 
 \examples{
