@@ -1,25 +1,59 @@
-#' Generate predicted effects from Bayesian distributed-lag models (B-DLNM).
+#' Predict exposure-lag-response effects from a Bayesian distributed-lag models (B-DLNM).
 #'
-#' It produces lag-specific, overall and (optionally) cumulative predictions from an object produced by `bdlnm()`.
+#' Calculate predictions from a fitted Bayesian distributed lag non-linear model ([bdlnm()]). Predicted associations are computed on a grid of values of the exposure and lags, relative to a reference exposure center value. The function gives posterior samples of exposure–lag-specific associations, overall cumulative associations (summed across lags) and optionally incremental cumulative associations, together with summary statistics (mean, sd, credible interval quantiles and mode).
 #'
-#' @param object A fitted `"bdlnm"` class object returned by [bdlnm].
-#' @param basis A DLNM basis object produced by `dlnm`. It can be one of [dlnm::crossbasis] or [dlnm::onebasis].
-#' @param model.link Optional character; model link (if `NULL` it is
-#'   inferred from the fitted model).
-#' @param at Values (or matrix) of the predictor at which to predict; can be `NULL` and reconstructed from `from`, `to`, `by` and the basis attributes.
-#' @param from,to,by Optional numeric used to construct `at` when
-#'   not provided.
-#' @param lag Optional lag specification; when `NULL` the original lag
-#'   from `basis` is used.
-#' @param bylag Integer step for lags (default `1`).
-#' @param cen Centering value for predictions; if `NULL` a centering
-#'   value is constructed from `basis` attributes.
-#' @param ci.level Numeric in `(0,1)` giving the credible interval level (default `0.95`).
-#' @param cumul Logical; if `TRUE` compute cumulative predictions (default `FALSE`).
+#' @param object A fitted `"bdlnm"` object returned by [bdlnm()].
+#' @param basis A DLNM basis object produced by `dlnm`. It must be of class `"crossbasis"` ([dlnm::crossbasis()]) or `"onebasis"` ([dlnm::onebasis()]).
+#' @param model.link Optional character specifying the model link (if `NULL` it is inferred from the fitted model).
+#' @param at Numeric vector (or matrix) of exposure values at which to compute predictions. If `NULL` the function reconstructs a grid using `from`, `to`, `by` together with the `basis` attributes.
+#' @param from,to,by Optional numeric used to construct `at` when not provided.
+#' @param lag Optional lag specification; when `NULL` the original lag from `basis` is used. If supplied it must be of length 1 or 2 and represent the lag interval.
+#' @param bylag Integer lag step (default `1L`).
+#' @param cen Centering exposure value for predictions. If `NULL` the centering value depends on the exposure basis function or set to a mid-range value (see Details).
+#' @param ci.level Numeric in `(0,1)` giving the credible interval level (default `0.95`). Credible interval quantiles are computed from the posterior samples.
+#' @param cumul Logical; if `TRUE` compute incremental cumulative predictions along lags (default `FALSE`).
 #'
-#' @returns An object of class `"bcrosspred"` containing
-#'   coefficients, fitted matrices, summaries and relative-risks (if link is
-#'   log/logit).
+#' @details
+#'
+#' The function computes predictions for specific combinations of the requested exposure and lag grids. The values in `at` can be provided as a vector; in this case, they are replicated for each lag. Alternatively, `at` can be provided as a matrix of complete exposure histories over the same lag period used for estimation to compute the association with a specific exposure pattern.
+#'
+#' Predictions are computed relative to a centering/reference value (`cen`). If `NULL`, the default `cen` depends on the exposure-response basis function: for `strata`, `thr` and `integer` the reference corresponds to the reference region, and for `lin` the reference is set to 0. For other choices, such as `ns`, `bs`, `poly` or other existing or user-defined functions, the default centering value is set to an approximate mid-range value. For non-linear exposure-response associations is sometimes recommended to manually set the centering value to a data-driven center such as the optimal exposure value (see [optimal_exposure()]).
+#'
+#' Posterior sample of the predicted associations are stored as matrices for the overall cumulative effect and 3D arrays for the exposure-lag-specific predictions. Summaries across these samples are computed using the mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to `ci.level`) and an approximate mode obtained from a kernel density estimate. Relative risks versions of these associations (exponentiated predictions) are also included if `model.link` is equal to `"log"` or `"logit"`. The `model.link` can be manually specified or, if `NULL`, it is tried to be inferred from the `model` type in `object`.
+#'
+#' Be aware of memory usage: exposure-lag-specific predictions are stored in 3D arrays of dimension `length(predvar)` × `length(predlag)` × `n_sim`. For dense grids and many posterior samples this can be computationally intensive.
+#'
+#' This function can also be used to compute predictions for models with simple uni-dimensional basis functions not including lags, if the basis supplied is `"onebasis"` instead of `"crossbasis"`. In this case, only unlagged predicted associations are returned.
+#'
+#'
+#' @return An object of class `"bcrosspred"` (a list) with elements including:
+#' - `predvar`: the exposure grid used for prediction (vector).
+#' - `lag`: numeric vector of length 2 with the lag interval used.
+#' - `bylag`: the lag step used.
+#' - `coefficients`: matrix of posterior coefficient draws (columns = samples).
+#' - `coefficients.summary`: matrix of coefficient summaries (mean, sd, quantiles, mode).
+#' - `matfit`: 3D array of sampled lag-specific effects (predvar × predlag × samples).
+#' - `matfit.summary`: 3D array of summaries for `matfit` (predvar × predlag × summary-statistics).
+#' - `allfit`: matrix of sampled overall cumulative (summed across lags) effects (predvar × samples).
+#' - `allfit.summary`: matrix of summaries for `allfit` (predvar x summary-statistics).
+#' - `cumfit`: (optional) 3D array of sampled incremental cumulative effects (predvar × predlag × samples).
+#' - `cumfit.summary`: (optional) 3D array of summaries for `cumfit` (predvar × predlag × summary-statistics).
+#' - `matRRfit`, `allRRfit`, `matRRfit.summary`, `allRRfit.summary`, `cumRRfit.summary` (optional), `cumRRfit.summary` (optional: relative-risk versions (only when link is `log` or `logit`).
+#' - `cen`: centering value used.
+#' - `ci.level`, `model.class`, `model.link`.
+#'
+#' @author Pau Satorra, Marcos Quijal.
+#'
+#' @note This function is inspired by [dlnm::crosspred()] (Gasparrini 2011). It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
+#'
+#' @references
+#'
+#' Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
+#'
+#' @seealso [plot.bcrosspred()]  to plot the predicted associations stored in a `"bcrosspred"` object,
+#' @seealso [bdlnm()] to fit a Bayesian distributed lag non-linear model.
+#' @seealso [attributable()] to calculate attributable fractions and numbers for a `bdlnm` object,
+#' @seealso [optimal_exposure()] to estimate exposure values that optimise the predicted effect for a `bdlnm` object.
 #'
 #' @export
 #'
@@ -198,7 +232,7 @@ bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL,
   if (!is.null(fun) && fun %in% c("thr", "strata", "integer", "lin")) {
     if (is.logical(cen)) cen <- NULL
   } else {
-    # If we cannot infer it from the basis, set to mid-range (approximately)
+    # If we cannot infer it from the function basis, set to mid-range (approximately)
     if (is.null(cen) || (is.logical(cen) && cen)) {
       cen <- stats::median(pretty(range))
     }

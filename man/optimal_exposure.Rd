@@ -11,7 +11,8 @@ optimal_exposure(
   from = NULL,
   to = NULL,
   by = NULL,
-  which = "min"
+  which = "min",
+  ci.level = 0.95
 )
 }
 \arguments{
@@ -24,6 +25,8 @@ optimal_exposure(
 \item{from, to, by}{Optional numeric used to construct \code{at} when not provided.}
 
 \item{which}{Selection criterion to calculate the optimal exposure: \code{"min"} (default) chooses the exposure with the minimum overall cumulative effect, \code{"max"} chooses the exposure with maximum overall cumulative effect.}
+
+\item{ci.level}{Numeric in \verb{(0,1)} giving the credible-interval level (default \code{0.95}). Credible interval quantiles are computed from the posterior samples.}
 }
 \value{
 An S3 object of class \code{"optimal_exposure"} containing:
@@ -33,7 +36,7 @@ An S3 object of class \code{"optimal_exposure"} containing:
 }
 }
 \description{
-Find exposure values that optimize the overall effect for each posterior sample drawn from a Bayesian distributed lag non-linear model (\code{\link[=bdlnm]{bdlnm()}}). The function returns the exposure value that minimizes or maximizes the overall cumulative effect (summed across lags) for each posterior sample, together with simple summary statistics (mean, sd, credible-interval quantiles and mode). When used to find the minimum effect in temperature–mortality analyses this optimal exposure value is commonly called the Minimum Mortality Temperature (MMT).
+Find exposure values that optimize the overall effect for each posterior sample drawn from a Bayesian distributed lag non-linear model (\code{\link[=bdlnm]{bdlnm()}}). The function returns the exposure value that minimizes or maximizes the overall cumulative effect (summed across lags) for each posterior sample, together with summary statistics (mean, sd, credible-interval quantiles and mode). When used to find the minimum effect in temperature–mortality analyses this optimal exposure value is commonly called the Minimum Mortality Temperature (MMT).
 }
 \details{
 The function internally calls \code{\link[=bcrosspred]{bcrosspred()}} to compute the posterior distribution of the overall exposure effect for the grid specified by \code{at} (or reconstructed using \code{from}, \code{to}, \code{by} and the attributes of \code{basis}). For each posterior sample the function calculates the exposure value that optimizes (minimizes or maximizes) the overall cumulative effect and then summarizes these optimal values across samples using mean, sd, credible-interval quantiles and the mode (most frequent observed value).

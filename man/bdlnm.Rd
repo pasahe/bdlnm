@@ -58,6 +58,8 @@ Additional arguments supplied via \code{...} are forwarded to \code{\link[INLA:i
 After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a cross-basis built from an exposure basis with C parameters and a lag basis with L parameters, there will be C × L cross-basis associated coefficients (named e.g. v1.l1, ..., vC.lL). For a \code{"onebasis"} object the coefficients follow the simpler form b1, ... bC.
 
 Additional arguments supplied via \code{sample.arg} are forwarded to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}} (see documentation for all available arguments). By default, the number of samples is \code{1000}, be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric \code{seed} in \code{sample.arg}.
+
+Posterior sample estimations are then summarized across samples using mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to \code{ci.level}) and an approximate mode obtained from a kernel density estimate.
 }
 
 \section{Requirements}{

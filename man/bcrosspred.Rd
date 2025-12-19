@@ -2,7 +2,7 @@
 % Please edit documentation in R/bcrosspred.R
 \name{bcrosspred}
 \alias{bcrosspred}
-\title{Generate predicted effects from Bayesian distributed-lag models (B-DLNM).}
+\title{Predict exposure-lag-response effects from a Bayesian distributed-lag models (B-DLNM).}
 \usage{
 bcrosspred(
   object,
@@ -20,37 +20,61 @@ bcrosspred(
 )
 }
 \arguments{
-\item{object}{A fitted \code{"bdlnm"} class object returned by \link{bdlnm}.}
+\item{object}{A fitted \code{"bdlnm"} object returned by \code{\link[=bdlnm]{bdlnm()}}.}
 
-\item{basis}{A DLNM basis object produced by \code{dlnm}. It can be one of \link[dlnm:crossbasis]{dlnm::crossbasis} or \link[dlnm:onebasis]{dlnm::onebasis}.}
+\item{basis}{A DLNM basis object produced by \code{dlnm}. It must be of class \code{"crossbasis"} (\code{\link[dlnm:crossbasis]{dlnm::crossbasis()}}) or \code{"onebasis"} (\code{\link[dlnm:onebasis]{dlnm::onebasis()}}).}
 
-\item{model.link}{Optional character; model link (if \code{NULL} it is
-inferred from the fitted model).}
+\item{model.link}{Optional character specifying the model link (if \code{NULL} it is inferred from the fitted model).}
 
-\item{at}{Values (or matrix) of the predictor at which to predict; can be \code{NULL} and reconstructed from \code{from}, \code{to}, \code{by} and the basis attributes.}
+\item{at}{Numeric vector (or matrix) of exposure values at which to compute predictions. If \code{NULL} the function reconstructs a grid using \code{from}, \code{to}, \code{by} together with the \code{basis} attributes.}
 
-\item{from, to, by}{Optional numeric used to construct \code{at} when
-not provided.}
+\item{from, to, by}{Optional numeric used to construct \code{at} when not provided.}
 
-\item{lag}{Optional lag specification; when \code{NULL} the original lag
-from \code{basis} is used.}
+\item{lag}{Optional lag specification; when \code{NULL} the original lag from \code{basis} is used. If supplied it must be of length 1 or 2 and represent the lag interval.}
 
-\item{bylag}{Integer step for lags (default \code{1}).}
+\item{bylag}{Integer lag step (default \code{1L}).}
 
-\item{cen}{Centering value for predictions; if \code{NULL} a centering
-value is constructed from \code{basis} attributes.}
+\item{cen}{Centering exposure value for predictions. If \code{NULL} the centering value depends on the exposure basis function or set to a mid-range value (see Details).}
 
-\item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}).}
+\item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}). Credible interval quantiles are computed from the posterior samples.}
 
-\item{cumul}{Logical; if \code{TRUE} compute cumulative predictions (default \code{FALSE}).}
+\item{cumul}{Logical; if \code{TRUE} compute incremental cumulative predictions along lags (default \code{FALSE}).}
 }
 \value{
-An object of class \code{"bcrosspred"} containing
-coefficients, fitted matrices, summaries and relative-risks (if link is
-log/logit).
+An object of class \code{"bcrosspred"} (a list) with elements including:
+\itemize{
+\item \code{predvar}: the exposure grid used for prediction (vector).
+\item \code{lag}: numeric vector of length 2 with the lag interval used.
+\item \code{bylag}: the lag step used.
+\item \code{coefficients}: matrix of posterior coefficient draws (columns = samples).
+\item \code{coefficients.summary}: matrix of coefficient summaries (mean, sd, quantiles, mode).
+\item \code{matfit}: 3D array of sampled lag-specific effects (predvar × predlag × samples).
+\item \code{matfit.summary}: 3D array of summaries for \code{matfit} (predvar × predlag × summary-statistics).
+\item \code{allfit}: matrix of sampled overall cumulative (summed across lags) effects (predvar × samples).
+\item \code{allfit.summary}: matrix of summaries for \code{allfit} (predvar x summary-statistics).
+\item \code{cumfit}: (optional) 3D array of sampled incremental cumulative effects (predvar × predlag × samples).
+\item \code{cumfit.summary}: (optional) 3D array of summaries for \code{cumfit} (predvar × predlag × summary-statistics).
+\item \code{matRRfit}, \code{allRRfit}, \code{matRRfit.summary}, \code{allRRfit.summary}, \code{cumRRfit.summary} (optional), \code{cumRRfit.summary} (optional: relative-risk versions (only when link is \code{log} or \code{logit}).
+\item \code{cen}: centering value used.
+\item \code{ci.level}, \code{model.class}, \code{model.link}.
+}
 }
 \description{
-It produces lag-specific, overall and (optionally) cumulative predictions from an object produced by \code{bdlnm()}.
+Calculate predictions from a fitted Bayesian distributed lag non-linear model (\code{\link[=bdlnm]{bdlnm()}}). Predicted associations are computed on a grid of values of the exposure and lags, relative to a reference exposure center value. The function gives posterior samples of exposure–lag-specific associations, overall cumulative associations (summed across lags) and optionally incremental cumulative associations, together with summary statistics (mean, sd, credible interval quantiles and mode).
+}
+\details{
+The function computes predictions for specific combinations of the requested exposure and lag grids. The values in \code{at} can be provided as a vector; in this case, they are replicated for each lag. Alternatively, \code{at} can be provided as a matrix of complete exposure histories over the same lag period used for estimation to compute the association with a specific exposure pattern.
+
+Predictions are computed relative to a centering/reference value (\code{cen}). If \code{NULL}, the default \code{cen} depends on the exposure-response basis function: for \code{strata}, \code{thr} and \code{integer} the reference corresponds to the reference region, and for \code{lin} the reference is set to 0. For other choices, such as \code{ns}, \code{bs}, \code{poly} or other existing or user-defined functions, the default centering value is set to an approximate mid-range value. For non-linear exposure-response associations is sometimes recommended to manually set the centering value to a data-driven center such as the optimal exposure value (see \code{\link[=optimal_exposure]{optimal_exposure()}}).
+
+Posterior sample of the predicted associations are stored as matrices for the overall cumulative effect and 3D arrays for the exposure-lag-specific predictions. Summaries across these samples are computed using the mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to \code{ci.level}) and an approximate mode obtained from a kernel density estimate. Relative risks versions of these associations (exponentiated predictions) are also included if \code{model.link} is equal to \code{"log"} or \code{"logit"}. The \code{model.link} can be manually specified or, if \code{NULL}, it is tried to be inferred from the \code{model} type in \code{object}.
+
+Be aware of memory usage: exposure-lag-specific predictions are stored in 3D arrays of dimension \code{length(predvar)} × \code{length(predlag)} × \code{n_sim}. For dense grids and many posterior samples this can be computationally intensive.
+
+This function can also be used to compute predictions for models with simple uni-dimensional basis functions not including lags, if the basis supplied is \code{"onebasis"} instead of \code{"crossbasis"}. In this case, only unlagged predicted associations are returned.
+}
+\note{
+This function is inspired by \code{\link[dlnm:crosspred]{dlnm::crosspred()}} (Gasparrini 2011). It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
 }
 \examples{
 # Set exposure-response and lag-response spline parameters
@@ -87,4 +111,19 @@ It produces lag-specific, overall and (optionally) cumulative predictions from a
  # Prediction
  cpred <- bcrosspred(mod, cb, at = temp)
 
+}
+\references{
+Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
+}
+\seealso{
+\code{\link[=plot.bcrosspred]{plot.bcrosspred()}}  to plot the predicted associations stored in a \code{"bcrosspred"} object,
+
+\code{\link[=bdlnm]{bdlnm()}} to fit a Bayesian distributed lag non-linear model.
+
+\code{\link[=attributable]{attributable()}} to calculate attributable fractions and numbers for a \code{bdlnm} object,
+
+\code{\link[=optimal_exposure]{optimal_exposure()}} to estimate exposure values that optimise the predicted effect for a \code{bdlnm} object.
+}
+\author{
+Pau Satorra, Marcos Quijal.
 }

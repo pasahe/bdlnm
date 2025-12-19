@@ -1,13 +1,14 @@
 #' Calculate the exposure value that minimizes or maximizes the effect
 #'
-#' Find exposure values that optimize the overall effect for each posterior sample drawn from a Bayesian distributed lag non-linear model ([bdlnm()]). The function returns the exposure value that minimizes or maximizes the overall cumulative effect (summed across lags) for each posterior sample, together with simple summary statistics (mean, sd, credible-interval quantiles and mode). When used to find the minimum effect in temperature–mortality analyses this optimal exposure value is commonly called the Minimum Mortality Temperature (MMT).
+#' Find exposure values that optimize the overall effect for each posterior sample drawn from a Bayesian distributed lag non-linear model ([bdlnm()]). The function returns the exposure value that minimizes or maximizes the overall cumulative effect (summed across lags) for each posterior sample, together with summary statistics (mean, sd, credible-interval quantiles and mode). When used to find the minimum effect in temperature–mortality analyses this optimal exposure value is commonly called the Minimum Mortality Temperature (MMT).
 #'
 #' @param object A fitted `"bdlnm"` object returned by [bdlnm()].
 #' @param basis A DLNM basis object produced by `dlnm`. It must be of class `"crossbasis"` ([dlnm::crossbasis()]) or `"onebasis"` ([dlnm::onebasis()]).
 #' @param at Numeric vector (or matrix) of exposure values at which to compute predictions. If `NULL` the function reconstructs a grid using `from`, `to`, `by` together with the `basis` attributes.
 #' @param from,to,by Optional numeric used to construct `at` when not provided.
 #' @param which Selection criterion to calculate the optimal exposure: `"min"` (default) chooses the exposure with the minimum overall cumulative effect, `"max"` chooses the exposure with maximum overall cumulative effect.
-#'
+#' @param ci.level Numeric in `(0,1)` giving the credible-interval level (default `0.95`). Credible interval quantiles are computed from the posterior samples.
+
 #' @details
 #'
 #' The function internally calls [bcrosspred()] to compute the posterior distribution of the overall exposure effect for the grid specified by `at` (or reconstructed using `from`, `to`, `by` and the attributes of `basis`). For each posterior sample the function calculates the exposure value that optimizes (minimizes or maximizes) the overall cumulative effect and then summarizes these optimal values across samples using mean, sd, credible-interval quantiles and the mode (most frequent observed value).
@@ -70,7 +71,7 @@
 #'
 #'  @export
 #'
-optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, by = NULL, which = "min") {
+optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, by = NULL, which = "min", ci.level = 0.95) {
 
   ## ---------------------------
   ## Basic checks
@@ -126,6 +127,11 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
     cli::cli_abort("{.arg which} has to be either {.val min} or {.val max}.")
   }
 
+  # 0 < ci.level < 1
+  if (!is.numeric(ci.level) || length(ci.level) != 1 || ci.level <= 0 || ci.level >= 1) {
+    cli::cli_abort("{.arg ci.level} must be a single numeric value strictly between 0 and 1.")
+  }
+
   ## ---------------------------
   ## Predict using bcrosspred()
   ## ---------------------------
@@ -137,7 +143,7 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
 
   # prediction
   cpred <- tryCatch({
-    suppressWarnings(bcrosspred(object, basis, at = at))
+    suppressWarnings(bcrosspred(object, basis, at = at, ci.level = ci.level))
   }, error = function(e) {
     cli::cli_abort("Failed to compute predictions via bcrosspred: {conditionMessage(e)}")
   })
