@@ -10,9 +10,6 @@
 #' @param ci.level Numeric in `(0,1)` giving the credible interval level (default `0.95`). Credible interval quantiles are computed from the posterior samples.
 #' @param ... Additional arguments passed to [INLA::inla()].
 #'
-#' @section Basis and lag handling:
-#' If the supplied `basis` has a non-zero lag attribute, the function inserts `NA` rows in the first (if lag > 0) or last (if lag < 0) `max(lag)` observations of `data` before fitting. This removes observations for which the basis is undefined.
-#'
 #' @section INLA options:
 #' Additional arguments supplied via `...` are forwarded to [INLA::inla()] (see documentation for all available arguments). Internally, the function ensures that `control.compute = list(config = TRUE)` in order to enable posterior sample drawing with [INLA::inla.posterior.sample()].
 #'
@@ -118,20 +115,16 @@ bdlnm <- function(formula,
   }
 
   # ----------------------------
-  # Remove first NA lags
+  # Remove observations when onebasis/crossbasis is NA
   # ----------------------------
 
-  # Extract lag attribute
-  lag <- switch(type, cb = attr(basis, "lag"), one = c(0, 0))
-
-  # Compute prediction lags: (revisar el by)
-  predlag <- seq(from = lag[1], to = lag[2], by = 1)
-
-  # Insert NA's at the data first max(predlag) rows (revisar. Crec que si els lags són negatius s'haurà de treure les files del final...)
-  if (any(predlag > 0)) {
-    na_rows <- predlag[predlag > 0]
-    data[na_rows, ] <- NA
+  # Insert NA's at the data first max(predlag) rows
+  if (type == "cb") {
+    na_rows <- which(apply(basis, 1, function(x) all(is.na(x))))
+  } else if (type == "one") {
+    na_rows <- which(is.na(basis))
   }
+  data[na_rows,] <- NA
 
   # ----------------------------
   # Check for INLA availability

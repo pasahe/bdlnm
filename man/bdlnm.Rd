@@ -2,7 +2,7 @@
 % Please edit documentation in R/bdlnm.R
 \name{bdlnm}
 \alias{bdlnm}
-\title{Fit a bayesian distributed lag non-linear model (B-DLNM)}
+\title{Fit a Bayesian distributed lag non-linear model (B-DLNM)}
 \usage{
 bdlnm(
   formula,
@@ -15,58 +15,51 @@ bdlnm(
 )
 }
 \arguments{
-\item{formula}{A model formula (as for \link[INLA:inla]{INLA::inla}).}
+\item{formula}{A model formula (as for \code{\link[INLA:inla]{INLA::inla()}}).}
 
-\item{basis}{A DLNM basis object produced by \code{dlnm}. It can be one of \link[dlnm:crossbasis]{dlnm::crossbasis} or \link[dlnm:onebasis]{dlnm::onebasis}.}
+\item{basis}{A DLNM basis object produced by \code{dlnm}. It must be of class \code{"crossbasis"} (\code{\link[=crossbasis]{crossbasis()}}) or \code{"onebasis"} (\code{\link[=onebasis]{onebasis()}}).}
 
-\item{data}{A data frame used for the model fitted with \link[INLA:inla]{INLA::inla}.}
+\item{data}{A data frame used for the model fitted with \code{\link[INLA:inla]{INLA::inla()}}.}
 
-\item{family}{Family name passed to \link[INLA:inla]{INLA::inla} (default \code{"gaussian"}).}
+\item{family}{Character. Family name passed to \code{\link[INLA:inla]{INLA::inla()}} (default \code{"gaussian"}).}
 
-\item{sample.arg}{List containing the arguments passed to \link[INLA:posterior.sample]{INLA::inla.posterior.sample}. Default sets \code{n = 1000} as the number of samples and \code{seed = 0L} (set the seed at 'random').}
+\item{sample.arg}{List of arguments passed to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. Default to \code{list(n = 1000, seed = 0L)} (draws \code{1000} posterior samples, set the seed at random). For reproducible sampling, set a non-zero \code{seed} in \code{sample.arg}.}
 
-\item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}).}
+\item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}). Credible interval quantiles are computed from the posterior samples.}
 
-\item{...}{Additional arguments passed to \link[INLA:inla]{INLA::inla}.}
+\item{...}{Additional arguments passed to \code{\link[INLA:inla]{INLA::inla()}}.}
 }
 \value{
-A S3 object of class \code{"bdlnm"} with the following components:
+An S3 object of class \code{"bdlnm"} with the following components:
 \itemize{
-\item \code{model}: The fitted \code{INLA} model returned by \code{\link[INLA:inla]{INLA::inla()}}.
-\item \code{coefficients}: a matrix where each column is a posterior sample draw returned by \code{INLA::inla.posterior.sample} (columns are named \code{sample1}, \code{sample2}, ...) and each row is a different model coefficient.
-\item \code{coefficients.summary}: a matrix with summary statistics for the posterior samples stored in \code{coefficients}. Each column is a statistic (\code{mean}, \code{sd}, requested quantiles and mode) and each row is a different model coefficients.
+\item \code{model}: the fitted \code{INLA} model returned by \code{\link[INLA:inla]{INLA::inla()}}.
+\item \code{coefficients}: a matrix whose columns are posterior sample draws returned by \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}} (named \code{sample1}, \code{sample2}, ...) and whose rows are all model coefficients.
+\item \code{coefficients.summary}: a matrix of summary statistics for all the posterior samples stored in \code{coefficients} (mean, sd, quantiles, mode).
 }
 }
 \description{
-Fit a distributed lag non-linear model (DLNM) using a bayesian framework. It uses \code{INLA} to fit the bayesian model and to extract posterior samples of the model coefficients. Review the package vignette for detailed examples.
+Fit a distributed lag non-linear model (DLNM) using a Bayesian framework. The function calls \code{\link[INLA:inla]{INLA::inla()}} to fit the model and then draws posterior samples of the model latent field with \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. See the package vignette for worked examples and recommended workflows.
 }
-\details{
-The function fits a Bayesian distributed lag non-linear model (B-DLNM) by calling \code{\link[INLA:inla]{INLA::inla()}} and then it draws posterior samples of model coefficient by calling \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. Here are some considerations to take in account:
-\subsection{Basis and lag handling:}{
+\section{INLA options}{
 
-If the supplied \code{basis} has a non-zero lag attribute, the function inserts \code{NA} rows in the first \code{max(lag)} observations of \code{data} before fitting. This removes observations for which the model is undefined (no available lags) and matches the behaviour expected by the DLNM construction.
+Additional arguments supplied via \code{...} are forwarded to \code{\link[INLA:inla]{INLA::inla()}} (see documentation for all available arguments). Internally, the function ensures that \code{control.compute = list(config = TRUE)} in order to enable posterior sample drawing with \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}.
 }
 
-\subsection{INLA options:}{
+\section{Posterior sample options}{
 
-Additional arguments supplied via \code{...} are forwarded to \code{\link[INLA:inla]{INLA::inla()}}. See its documentation to see all available arguments. Internally, the function ensures that \code{control.compute = list(config = TRUE)} in order to enable posterior sample drawing with \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}.
+Additional arguments supplied via \code{sample.arg} are forwarded to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}} (see documentation for all available arguments). By default, the number of samples is \code{1000}, be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric \code{seed} in \code{sample.arg}.
 }
 
-\subsection{Posterior sample options:}{
+\section{coefficient summaries}{
 
-Additional arguments supplied via \code{sample.arg} are forwarded to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. See its documentation to see all available arguments. By default, \code{sample.arg = list(n = 1000, seed = 0L)}, so that the number of samples is \code{1000} and the seed is set at random. For reproducible draws, you need to set a \code{seed} in \code{sample.arg}.
+For all the model coefficient samples the function computes mean, standard deviation, the lower/median/upper credible interval quantiles (according to \code{ci.level}) and approximate mode obtained from a kernel density estimate.
 }
 
-\subsection{Summary coefficient calculation:}{
+\section{Requirements}{
 
-The function computes posterior summaries for each coefficient: mean, standard deviation, credible-interval quantiles (the mid and the lower/upper tails according to \code{ci.level}) and an approximate mode obtained from a kernel density estimate.
+The \link{INLA} package must be installed from the R-INLA repository (https://www.r-inla.org/); if not available the function aborts with a short instruction on how to install it.
 }
 
-\subsection{Requirements:}{
-
-The \code{INLA} package must be installed from the R-INLA repository (https://www.r-inla.org/); if not available the function aborts with a short instruction on how to install it.
-}
-}
 \examples{
 
 # Set exposure-response and lag-response spline parameters
@@ -108,11 +101,11 @@ Gasparrini A. Distributed lag linear and non-linear models in R: the package dln
 Havard Rue, Sara Martino, and Nicholas Chopin (2009), Approximate Bayesian Inference for Latent Gaussian Models Using Integrated Nested Laplace Approximations (with discussion), Journal of the Royal Statistical Society B, 71, 319-392.
 }
 \seealso{
-\code{\link[=bcrosspred]{bcrosspred()}} for prediction of exposure–lag–response associations for a \code{bdlnm} object,
+\code{\link[=bcrosspred]{bcrosspred()}} to predict exposure–lag–response associations for a \code{bdlnm} object,
 
-\code{\link[=attributable]{attributable()}} for calculation of attributable fractions and numbers for a \code{bdlnm} object,
+\code{\link[=attributable]{attributable()}} to calculate attributable fractions and numbers for a \code{bdlnm} object,
 
-\code{\link[=optimal_exposure]{optimal_exposure()}} for estimation of exposure values that optimise the predicted effect for a \code{bdlnm} object.
+\code{\link[=optimal_exposure]{optimal_exposure()}} to estimate exposure values that optimise the predicted effect for a \code{bdlnm} object.
 }
 \author{
 Pau Satorra, Marcos Quijal.
