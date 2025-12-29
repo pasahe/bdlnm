@@ -1,11 +1,19 @@
 #' Plot posterior distribution of optimal effect exposure values
 #'
-#' Plot the posterior distribution of the optimal effect exposure values returned by `optimal_exposure()`.
+#' It plots a histogram of the posterior distribution of the optimal effect exposure values returned by [optimal_exposure()].
 #'
-#'  Plot an histogram showing the posterior distribution of the optimal effect exposure values returned by `optimal_exposure()`. The original prediction grid will be used as axis breaks. A dashed red vertical line marks the posterior median of these values.
-#' @param x x of class `optimal_exposure` as returned by [optimal_exposure].
-#' @param line.arg List of graphical arguments for the plotting of the median vertical line passed to [graphics::abline].
-#' @param ... Additional graphical parameters passed to [hist].
+#' @param x An object of class `"optimal_exposure"` returned by [optimal_exposure()].
+#' @param vline Logical. If `TRUE` (default) the function draws a vertical line for the median of all the posterior samples. If `FALSE` it doesn't draw any additional line.
+#' @param vline.arg Optional list of graphical arguments passed to [graphics::abline()] when drawing the median vertical line.
+#' @param ... Optional graphical parameters passed to [graphics::hist()].
+#'
+#' @details
+#'
+#' The histogram uses the original prediction grid in `attr(object, "xvar")` as breaks so bars align with prediction exposure values. The function plots the posterior distribution of the optimal exposure values (stored in `x$est`) and highlights the posterior median across samples (stored in `x$summary[["0.5quant"]]`) with a vertical line if `vline = TRUE`. Use `vline.arg` to change the appearance of that line passed to [graphics::abline()] and `...` to change the graphical parameters of the histogram passed to [graphics::hist()] (to control axis labels, title, colours, etc.). See the original functions for a complete list of the arguments. Some arguments, if not specified, are set to different default values than the original functions.
+#'
+#' @author Pau Satorra, Marcos Quijal.
+#'
+#' @seealso [optimal_exposure()] to estimate exposure values that optimize the predicted effect for a `"bdlnm"` object.
 #'
 #' @export
 #'
@@ -51,7 +59,7 @@
 #'  main = paste0("MMT (Median = ", round(mmt$summary[["0.5quant"]], 1), "ºC)"))
 #'
 #'
-plot.optimal_exposure <- function(x, line.arg = NULL, ...) {
+plot.optimal_exposure <- function(x, vline = TRUE, vline.arg = NULL, ...) {
 
   ## ---------------------------
   ## Basic checks
@@ -86,21 +94,26 @@ plot.optimal_exposure <- function(x, line.arg = NULL, ...) {
   # x-axis ticks at the supplied grid points
   graphics::axis(side = 1, at = attr(x, "xvar"))
 
-  # by default set the following arguments
-  if(is.null(line.arg)) line.arg <- list()
+  # if vertical line with median has to be drawn
+  if(vline) {
 
-  line.arg.def <- list(
-    col = "red",
-    lwd = 3,
-    lty = "dashed"
-  )
+    # by default set the following arguments
+    if(is.null(vline.arg)) vline.arg <- list()
 
-  # merge with user arguments
-  line.arg <- utils::modifyList(line.arg.def, line.arg)
+    vline.arg.def <- list(
+      col = "red",
+      lwd = 3,
+      lty = "dashed"
+    )
 
-  line.arg <- c(list(v = x$summary[["0.5quant"]]), line.arg)
+    # merge with user arguments
+    vline.arg <- utils::modifyList(vline.arg.def, vline.arg)
 
-  # draw median line
-  do.call(graphics::abline, line.arg)
+    vline.arg <- c(list(v = x$summary[["0.5quant"]]), vline.arg)
+
+    # draw median line
+    do.call(graphics::abline, vline.arg)
+
+  }
 
 }

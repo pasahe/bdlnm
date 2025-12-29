@@ -4,20 +4,22 @@
 \alias{plot.optimal_exposure}
 \title{Plot posterior distribution of optimal effect exposure values}
 \usage{
-\method{plot}{optimal_exposure}(x, line.arg = NULL, ...)
+\method{plot}{optimal_exposure}(x, vline = TRUE, vline.arg = NULL, ...)
 }
 \arguments{
-\item{x}{x of class \code{optimal_exposure} as returned by \link{optimal_exposure}.}
+\item{x}{An object of class \code{"optimal_exposure"} returned by \code{\link[=optimal_exposure]{optimal_exposure()}}.}
 
-\item{line.arg}{List of graphical arguments for the plotting of the median vertical line passed to \link[graphics:abline]{graphics::abline}.}
+\item{vline}{Logical. If \code{TRUE} (default) the function draws a vertical line for the median of all the posterior samples. If \code{FALSE} it doesn't draw any additional line.}
 
-\item{...}{Additional graphical parameters passed to \link{hist}.}
+\item{vline.arg}{Optional list of graphical arguments passed to \code{\link[graphics:abline]{graphics::abline()}} when drawing the median vertical line.}
+
+\item{...}{Optional graphical parameters passed to \code{\link[graphics:hist]{graphics::hist()}}.}
 }
 \description{
-Plot the posterior distribution of the optimal effect exposure values returned by \code{optimal_exposure()}.
+It plots a histogram of the posterior distribution of the optimal effect exposure values returned by \code{\link[=optimal_exposure]{optimal_exposure()}}.
 }
 \details{
-Plot an histogram showing the posterior distribution of the optimal effect exposure values returned by \code{optimal_exposure()}. The original prediction grid will be used as axis breaks. A dashed red vertical line marks the posterior median of these values.
+The histogram uses the original prediction grid in \code{attr(object, "xvar")} as breaks so bars align with prediction exposure values. The function plots the posterior distribution of the optimal exposure values (stored in \code{x$est}) and highlights the posterior median across samples (stored in \code{x$summary[["0.5quant"]]}) with a vertical line if \code{vline = TRUE}. Use \code{vline.arg} to change the appearance of that line passed to \code{\link[graphics:abline]{graphics::abline()}} and \code{...} to change the graphical parameters of the histogram passed to \code{\link[graphics:hist]{graphics::hist()}} (to control axis labels, title, colours, etc.). See the original functions for a complete list of the arguments. Some arguments, if not specified, are set to different default values than the original functions.
 }
 \examples{
 
@@ -61,4 +63,10 @@ Plot an histogram showing the posterior distribution of the optimal effect expos
  main = paste0("MMT (Median = ", round(mmt$summary[["0.5quant"]], 1), "ºC)"))
 
 
+}
+\seealso{
+\code{\link[=optimal_exposure]{optimal_exposure()}} to estimate exposure values that optimize the predicted effect for a \code{"bdlnm"} object.
+}
+\author{
+Pau Satorra, Marcos Quijal.
 }
