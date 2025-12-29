@@ -2,7 +2,7 @@
 % Please edit documentation in R/optimal_exposure.R
 \name{optimal_exposure}
 \alias{optimal_exposure}
-\title{Calculate the exposure value that minimizes or maximizes the effect}
+\title{Calculate the exposure value that minimizes or maximizes the effect of a Bayesian distributed lag non-linear model (B-DLNM)}
 \usage{
 optimal_exposure(
   object,
@@ -91,11 +91,11 @@ Armstrong B. Models for the relationship between ambient temperature and daily m
 \seealso{
 \code{\link[=plot.optimal_exposure]{plot.optimal_exposure()}} to plot the optimal exposure values stored in a \code{"optimal_exposure"} object.
 
-\code{\link[=bdlnm]{bdlnm()}} to fit a Bayesian distributed lag non-linear model.
+\code{\link[=bcrosspred]{bcrosspred()}} to predict exposure–lag–response associations for a \code{"bdlnm"} object,
 
-\code{\link[=bcrosspred]{bcrosspred()}} to predict exposure–lag–response associations for a B-DLNM,
+\code{\link[=bdlnm]{bdlnm()}} to fit a Bayesian distributed lag non-linear model (\code{"bdlnm"}).
 
-\code{\link[=attributable]{attributable()}} to calculate attributable fractions and numbers for a B-DLNM,
+\code{\link[=attributable]{attributable()}} to calculate attributable fractions and numbers for a \code{"bdlnm"} object.
 }
 \author{
 Pau Satorra, Marcos Quijal.

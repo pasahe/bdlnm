@@ -2,7 +2,7 @@
 % Please edit documentation in R/bcrosspred.R
 \name{bcrosspred}
 \alias{bcrosspred}
-\title{Predict exposure-lag-response effects from a Bayesian distributed-lag models (B-DLNM).}
+\title{Predict exposure-lag-response effects from a Bayesian distributed-lag model (B-DLNM).}
 \usage{
 bcrosspred(
   object,
@@ -118,11 +118,11 @@ Gasparrini A. Distributed lag linear and non-linear models in R: the package dln
 \seealso{
 \code{\link[=plot.bcrosspred]{plot.bcrosspred()}}  to plot the predicted associations stored in a \code{"bcrosspred"} object,
 
-\code{\link[=bdlnm]{bdlnm()}} to fit a Bayesian distributed lag non-linear model.
+\code{\link[=bdlnm]{bdlnm()}} to fit a Bayesian distributed lag non-linear model (\code{"bdlnm"}).
 
-\code{\link[=attributable]{attributable()}} to calculate attributable fractions and numbers for a \code{bdlnm} object,
+\code{\link[=attributable]{attributable()}} to calculate attributable fractions and numbers for a \code{"bdlnm"} object,
 
-\code{\link[=optimal_exposure]{optimal_exposure()}} to estimate exposure values that optimise the predicted effect for a \code{bdlnm} object.
+\code{\link[=optimal_exposure]{optimal_exposure()}} to estimate exposure values that optimize the predicted effect for a \code{"bdlnm"} object.
 }
 \author{
 Pau Satorra, Marcos Quijal.

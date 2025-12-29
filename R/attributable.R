@@ -1,28 +1,56 @@
-#' Calculate attributable number and fractions from Bayesian distributed-lag models (B-DLNM).
+#' Calculate attributable number and fractions from a Bayesian distributed-lag model (B-DLNM).
 #'
-#' It computes the attributable number (AN) and fraction (AF) from a fitted B-DLNM returned by `bdlnm()`.
+#' Compute attributable numbers (AN) and attributable fractions (AF) from a fitted Bayesian distributed lag non-linear model ([bdlnm()]). The function uses posterior predicted relative risks from [bcrosspred()] and applies a forward or backward lag algorithm to compute per-time and total attributable measures, optionally filtering the calculation to a subset of time points.
 #'
-#' @param object A fitted `"bdlnm"` class object returned by [bdlnm].
-#' @param basis A DLNM crossbasis object produced by `dlnm`. It has to be of class [dlnm::crossbasis].
-#' @param data A dataframe containing the time series of exposure values (see `name_exposure`) and number of cases (see `name_cases`). Ensure that the time series are provided on a regular basis for attributable measures to be calculated properly. It can also include a column with the measured time point (see `name_date`) or a column with a `0/1` indicator that filters the calculation of attributable measures for specific time periods (see `name_filter`).
-#' @param name_date A character with the name of the column with the date (class `Date` or `POSICXt`) of the time series measurement (optional).
-#' @param name_exposure A character with the name of the column with the time series exposure values.
-#' @param name_cases A character with the name of the column with the time series case values. If not provided, only attributable fractions per time point can be calculated.
-#' @param name_filter A character with the name of the column with the indicator that can filter the time points in which to calculate attributable measures (optional).
-#' @param dir Character; "back" (default) or "forw" direction in the lag dimension for calculating attributable numbers and fractions.
-#' @param cen Numeric scalar; centering value for predictions. If missing the function will attempt to read it from attr(basis, "argvar")$cen.
-#' @param range Optional numeric vector of range 2. It gives the exposure value range for which attributable numbers and fractions will be calculated.
-#' @param average Logical (default is TRUE). When TRUE the function uses average (lag-averaged) contributions to calculate attributable risks. Only applied in the forward perspective.
+#' @param object A fitted `"bdlnm"` class object returned by [bdlnm()].
+#' @param basis A DLNM cross-basis object produced by `dlnm`. It must be of class `"crossbasis"` ([dlnm::crossbasis()]).
+#' @param data A data frame containing the temporal series needed to calculate attributable measures. It can include a date column (optional, see `name_date`), the exposure values (mandatory, see `name_exposure`), the number of cases (optional, see `name_cases`) and a binary (`0/1`) filter column (optional, see `name_filter`).
+#' @param name_date Optional single string with the name of the column in `data` containing the date. The column must be of class `Date` or `POSIXt`. When provided the function checks that the series is regularly spaced (see `Details`).
+#' @param name_exposure Single string with the name of the exposure column in `data`.
+#' @param name_cases Optional single string with the name of the cases column in `data`. If not provided, the function returns only attributable fractions (AF) per time point.
+#' @param name_filter Optional single string with the name of a binary (`0/1`) column in `data`. Only rows with value `1` are used to compute total AF and AN and per-time results are returned only for the filtered rows.
+#' @param dir Character; direction of the algorithm to calculate attributable measures. `"back"` (default) calculates AF and AN attributing current-day outcome to past exposures; `"forw"` calculates AF and AN attributing current-day exposure to future outcomes.
+#' @param cen Numeric scalar; centering exposure value used to compute predictions. If missing the function will attempt to read it from `attr(basis, "argvar")$cen`. If no centering is available the function aborts.
+#' @param range Optional numeric vector of length 2 with the exposure range for which attributable measures will be calculated. Values outside `range` are coerced to `cen` before prediction.
+#' @param average Logical (default `TRUE`). When `TRUE` use lag-averaged contributions to compute AN in the forward algorithm; when `FALSE` use the full lag-structured contributions instead.
 #'
-#' @return A list with elements:
-#'   - `af`: attributable fraction (AF) per time point
-#'   - `an`: attributable number (AN) per time point
-#'   - `aftotal`: total attributable fraction (AF) across all period
-#'   - `antotal`: total attributable number (AN) across all period
-#'   - `af.summary`: data frame with summary statistics for AF per time point
-#'   - `an.summary`: data frame with summary statistics for AN per time point
-#'   - `aftotal.summary`: data frame with summary statistics for total AF
-#'   - `antotal.summary`: data frame with summary statistics for total AN
+#' @details
+#'
+#' The function first obtains posterior predicted effects at the observed exposure values by calling [bcrosspred()] with `at = data[[name_exposure]]`. Predictions must include relative-risk scale predictions so the previously fitted `"bdlnm"` model must have a `log` or `logit` link; otherwise the function aborts. These predictions require a defined centering value (`cen`), as attributable measures are always computed with respect to a reference exposure. This reference exposure is usually an optimal exposure computed with the [optimal_exposure()] function, such as the Minimum Mortality Temperature (MMT).
+#'
+#' Two different algorithms can be chosen to calculate attributable measures:
+#'
+#'  - Backward (`dir = "back"`): for each time point, contributions from past exposures (over the lag window) are combined to calculate the daily AF/AN.
+#'  - Forward (`dir = "forw"`): for each day, the contribution of that day exposure to future outcomes (over the lag window) is combined to calculate the daily AF/AN.
+#'
+#' Both algorithms are fully described by Gasparrini and Leone (2014), see references below.
+#'
+#' Required columns to calculate `AF` and `AN` are `name_exposure` and `name_cases` columns. If `name_cases` is not supplied only AF per time can be computed. If `name_date` is provided the function checks that dates are regularly spaced (checks seconds, minutes, hours, days, weeks, months or years). Time series have to be regularly spaced because the algorithms used to calculate attributable measures rely on neighbour time points over the lag window,. For example, if you only have seasonal observations (e.g., summers) expand the data to the full sequence and insert `NA` for missing exposures/cases and use `name_filter` to compute measures only for the seasonal subset.
+#'
+#' Only `"bdlnm"` objects fitted with a cross-basis are supported; models fitted with a one-basis (no lag) are not suitable for attributable calculations.
+#'
+#'
+#' @return A list with components:
+#'   - `af`: matrix (rows = time points, columns = posterior samples) with attributable fractions per time point.
+#'   - `an`: matrix (rows = time points, columns = posterior samples) with attributable numbers per time point.
+#'   - `aftotal`: numeric vector (length = posterior samples) with total AF across all the selected period.
+#'   - `antotal`: numeric vector (length = posterior samples) with total AN across all the selected period.
+#'   - `af.summary`: data.frame with summary statistics (mean, sd, quantiles, mode) for AF per time point.
+#'   - `an.summary`: data.frame with summary statistics (mean, sd, quantiles, mode) for AN per time point.
+#'   - `aftotal.summary`: data.frame with summary statistics (mean, sd, quantiles, mode) for total AF.
+#'   - `antotal.summary`: data.frame with summary statistics (mean, sd, quantiles, mode) for total AN.
+#'
+#' @author Pau Satorra, Marcos Quijal.
+#'
+#' @note This function is inspired by `attrdl()` (Gasparrini 2014), which is available \href{https://github.com/gasparrini/2014_gasparrini_BMCmrm_Rcodedata/blob/master/attrdl.Rd}{here}. It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
+#'
+#' @references
+#'
+#' Gasparrini A, Leone M. Attributable risk from distributed lag models. BMC Med Res Methodol 2014;14:55.
+#'
+#' @seealso [bcrosspred()] to predict exposure–lag–response associations for a `"bdlnm"` object,
+#' @seealso [bdlnm()] to fit a Bayesian distributed lag non-linear model (`"bdlnm"`),
+#' @seealso [optimal_exposure()] to estimate exposure values that optimize the predicted effect for a `"bdlnm"` object.
 #'
 #' @export
 #'

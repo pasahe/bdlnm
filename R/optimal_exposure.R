@@ -1,4 +1,4 @@
-#' Calculate the exposure value that minimizes or maximizes the effect
+#' Calculate the exposure value that minimizes or maximizes the effect of a Bayesian distributed lag non-linear model (B-DLNM)
 #'
 #' Find exposure values that optimize the overall effect for each posterior sample drawn from a Bayesian distributed lag non-linear model ([bdlnm()]). The function returns the exposure value that minimizes or maximizes the overall cumulative effect (summed across lags) for each posterior sample, together with summary statistics (mean, sd, credible-interval quantiles and mode). When used to find the minimum effect in temperature–mortality analyses this optimal exposure value is commonly called the Minimum Mortality Temperature (MMT).
 #'
@@ -30,9 +30,9 @@
 #' Armstrong B. Models for the relationship between ambient temperature and daily mortality. Epidemiology. 2006;17(6):624-31.
 #'
 #' @seealso [plot.optimal_exposure()] to plot the optimal exposure values stored in a `"optimal_exposure"` object.
-#' @seealso [bdlnm()] to fit a Bayesian distributed lag non-linear model.
-#' @seealso [bcrosspred()] to predict exposure–lag–response associations for a B-DLNM,
-#' @seealso [attributable()] to calculate attributable fractions and numbers for a B-DLNM,
+#' @seealso [bcrosspred()] to predict exposure–lag–response associations for a `"bdlnm"` object,
+#' @seealso [bdlnm()] to fit a Bayesian distributed lag non-linear model (`"bdlnm"`).
+#' @seealso [attributable()] to calculate attributable fractions and numbers for a `"bdlnm"` object.
 #'
 #' @examples
 #' # Set exposure-response and lag-response spline parameters

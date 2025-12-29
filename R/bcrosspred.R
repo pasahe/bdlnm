@@ -1,4 +1,4 @@
-#' Predict exposure-lag-response effects from a Bayesian distributed-lag models (B-DLNM).
+#' Predict exposure-lag-response effects from a Bayesian distributed-lag model (B-DLNM).
 #'
 #' Calculate predictions from a fitted Bayesian distributed lag non-linear model ([bdlnm()]). Predicted associations are computed on a grid of values of the exposure and lags, relative to a reference exposure center value. The function gives posterior samples of exposure–lag-specific associations, overall cumulative associations (summed across lags) and optionally incremental cumulative associations, together with summary statistics (mean, sd, credible interval quantiles and mode).
 #'
@@ -51,9 +51,9 @@
 #' Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
 #'
 #' @seealso [plot.bcrosspred()]  to plot the predicted associations stored in a `"bcrosspred"` object,
-#' @seealso [bdlnm()] to fit a Bayesian distributed lag non-linear model.
-#' @seealso [attributable()] to calculate attributable fractions and numbers for a `bdlnm` object,
-#' @seealso [optimal_exposure()] to estimate exposure values that optimise the predicted effect for a `bdlnm` object.
+#' @seealso [bdlnm()] to fit a Bayesian distributed lag non-linear model (`"bdlnm"`).
+#' @seealso [attributable()] to calculate attributable fractions and numbers for a `"bdlnm"` object,
+#' @seealso [optimal_exposure()] to estimate exposure values that optimize the predicted effect for a `"bdlnm"` object.
 #'
 #' @export
 #'

@@ -2,7 +2,7 @@
 % Please edit documentation in R/attributable.R
 \name{attributable}
 \alias{attributable}
-\title{Calculate attributable number and fractions from Bayesian distributed-lag models (B-DLNM).}
+\title{Calculate attributable number and fractions from a Bayesian distributed-lag model (B-DLNM).}
 \usage{
 attributable(
   object,
@@ -19,43 +19,61 @@ attributable(
 )
 }
 \arguments{
-\item{object}{A fitted \code{"bdlnm"} class object returned by \link{bdlnm}.}
+\item{object}{A fitted \code{"bdlnm"} class object returned by \code{\link[=bdlnm]{bdlnm()}}.}
 
-\item{basis}{A DLNM crossbasis object produced by \code{dlnm}. It has to be of class \link[dlnm:crossbasis]{dlnm::crossbasis}.}
+\item{basis}{A DLNM cross-basis object produced by \code{dlnm}. It must be of class \code{"crossbasis"} (\code{\link[dlnm:crossbasis]{dlnm::crossbasis()}}).}
 
-\item{data}{A dataframe containing the time series of exposure values (see \code{name_exposure}) and number of cases (see \code{name_cases}). Ensure that the time series are provided on a regular basis for attributable measures to be calculated properly. It can also include a column with the measured time point (see \code{name_date}) or a column with a \code{0/1} indicator that filters the calculation of attributable measures for specific time periods (see \code{name_filter}).}
+\item{data}{A data frame containing the temporal series needed to calculate attributable measures. It can include a date column (optional, see \code{name_date}), the exposure values (mandatory, see \code{name_exposure}), the number of cases (optional, see \code{name_cases}) and a binary (\code{0/1}) filter column (optional, see \code{name_filter}).}
 
-\item{name_date}{A character with the name of the column with the date (class \code{Date} or \code{POSICXt}) of the time series measurement (optional).}
+\item{name_date}{Optional single string with the name of the column in \code{data} containing the date. The column must be of class \code{Date} or \code{POSIXt}. When provided the function checks that the series is regularly spaced (see \code{Details}).}
 
-\item{name_exposure}{A character with the name of the column with the time series exposure values.}
+\item{name_exposure}{Single string with the name of the exposure column in \code{data}.}
 
-\item{name_cases}{A character with the name of the column with the time series case values. If not provided, only attributable fractions per time point can be calculated.}
+\item{name_cases}{Optional single string with the name of the cases column in \code{data}. If not provided, the function returns only attributable fractions (AF) per time point.}
 
-\item{name_filter}{A character with the name of the column with the indicator that can filter the time points in which to calculate attributable measures (optional).}
+\item{name_filter}{Optional single string with the name of a binary (\code{0/1}) column in \code{data}. Only rows with value \code{1} are used to compute total AF and AN and per-time results are returned only for the filtered rows.}
 
-\item{dir}{Character; "back" (default) or "forw" direction in the lag dimension for calculating attributable numbers and fractions.}
+\item{dir}{Character; direction of the algorithm to calculate attributable measures. \code{"back"} (default) calculates AF and AN attributing current-day outcome to past exposures; \code{"forw"} calculates AF and AN attributing current-day exposure to future outcomes.}
 
-\item{cen}{Numeric scalar; centering value for predictions. If missing the function will attempt to read it from attr(basis, "argvar")$cen.}
+\item{cen}{Numeric scalar; centering exposure value used to compute predictions. If missing the function will attempt to read it from \code{attr(basis, "argvar")$cen}. If no centering is available the function aborts.}
 
-\item{range}{Optional numeric vector of range 2. It gives the exposure value range for which attributable numbers and fractions will be calculated.}
+\item{range}{Optional numeric vector of length 2 with the exposure range for which attributable measures will be calculated. Values outside \code{range} are coerced to \code{cen} before prediction.}
 
-\item{average}{Logical (default is TRUE). When TRUE the function uses average (lag-averaged) contributions to calculate attributable risks. Only applied in the forward perspective.}
+\item{average}{Logical (default \code{TRUE}). When \code{TRUE} use lag-averaged contributions to compute AN in the forward algorithm; when \code{FALSE} use the full lag-structured contributions instead.}
 }
 \value{
-A list with elements:
+A list with components:
 \itemize{
-\item \code{af}: attributable fraction (AF) per time point
-\item \code{an}: attributable number (AN) per time point
-\item \code{aftotal}: total attributable fraction (AF) across all period
-\item \code{antotal}: total attributable number (AN) across all period
-\item \code{af.summary}: data frame with summary statistics for AF per time point
-\item \code{an.summary}: data frame with summary statistics for AN per time point
-\item \code{aftotal.summary}: data frame with summary statistics for total AF
-\item \code{antotal.summary}: data frame with summary statistics for total AN
+\item \code{af}: matrix (rows = time points, columns = posterior samples) with attributable fractions per time point.
+\item \code{an}: matrix (rows = time points, columns = posterior samples) with attributable numbers per time point.
+\item \code{aftotal}: numeric vector (length = posterior samples) with total AF across all the selected period.
+\item \code{antotal}: numeric vector (length = posterior samples) with total AN across all the selected period.
+\item \code{af.summary}: data.frame with summary statistics (mean, sd, quantiles, mode) for AF per time point.
+\item \code{an.summary}: data.frame with summary statistics (mean, sd, quantiles, mode) for AN per time point.
+\item \code{aftotal.summary}: data.frame with summary statistics (mean, sd, quantiles, mode) for total AF.
+\item \code{antotal.summary}: data.frame with summary statistics (mean, sd, quantiles, mode) for total AN.
 }
 }
 \description{
-It computes the attributable number (AN) and fraction (AF) from a fitted B-DLNM returned by \code{bdlnm()}.
+Compute attributable numbers (AN) and attributable fractions (AF) from a fitted Bayesian distributed lag non-linear model (\code{\link[=bdlnm]{bdlnm()}}). The function uses posterior predicted relative risks from \code{\link[=bcrosspred]{bcrosspred()}} and applies a forward or backward lag algorithm to compute per-time and total attributable measures, optionally filtering the calculation to a subset of time points.
+}
+\details{
+The function first obtains posterior predicted effects at the observed exposure values by calling \code{\link[=bcrosspred]{bcrosspred()}} with \code{at = data[[name_exposure]]}. Predictions must include relative-risk scale predictions so the previously fitted \code{"bdlnm"} model must have a \code{log} or \code{logit} link; otherwise the function aborts. These predictions require a defined centering value (\code{cen}), as attributable measures are always computed with respect to a reference exposure. This reference exposure is usually an optimal exposure computed with the \code{\link[=optimal_exposure]{optimal_exposure()}} function, such as the Minimum Mortality Temperature (MMT).
+
+Two different algorithms can be chosen to calculate attributable measures:
+\itemize{
+\item Backward (\code{dir = "back"}): for each time point, contributions from past exposures (over the lag window) are combined to calculate the daily AF/AN.
+\item Forward (\code{dir = "forw"}): for each day, the contribution of that day exposure to future outcomes (over the lag window) is combined to calculate the daily AF/AN.
+}
+
+Both algorithms are fully described by Gasparrini and Leone (2014), see references below.
+
+Required columns to calculate \code{AF} and \code{AN} are \code{name_exposure} and \code{name_cases} columns. If \code{name_cases} is not supplied only AF per time can be computed. If \code{name_date} is provided the function checks that dates are regularly spaced (checks seconds, minutes, hours, days, weeks, months or years). Time series have to be regularly spaced because the algorithms used to calculate attributable measures rely on neighbour time points over the lag window,. For example, if you only have seasonal observations (e.g., summers) expand the data to the full sequence and insert \code{NA} for missing exposures/cases and use \code{name_filter} to compute measures only for the seasonal subset.
+
+Only \code{"bdlnm"} objects fitted with a cross-basis are supported; models fitted with a one-basis (no lag) are not suitable for attributable calculations.
+}
+\note{
+This function is inspired by \code{attrdl()} (Gasparrini 2014), which is available \href{https://github.com/gasparrini/2014_gasparrini_BMCmrm_Rcodedata/blob/master/attrdl.Rd}{here}. It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
 }
 \examples{
 
@@ -109,4 +127,17 @@ name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 
 
 
+}
+\references{
+Gasparrini A, Leone M. Attributable risk from distributed lag models. BMC Med Res Methodol 2014;14:55.
+}
+\seealso{
+\code{\link[=bcrosspred]{bcrosspred()}} to predict exposure–lag–response associations for a \code{"bdlnm"} object,
+
+\code{\link[=bdlnm]{bdlnm()}} to fit a Bayesian distributed lag non-linear model (\code{"bdlnm"}),
+
+\code{\link[=optimal_exposure]{optimal_exposure()}} to estimate exposure values that optimize the predicted effect for a \code{"bdlnm"} object.
+}
+\author{
+Pau Satorra, Marcos Quijal.
 }
