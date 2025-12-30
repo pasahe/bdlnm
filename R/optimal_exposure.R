@@ -34,6 +34,8 @@
 #' @seealso [bdlnm()] to fit a Bayesian distributed lag non-linear model (`"bdlnm"`).
 #' @seealso [attributable()] to calculate attributable fractions and numbers for a `"bdlnm"` object.
 #'
+#' @export
+#'
 #' @examples
 #' # Set exposure-response and lag-response spline parameters
 #'  dlnm_var <- list(
@@ -69,7 +71,6 @@
 #'  # Find minimum risk exposure value
 #'  mmt <- optimal_exposure(mod, cb, at = temp)
 #'
-#'  @export
 #'
 optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, by = NULL, which = "min", ci.level = 0.95) {
 

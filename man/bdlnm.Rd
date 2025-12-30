@@ -64,7 +64,7 @@ Posterior sample estimations are then summarized across samples using mean, sd, 
 
 \section{Requirements}{
 
-The \link{INLA} package must be installed from the R-INLA repository (\href{https://www.r-inla.org/}{R-INLA Project}); if not available the function aborts with a short instruction on how to install it.
+The INLA package must be installed from the R-INLA repository (\href{https://www.r-inla.org/}{R-INLA Project}); if not available the function aborts with a short instruction on how to install it.
 }
 
 \examples{
@@ -99,6 +99,7 @@ The \link{INLA} package must be installed from the R-INLA repository (\href{http
 
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+
 
 
 }

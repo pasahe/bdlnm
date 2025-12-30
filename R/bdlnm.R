@@ -27,7 +27,7 @@
 #' Posterior sample estimations are then summarized across samples using mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to `ci.level`) and an approximate mode obtained from a kernel density estimate.
 #'
 #' @section Requirements:
-#' The [INLA] package must be installed from the R-INLA repository (\href{https://www.r-inla.org/}{R-INLA Project}); if not available the function aborts with a short instruction on how to install it.
+#' The INLA package must be installed from the R-INLA repository (\href{https://www.r-inla.org/}{R-INLA Project}); if not available the function aborts with a short instruction on how to install it.
 #'
 #' @return An S3 object of class `"bdlnm"` with the following components:
 #' - `model`: the fitted `INLA` model returned by [INLA::inla()].
@@ -46,6 +46,8 @@
 #' @seealso [bcrosspred()] to predict exposure–lag–response associations for a `bdlnm` object,
 #' @seealso [attributable()] to calculate attributable fractions and numbers for a `bdlnm` object,
 #' @seealso [optimal_exposure()] to estimate exposure values that optimise the predicted effect for a `bdlnm` object.
+#'
+#' @export
 #'
 #' @examples
 #'
@@ -81,7 +83,6 @@
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
 #'
 #'
-#' @export
 #'
 bdlnm <- function(formula,
                   basis,

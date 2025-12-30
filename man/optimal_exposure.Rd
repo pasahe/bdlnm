@@ -80,7 +80,6 @@ In the presence of a non-linear association between exposure and response, this 
  # Find minimum risk exposure value
  mmt <- optimal_exposure(mod, cb, at = temp)
 
- @export
 
 }
 \references{
