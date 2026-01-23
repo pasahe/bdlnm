@@ -89,16 +89,6 @@ attr <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean
 str(attr)
 ```
 
-We can also calculate the attributable number corresponding to each day:
-
-```{r}
-# tictoc::tic()
-attr <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back", tot = FALSE)
-# tictoc::toc()
-
-str(attr)
-```
-
 Finally, we can also filter for some specific time points. For example, imagine we only want attributable measures calculated for summers.
 
 ```{r}
@@ -111,7 +101,7 @@ slondon <- london |>
   )
 
 # tictoc::tic()
-attr <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", name_filter = "summer", cen = cen, dir = "back", tot = FALSE)
+attr <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", name_filter = "summer", cen = cen, dir = "back")
 # tictoc::toc()
 
 str(attr)

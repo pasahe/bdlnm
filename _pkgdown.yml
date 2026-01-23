@@ -1,4 +1,9 @@
 url: ~
 template:
   bootstrap: 5
-
+  bootswatch: minty
+  bslib:
+    primary: "#347b82"
+    link-color: "#347b82"
+    link-hover-color: "#347b82"
+    dropdown-link-hover-bg: "#347b82"
