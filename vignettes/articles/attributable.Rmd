@@ -13,9 +13,11 @@ knitr::opts_chunk$set(
 library(bdlnm)
 library(dlnm)
 library(dplyr)
+library(tidyr)
 library(stats)
 library(splines)
 library(utils)
+library(ggplot2)
 ```
 
 This article is a short tutorial to calculate attributable measures using the `attributable()` function. We will use the built-in `london` dataset. 
@@ -67,29 +69,88 @@ cen <- mmt$summary[["0.5quant"]]
 cen
 ```
 
-The MMT value in which values will be centered is `cen`ºC. Now, we can calculate attributable number and fractions.
+The MMT value in which values will be centered is `r cen`ºC. Now, we can calculate attributable numbers and fractions. 
+
+We can calculate them using the backwards algorithm, which will give the current burden due to the set of exposure events experienced in the past:
 
 ```{r}
 tictoc::tic()
-attr_bck <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
-tictoc::toc()
-
-tictoc::tic()
-attr_frw <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "forw")
+attr_back <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 tictoc::toc()
 ```
-
-Or with the forward one:
+The output will be a list containing the posterior samples of all attributable fractions and numbers per day and for the entire period, accompanied by their summaries:
 
 ```{r}
-# tictoc::tic()
-attr <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "forw")
-# tictoc::toc()
-
-str(attr)
+str(attr_back)
 ```
 
-Finally, we can also filter for some specific time points. For example, imagine we only want attributable measures calculated for summers.
+Let's plot the time series of attributable fractions and numbers per day:
+
+```{r fig.width = 10}
+london |> 
+  mutate(
+    "Attributable Fractions" = attr_back$af.summary[,"0.5quant"],
+    "Attributable Numbers" = attr_back$an.summary[,"0.5quant"]
+  ) |> 
+  pivot_longer(c("Attributable Fractions", "Attributable Numbers"), names_to = "name", values_to = "val") |> 
+  ggplot(aes(x = date, y = val, color = name)) +
+  facet_wrap(~name, scales = "free_y") +
+  geom_line() +
+  scale_x_date(date_breaks = "2 years") +
+  labs(x = "Date", y = "") +
+  guides(color = "none") +
+  theme_bw()
+```
+
+The total attributable fraction and number are:
+
+```{r}
+options(scipen=999)
+
+rbind(
+  "Attributable fraction" = attr_back$aftotal.summary,
+  "Attributable number" = attr_back$antotal.summary
+) |> 
+  knitr::kable(digits = 2)
+```
+
+
+Alternatively, we can use the forward algorithm which will give the future burden due to a given exposure event:
+
+```{r}
+tictoc::tic()
+attr_forw <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "forw")
+tictoc::toc()
+```
+Let's plot the time series of attributable fractions and numbers per day, with the forward algorithm:
+
+```{r fig.width = 10}
+london |> 
+  mutate(
+    "Attributable Fractions" = attr_forw$af.summary[,"0.5quant"],
+    "Attributable Numbers" = attr_forw$an.summary[,"0.5quant"]
+  ) |> 
+  pivot_longer(c("Attributable Fractions", "Attributable Numbers"), names_to = "name", values_to = "val") |> 
+  ggplot(aes(x = date, y = val, color = name)) +
+  facet_wrap(~name, scales = "free_y") +
+  geom_line() +
+  scale_x_date(date_breaks = "2 years") +
+  labs(x = "Date", y = "") +
+  guides(color = "none") +
+  theme_bw()
+```
+
+The total attributable fraction and number, with the forward algorithm, are:
+
+```{r}
+rbind(
+  "Attributable fraction" = attr_forw$aftotal.summary,
+  "Attributable number" = attr_forw$antotal.summary
+) |> 
+  knitr::kable(digits = 2)
+```
+
+Finally, we can also filter for some specific time points. For example, imagine we can calculate attributable measures only for summers:
 
 ```{r}
 slondon <- london |> 
@@ -101,9 +162,36 @@ slondon <- london |>
   )
 
 # tictoc::tic()
-attr <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", name_filter = "summer", cen = cen, dir = "back")
+attr_summer <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", name_filter = "summer", cen = cen, dir = "back")
 # tictoc::toc()
+```
 
-str(attr)
+Let's plot the time series of attributable fractions and numbers per day, only for summers:
+
+```{r fig.width = 10}
+slondon |> 
+  filter(summer == 1) |> 
+  mutate(
+    "Attributable Fractions" = attr_summer$af.summary[,"0.5quant"],
+    "Attributable Numbers" = attr_summer$an.summary[,"0.5quant"]
+  ) |> 
+  pivot_longer(c("Attributable Fractions", "Attributable Numbers"), names_to = "name", values_to = "val") |> 
+  ggplot(aes(x = date, y = val, color = name, group = year)) +
+  facet_wrap(~name, scales = "free_y") +
+  geom_line() +
+  scale_x_date(date_breaks = "2 years") +
+  labs(x = "Date", y = "") +
+  guides(color = "none") +
+  theme_bw()
+```
+
+The total attributable fraction and number, only for summers, are:
+
+```{r}
+rbind(
+  "Attributable fraction" = attr_summer$aftotal.summary,
+  "Attributable number" = attr_summer$antotal.summary
+) |> 
+  knitr::kable(digits = 2)
 ```
 
