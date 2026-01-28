@@ -107,7 +107,7 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
       pretty
     else
       seq(from = min(pretty),
-          to = to,
+        to = to,
           by = by)
   } else {
     if (!is.numeric(at)) {
@@ -124,8 +124,8 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
     }
   }
 
-  if(! which %in% c("min", "max")){
-    cli::cli_abort("{.arg which} has to be either {.val min} or {.val max}.")
+  if (!which %in% c("min", "max", "mmt")) {
+    cli::cli_abort("{.arg which} has to be either {.val min}, {.val max}, or {.val mmt}.")
   }
 
   # 0 < ci.level < 1
@@ -144,9 +144,9 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
 
   # prediction
   cpred <- tryCatch({
-    suppressWarnings(bcrosspred(object, basis, at = at, ci.level = ci.level))
+      suppressWarnings(bcrosspred(object, basis, at = at, ci.level = ci.level))
   }, error = function(e) {
-    cli::cli_abort("Failed to compute predictions via bcrosspred: {conditionMessage(e)}")
+      cli::cli_abort("Failed to compute predictions via bcrosspred: {conditionMessage(e)}")
   })
 
   ## ---------------------------
@@ -154,10 +154,17 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
   ## ---------------------------
 
   # each column of allfit corresponds to a posterior sample; find index of optimal
-  if(which == "min") {
+  if (which == "min") {
     which.fun <- which.min
-  } else {
+  }
+  if (which == "max") {
     which.fun <- which.max
+  }
+  if (which == "mmt") {
+    which.fun <- function(x) {
+      mmt <- 1 + which(diff(sign(diff(x))) == 2) # local minima
+      if (length(mmt) == 0) which.min(x) else which.min(x[mmt]) # lowest local minima or global min
+    }
   }
 
   opt_index <- apply(cpred$allfit, 2, which.fun)
