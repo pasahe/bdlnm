@@ -27,6 +27,8 @@ optimal_exposure(
 \item{which}{Selection criterion to calculate the optimal exposure: \code{"min"} (default) chooses the exposure with the minimum overall cumulative effect, \code{"max"} chooses the exposure with maximum overall cumulative effect.}
 
 \item{ci.level}{Numeric in \verb{(0,1)} giving the credible-interval level (default \code{0.95}). Credible interval quantiles are computed from the posterior samples.}
+
+\item{local_optimal}{Logical (default \code{FALSE}). When \code{TRUE} find a local optimal (minimum or maximum) point with the optimal effect instead of the absolute optimal point. If a local optimal point doesn't exist it will fall back to finding the absolute optimal point.}
 }
 \value{
 An S3 object of class \code{"optimal_exposure"} containing:
@@ -43,7 +45,9 @@ The function internally calls \code{\link[=bcrosspred]{bcrosspred()}} to compute
 
 If \code{basis} is a \code{crossbasis}, the function works on the overall cumulative effect of each exposure summed across all the lags, stored by \code{\link[=bcrosspred]{bcrosspred()}} in \verb{$allfit}. If \code{basis} is a \code{onebasis} instead, then the function uses the exposure effect stored in \verb{$matfit}.
 
-In the presence of a non-linear association between exposure and response, this optimal exposure value can be used as the reference exposure value for estimating effects. Therefore, it can be passed to the \code{\link[=bcrosspred]{bcrosspred()}} and \code{\link[=attributable]{attributable()}} functions as the centre exposure value. However, note that in the Bayesian framework, this reference temperature is characterized by a full posterior distribution (in contrast to the frequentist approach, where the association is centered on a single point estimate). This distribution may be asymmetric and non-unimodal, so reporting a single summary statistic (e.g., the median) as the reference value can be misleading in such cases. Therefore, before selecting an optimal exposure value as the reference, it is recommended that you visualize the distribution of the optimal exposure values using \code{\link[=plot.optimal_exposure]{plot.optimal_exposure()}}.
+The function searches for the absolute optimal value (minimum or maximum) of each sample in the posterior distribution, by default. If \code{local_optimal} is set to \code{TRUE}, the function searches for a local optimal point instead. If more than one optimal point is found, the function will return the one with the optimal effect. If a posterior sample has no local optimal values, the function returns the absolute optimal value.
+
+This optimal exposure value can be used as the reference exposure value to estimate effects passing it to the \code{\link[=bcrosspred]{bcrosspred()}} and \code{\link[=attributable]{attributable()}} functions as the center exposure. In temperature-mortality studies, for example, the minimum exposure value is typically used as the optimal exposure value to center the effects and it's called Minimum Mortality Temperature (MMT). However, note that in the Bayesian framework, this reference temperature is characterized by a full posterior distribution (in contrast to the frequentist approach, where the association is centered on a single point estimate). This distribution may be asymmetric and non-unimodal, so reporting a single summary statistic (e.g., the median) as the reference value can be misleading in such cases. Therefore, before selecting an optimal exposure value as the center, it is recommended that you visualize the distribution of the optimal exposure values using \code{\link[=plot.optimal_exposure]{plot.optimal_exposure()}}.
 }
 \examples{
 # Set exposure-response and lag-response spline parameters

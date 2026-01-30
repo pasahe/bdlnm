@@ -11,7 +11,7 @@
 #' @param bylag Integer lag step (default `1L`).
 #' @param cen Centering exposure value for predictions. If `NULL` the centering value depends on the exposure basis function or set to a mid-range value (see Details).
 #' @param ci.level Numeric in `(0,1)` giving the credible interval level (default `0.95`). Credible interval quantiles are computed from the posterior samples.
-#' @param cumul Logical; if `TRUE` compute incremental cumulative predictions along lags (default `FALSE`).
+#' @param cumul Logical; if `TRUE` compute incremental cumulative effects along lags (default `FALSE`). It will give the cumulative effect from lag 0 up to each subsequent lag (e.g., lag `0`, lag `0–1`, lag `0–2`, etc.).
 #'
 #' @details
 #'

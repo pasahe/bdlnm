@@ -38,7 +38,7 @@ bcrosspred(
 
 \item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}). Credible interval quantiles are computed from the posterior samples.}
 
-\item{cumul}{Logical; if \code{TRUE} compute incremental cumulative predictions along lags (default \code{FALSE}).}
+\item{cumul}{Logical; if \code{TRUE} compute incremental cumulative effects along lags (default \code{FALSE}). It will give the cumulative effect from lag 0 up to each subsequent lag (e.g., lag \code{0}, lag \verb{0–1}, lag \verb{0–2}, etc.).}
 }
 \value{
 An object of class \code{"bcrosspred"} (a list) with elements including:
