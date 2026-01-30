@@ -28,13 +28,15 @@
 #'
 #' If exponentiated effects (relative risks) are specified (`exp = TRUE`) or auto-detected if `x$model.link` is `log` or `logit`, the function will use the predicted relative risks stored in `x$matRRfit`, `x$allRRfit` or `x$cumRRfit` (if `cumul=TRUE`).
 #'
-#' @author Pau Satorra, Marcos Quijal.
+#' @author Pau Satorra, Marcos Quijal-Zamorano.
 #'
 #' @note This function is inspired by [dlnm::plot.crosspred()] (Gasparrini 2011). It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
 #'
 #' @references
 #'
 #' Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
+#'
+#' Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
 #'
 #' @seealso [bcrosspred()] to predict exposure–lag–response associations for a `"bdlnm"` object,
 #' @seealso [bdlnm()] to fit a Bayesian distributed lag non-linear model (`"bdlnm"`).

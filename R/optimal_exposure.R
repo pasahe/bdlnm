@@ -11,19 +11,21 @@
 
 #' @details
 #'
-#' The function internally calls [bcrosspred()] to compute the posterior distribution of the overall exposure effect for the grid specified by `at` (or reconstructed using `from`, `to`, `by` and the attributes of `basis`). For each posterior sample the function calculates the exposure value that optimizes (minimizes or maximizes) the overall cumulative effect and then summarizes these optimal values across samples using mean, sd, credible-interval quantiles and the mode (most frequent observed value).
+#' The function internally calls [bcrosspred()] to compute the posterior distribution of the overall cumulative exposure effect for the grid specified by `at` (or reconstructed using `from`, `to`, `by` and the attributes of `basis`). For each posterior sample the function calculates the exposure value that optimizes (minimizes or maximizes) the overall cumulative effect and then summarizes these optimal values across samples using mean, sd, credible-interval quantiles and the mode (most frequent observed value).
 #'
 #' If `basis` is a `crossbasis`, the function works on the overall cumulative effect of each exposure summed across all the lags, stored by [bcrosspred()] in `$allfit`. If `basis` is a `onebasis` instead, then the function uses the exposure effect stored in `$matfit`.
 #'
-#' In the presence of a non-linear association between exposure and response, this optimal exposure value can be used as the reference exposure value for estimating effects. Therefore, it can be passed to the [bcrosspred()] and [attributable()] functions as the centre exposure value. However, be aware that, in the presence of uncertainty, the optimal exposure range across all samples can be wide, so providing one summary statistic (e.g. the median) as the center reference value can be misleading. It is recommended to visualize the distribution of these optimal exposure values using [plot.optimal_exposure()] before using an optimal exposure value as the center.
+#' In the presence of a non-linear association between exposure and response, this optimal exposure value can be used as the reference exposure value for estimating effects. Therefore, it can be passed to the [bcrosspred()] and [attributable()] functions as the centre exposure value. However, note that in the Bayesian framework, this reference temperature is characterized by a full posterior distribution (in contrast to the frequentist approach, where the association is centered on a single point estimate). This distribution may be asymmetric and non-unimodal, so reporting a single summary statistic (e.g., the median) as the reference value can be misleading in such cases. Therefore, before selecting an optimal exposure value as the reference, it is recommended that you visualize the distribution of the optimal exposure values using [plot.optimal_exposure()].
 #'
 #' @return An S3 object of class `"optimal_exposure"` containing:
 #'  - `est`: numeric vector with the optimal exposure value for each posterior sample (named sample1, sample2, ...).
 #'  - `summary`: a one-row data frame with summary statistics for the optimal values across all samples (mean, sd, quantiles, mode).
 #'
-#' @author Pau Satorra, Marcos Quijal.
+#' @author Pau Satorra, Marcos Quijal-Zamorano.
 #'
 #' @references
+#'
+#' Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
 #'
 #' Gasparrini A (2011). Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software, 43(8), 1–20.
 #'

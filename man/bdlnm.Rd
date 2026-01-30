@@ -25,7 +25,7 @@ bdlnm(
 
 \item{sample.arg}{List of arguments passed to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. Defaults to \code{list(n = 1000, seed = 0L)} (draws \code{1000} posterior samples; seed at random). For reproducible sampling set a non-zero numeric \code{seed}.}
 
-\item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}). Credible interval quantiles are computed from the posterior samples.}
+\item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}). Credible interval quantiles are computed to summarize coefficients from the posterior samples.}
 
 \item{...}{Additional arguments passed to \code{\link[INLA:inla]{INLA::inla()}}.}
 }
@@ -42,7 +42,7 @@ Fit a distributed lag non-linear model (DLNM) using a Bayesian framework. The fu
 }
 \section{Distributed lag non-linear model}{
 
-Distributed lag non-linear models (DLNMs) describe simultaneous non-linear and delayed (lagged) dependencies, commonly called exposure-lag-response associations. This modelling framework is based on the definition of a cross-basis (a bi-dimensional space of functions) built with \code{\link[dlnm:crossbasis]{dlnm::crossbasis()}} that encondes the dependency along the space of the predictor (exposure-response) and along lags (lag-response). This cross-basis matrix has to be supplied in the \code{basis} argument and included in \code{formula}. A basis object built with \code{\link[dlnm:onebasis]{dlnm::onebasis()}} can be used instead, when we want to simplify the modelling of a uni-dimensional exposure-response relationship.
+Distributed lag non-linear models (DLNMs) describe simultaneous non-linear and delayed (lagged) dependencies, commonly called exposure-lag-response associations. This modelling framework is based on the definition of a cross-basis (a bi-dimensional space of functions) built with \code{\link[dlnm:crossbasis]{dlnm::crossbasis()}} that defines the dependency along the space of the predictor (exposure-response) and along lags (lag-response). This cross-basis matrix has to be supplied in the \code{basis} argument and included in \code{formula}. A basis object built with \code{\link[dlnm:onebasis]{dlnm::onebasis()}} can be used instead, when simplifying the model in a uni-dimensional exposure-response relationship.
 }
 
 \section{INLA}{
@@ -57,7 +57,7 @@ Additional arguments supplied via \code{...} are forwarded to \code{\link[INLA:i
 
 After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a cross-basis built from an exposure basis with C parameters and a lag basis with L parameters, there will be C × L cross-basis associated coefficients (named e.g. v1.l1, ..., vC.lL). For a \code{"onebasis"} object the coefficients follow the simpler form b1, ... bC.
 
-Additional arguments supplied via \code{sample.arg} are forwarded to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}} (see documentation for all available arguments). By default, the number of samples is \code{1000}, be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric \code{seed} in \code{sample.arg}.
+Additional arguments supplied via \code{sample.arg} are forwarded to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}} (see documentation for all available arguments). By default, the number of samples is \code{1000}. Be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric \code{seed} in \code{sample.arg}.
 
 Posterior sample estimations are then summarized across samples using mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to \code{ci.level}) and an approximate mode obtained from a kernel density estimate.
 }
@@ -104,6 +104,10 @@ The INLA package must be installed from the R-INLA repository (\href{https://www
 
 }
 \references{
+Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
+
+Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models with R-INLA. Int J Epidemiol. 2025;54(4):dyaf120.
+
 Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
 
 Havard Rue, Sara Martino, and Nicholas Chopin (2009), Approximate Bayesian Inference for Latent Gaussian Models Using Integrated Nested Laplace Approximations (with discussion), Journal of the Royal Statistical Society B, 71, 319-392.
@@ -116,5 +120,5 @@ Havard Rue, Sara Martino, and Nicholas Chopin (2009), Approximate Bayesian Infer
 \code{\link[=optimal_exposure]{optimal_exposure()}} to estimate exposure values that optimise the predicted effect for a \code{bdlnm} object.
 }
 \author{
-Pau Satorra, Marcos Quijal.
+Pau Satorra, Marcos Quijal-Zamorano.
 }

@@ -119,6 +119,8 @@ This function is inspired by \code{\link[dlnm:plot.crosspred]{dlnm::plot.crosspr
 }
 \references{
 Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
+
+Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
 }
 \seealso{
 \code{\link[=bcrosspred]{bcrosspred()}} to predict exposure–lag–response associations for a \code{"bdlnm"} object,
@@ -126,5 +128,5 @@ Gasparrini A. Distributed lag linear and non-linear models in R: the package dln
 \code{\link[=bdlnm]{bdlnm()}} to fit a Bayesian distributed lag non-linear model (\code{"bdlnm"}).
 }
 \author{
-Pau Satorra, Marcos Quijal.
+Pau Satorra, Marcos Quijal-Zamorano.
 }

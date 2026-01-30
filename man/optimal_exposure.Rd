@@ -39,11 +39,11 @@ An S3 object of class \code{"optimal_exposure"} containing:
 Find exposure values that optimize the overall effect for each posterior sample drawn from a Bayesian distributed lag non-linear model (\code{\link[=bdlnm]{bdlnm()}}). The function returns the exposure value that minimizes or maximizes the overall cumulative effect (summed across lags) for each posterior sample, together with summary statistics (mean, sd, credible-interval quantiles and mode). When used to find the minimum effect in temperature–mortality analyses this optimal exposure value is commonly called the Minimum Mortality Temperature (MMT).
 }
 \details{
-The function internally calls \code{\link[=bcrosspred]{bcrosspred()}} to compute the posterior distribution of the overall exposure effect for the grid specified by \code{at} (or reconstructed using \code{from}, \code{to}, \code{by} and the attributes of \code{basis}). For each posterior sample the function calculates the exposure value that optimizes (minimizes or maximizes) the overall cumulative effect and then summarizes these optimal values across samples using mean, sd, credible-interval quantiles and the mode (most frequent observed value).
+The function internally calls \code{\link[=bcrosspred]{bcrosspred()}} to compute the posterior distribution of the overall cumulative exposure effect for the grid specified by \code{at} (or reconstructed using \code{from}, \code{to}, \code{by} and the attributes of \code{basis}). For each posterior sample the function calculates the exposure value that optimizes (minimizes or maximizes) the overall cumulative effect and then summarizes these optimal values across samples using mean, sd, credible-interval quantiles and the mode (most frequent observed value).
 
 If \code{basis} is a \code{crossbasis}, the function works on the overall cumulative effect of each exposure summed across all the lags, stored by \code{\link[=bcrosspred]{bcrosspred()}} in \verb{$allfit}. If \code{basis} is a \code{onebasis} instead, then the function uses the exposure effect stored in \verb{$matfit}.
 
-In the presence of a non-linear association between exposure and response, this optimal exposure value can be used as the reference exposure value for estimating effects. Therefore, it can be passed to the \code{\link[=bcrosspred]{bcrosspred()}} and \code{\link[=attributable]{attributable()}} functions as the centre exposure value. However, be aware that, in the presence of uncertainty, the optimal exposure range across all samples can be wide, so providing one summary statistic (e.g. the median) as the center reference value can be misleading. It is recommended to visualize the distribution of these optimal exposure values using \code{\link[=plot.optimal_exposure]{plot.optimal_exposure()}} before using an optimal exposure value as the center.
+In the presence of a non-linear association between exposure and response, this optimal exposure value can be used as the reference exposure value for estimating effects. Therefore, it can be passed to the \code{\link[=bcrosspred]{bcrosspred()}} and \code{\link[=attributable]{attributable()}} functions as the centre exposure value. However, note that in the Bayesian framework, this reference temperature is characterized by a full posterior distribution (in contrast to the frequentist approach, where the association is centered on a single point estimate). This distribution may be asymmetric and non-unimodal, so reporting a single summary statistic (e.g., the median) as the reference value can be misleading in such cases. Therefore, before selecting an optimal exposure value as the reference, it is recommended that you visualize the distribution of the optimal exposure values using \code{\link[=plot.optimal_exposure]{plot.optimal_exposure()}}.
 }
 \examples{
 # Set exposure-response and lag-response spline parameters
@@ -83,6 +83,8 @@ In the presence of a non-linear association between exposure and response, this 
 
 }
 \references{
+Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
+
 Gasparrini A (2011). Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software, 43(8), 1–20.
 
 Armstrong B. Models for the relationship between ambient temperature and daily mortality. Epidemiology. 2006;17(6):624-31.
@@ -97,5 +99,5 @@ Armstrong B. Models for the relationship between ambient temperature and daily m
 \code{\link[=attributable]{attributable()}} to calculate attributable fractions and numbers for a \code{"bdlnm"} object.
 }
 \author{
-Pau Satorra, Marcos Quijal.
+Pau Satorra, Marcos Quijal-Zamorano.
 }

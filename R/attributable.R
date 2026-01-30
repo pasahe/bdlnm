@@ -9,10 +9,10 @@
 #' @param name_exposure Single string with the name of the exposure column in `data`.
 #' @param name_cases Optional single string with the name of the cases column in `data`. If not provided, the function returns only attributable fractions (AF) per time point.
 #' @param name_filter Optional single string with the name of a binary (`0/1`) column in `data`. Only rows with value `1` are used to compute total AF and AN and per-time results are returned only for the filtered rows.
-#' @param dir Character; direction of the algorithm to calculate attributable measures. `"back"` (default) calculates AF and AN attributing current-day outcome to past exposures; `"forw"` calculates AF and AN attributing current-day exposure to future outcomes.
+#' @param dir Character; direction of the algorithm to calculate attributable measures. `"back"` (default) calculates AF and AN attributing current-time outcome to past exposures; `"forw"` calculates AF and AN attributing current-time exposure to future outcomes.
 #' @param cen Numeric scalar; centering exposure value used to compute predictions. If missing the function will attempt to read it from `attr(basis, "argvar")$cen`. If no centering is available the function aborts.
 #' @param range Optional numeric vector of length 2 with the exposure range for which attributable measures will be calculated. Values outside `range` are coerced to `cen` before prediction.
-#' @param average Logical (default `TRUE`). When `TRUE` use lag-averaged contributions to compute AN in the forward algorithm; when `FALSE` use the full lag-structured contributions instead.
+#' @param lag_average Logical (default `TRUE`). When `TRUE` use lag-averaged contributions to compute AN in the forward algorithm; when `FALSE` use the full lag-structured contributions instead.
 #'
 #' @details
 #'
@@ -21,11 +21,11 @@
 #' Two different algorithms can be chosen to calculate attributable measures:
 #'
 #'  - Backward (`dir = "back"`): for each time point, contributions from past exposures (over the lag window) are combined to calculate the daily AF/AN.
-#'  - Forward (`dir = "forw"`): for each day, the contribution of that day exposure to future outcomes (over the lag window) is combined to calculate the daily AF/AN.
+#'  - Forward (`dir = "forw"`): for each time point, the contribution of that time point exposure to future outcomes (over the lag window) is combined to calculate the daily AF/AN.
 #'
 #' Both algorithms are fully described by Gasparrini and Leone (2014), see references below.
 #'
-#' Required columns to calculate `AF` and `AN` are `name_exposure` and `name_cases` columns. If `name_cases` is not supplied only AF per time can be computed. If `name_date` is provided the function checks that dates are regularly spaced (checks seconds, minutes, hours, days, weeks, months or years). Time series have to be regularly spaced because the algorithms used to calculate attributable measures rely on neighbour time points over the lag window,. For example, if you only have seasonal observations (e.g., summers) expand the data to the full sequence and insert `NA` for missing exposures/cases and use `name_filter` to compute measures only for the seasonal subset.
+#' Required columns to calculate `AF` and `AN` are `name_exposure` and `name_cases` columns. If `name_cases` is not supplied only AF per time can be computed. If `name_date` is provided the function checks that dates are regularly spaced (checks seconds, minutes, hours, days, weeks, months or years). Time series have to be regularly spaced because the algorithms used to calculate attributable measures rely on consecutive time points over the lag window,. For example, if you only have seasonal observations (e.g., summers) expand the data to the full sequence and insert `NA` for missing exposures/cases and use `name_filter` to compute measures only for the seasonal subset.
 #'
 #' Only `"bdlnm"` objects fitted with a cross-basis are supported; models fitted with a one-basis (no lag) are not suitable for attributable calculations.
 #'
@@ -33,20 +33,22 @@
 #' @return A list with components:
 #'   - `af`: matrix (rows = time points, columns = posterior samples) with attributable fractions per time point.
 #'   - `an`: matrix (rows = time points, columns = posterior samples) with attributable numbers per time point.
-#'   - `aftotal`: numeric vector (length = posterior samples) with total AF across all the selected period.
-#'   - `antotal`: numeric vector (length = posterior samples) with total AN across all the selected period.
+#'   - `aftotal`: numeric vector (length = number of posterior samples) with posterior samples of total AF across all the selected period.
+#'   - `antotal`: numeric vector (length = number of posterior samples) with posterior samples of total AN across all the selected period.
 #'   - `af.summary`: data.frame with summary statistics (mean, sd, quantiles, mode) for AF per time point.
 #'   - `an.summary`: data.frame with summary statistics (mean, sd, quantiles, mode) for AN per time point.
 #'   - `aftotal.summary`: data.frame with summary statistics (mean, sd, quantiles, mode) for total AF.
 #'   - `antotal.summary`: data.frame with summary statistics (mean, sd, quantiles, mode) for total AN.
 #'
-#' @author Pau Satorra, Marcos Quijal.
+#' @author Pau Satorra, Marcos Quijal-Zamorano.
 #'
 #' @note This function is inspired by `attrdl()` (Gasparrini 2014), which is available \href{https://github.com/gasparrini/2014_gasparrini_BMCmrm_Rcodedata/blob/master/attrdl.Rd}{here}. It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
 #'
 #' @references
 #'
 #' Gasparrini A, Leone M. Attributable risk from distributed lag models. BMC Med Res Methodol 2014;14:55.
+#'
+#' Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
 #'
 #' @seealso [bcrosspred()] to predict exposure–lag–response associations for a `"bdlnm"` object,
 #' @seealso [bdlnm()] to fit a Bayesian distributed lag non-linear model (`"bdlnm"`),
@@ -101,12 +103,12 @@
 #' cen <- mmt$summary[["0.5quant"]]
 #'
 #' # Attributable numbers and fractions (using the backwards algorithm):
-#' ar <- attributable(mod, cb, london, name_date = "date",
+#' attr <- attributable(mod, cb, london, name_date = "date",
 #' name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 #'
 #'
 #'
-attributable <- function(object, basis, data, name_date = NULL, name_exposure, name_cases = NULL, name_filter = NULL, dir = "back", cen, range = NULL, average = TRUE) {
+attributable <- function(object, basis, data, name_date = NULL, name_exposure, name_cases = NULL, name_filter = NULL, dir = "back", cen, range = NULL, lag_average = TRUE) {
 
   ## -----------------------
   ## Basic checks
@@ -300,11 +302,11 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
   an <- af <- numeric(n_sample) # total
   names(an) <- names(af) <- paste0("sample", seq_len(n_sample))
 
-  # forward perspective: contributions from the current day to future days
+  # forward perspective: contributions from the current time point to future time points
   if(dir == "forw") {
 
     if(!is.null(cases)) {
-      #Compute the Lagged matrix of daily cases for that day and the next max_lag days
+      #Compute the Lagged matrix of daily cases for that time point and the next max_lag time points
       lagged_cases <- tsModel::Lag(cases, seq(-lag[1], -lag[2]))
     }
 
@@ -318,7 +320,7 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
       M_af[,i] <- (all_sample - 1)/all_sample
 
       if(!is.null(cases)) {
-        if(average) {
+        if(lag_average) {
           # average of lagged cases
           M_an[,i] <- M_af[,i] * rowMeans(lagged_cases)
         } else {
@@ -350,10 +352,10 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
 
     }
 
-  # backward perspective: contributions from past exposures to current day
+  # backward perspective: contributions from past exposures to current time point
   } else {
 
-    #Compute the Lagged matrix of daily exposures for that day and the previous max_lag days
+    #Compute the Lagged matrix of daily exposures for that time point and the previous max_lag time points
     back_lagged_temp <- tsModel::Lag(exp, seq(lag[1], lag[2]))
     colnames(back_lagged_temp) <- paste0("lag", seq(lag[1], lag[2]))
 
@@ -427,7 +429,7 @@ attributable <- function(object, basis, data, name_date = NULL, name_exposure, n
   quant_cols <- grep("quant$", colnames(cpred$allfit.summary), value = TRUE)
   quant_val <- as.numeric(gsub("quant$", "", quant_cols))
 
-  # AF don't have the same missings as AN (e.g, in forward perspective we have non-missing AF in the last days whereas we have missing AN)
+  # AF don't have the same missings as AN (e.g, in forward perspective we have non-missing AF in the last time points whereas we have missing AN)
   ind_af <- !rowSums(is.na(M_af))
 
   if(!is.null(cases)) {
