@@ -63,9 +63,9 @@ An object of class \code{"bcrosspred"} (a list) with elements including:
 Calculate predictions from a fitted Bayesian distributed lag non-linear model (\code{\link[=bdlnm]{bdlnm()}}). Predicted associations are computed on a grid of values of the exposure and lags, relative to a reference exposure center value. The function gives posterior samples of exposure–lag-specific associations, overall cumulative associations (summed across lags) and optionally incremental cumulative associations, together with summary statistics (mean, sd, credible interval quantiles and mode).
 }
 \details{
-The function computes predictions for specific combinations of the requested exposure and lag grids. The values in \code{at} can be provided as a vector; in this case, they are replicated for each lag. Alternatively, \code{at} can be provided as a matrix of complete exposure histories over the same lag period used for estimation to compute the association with a specific exposure pattern.
+The function computes predictions for specific combinations of the requested exposure and lag grids. The values in \code{at} can be provided as a vector; in this case, they are replicated for each lag. Alternatively, \code{at} can be provided as a matrix of complete exposure histories over the lag period.
 
-Predictions are computed relative to a centering/reference value (\code{cen}). If \code{NULL}, the default \code{cen} depends on the exposure-response basis function: for \code{strata}, \code{thr} and \code{integer} the reference corresponds to the reference region, and for \code{lin} the reference is set to 0. For other choices, such as \code{ns}, \code{bs}, \code{poly} or other existing or user-defined functions, the default centering value is set to an approximate mid-range value. For non-linear exposure-response associations is sometimes recommended to manually set the centering value to a data-driven center such as the optimal exposure value (see \code{\link[=optimal_exposure]{optimal_exposure()}}).
+Predictions are computed relative to a centering/reference value (\code{cen}). If \code{NULL}, the default \code{cen} depends on the exposure-response basis function: for \code{strata}, \code{thr} and \code{integer} the reference corresponds to the reference category, and for \code{lin} the reference is set to 0. For other choices, such as \code{ns}, \code{bs}, \code{poly} or other existing or user-defined functions, the default centering value is set to an approximate mid-range value. For non-linear exposure-response associations is sometimes recommended to manually set the centering value to a data-driven center such as the optimal exposure value (see \code{\link[=optimal_exposure]{optimal_exposure()}}).
 
 Posterior sample of the predicted associations are stored as matrices for the overall cumulative effect and 3D arrays for the exposure-lag-specific predictions. Summaries across these samples are computed using the mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to \code{ci.level}) and an approximate mode obtained from a kernel density estimate. Relative risks versions of these associations (exponentiated predictions) are also included if \code{model.link} is equal to \code{"log"} or \code{"logit"}. The \code{model.link} can be manually specified or, if \code{NULL}, it is tried to be inferred from the \code{model} type in \code{object}.
 
@@ -114,6 +114,8 @@ This function is inspired by \code{\link[dlnm:crosspred]{dlnm::crosspred()}} (Ga
 }
 \references{
 Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
+
+Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
 }
 \seealso{
 \code{\link[=plot.bcrosspred]{plot.bcrosspred()}}  to plot the predicted associations stored in a \code{"bcrosspred"} object,
@@ -125,5 +127,5 @@ Gasparrini A. Distributed lag linear and non-linear models in R: the package dln
 \code{\link[=optimal_exposure]{optimal_exposure()}} to estimate exposure values that optimize the predicted effect for a \code{"bdlnm"} object.
 }
 \author{
-Pau Satorra, Marcos Quijal.
+Pau Satorra, Marcos Quijal-Zamorano.
 }

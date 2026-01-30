@@ -15,7 +15,7 @@ attributable(
   dir = "back",
   cen,
   range = NULL,
-  average = TRUE
+  lag_average = TRUE
 )
 }
 \arguments{
@@ -33,21 +33,21 @@ attributable(
 
 \item{name_filter}{Optional single string with the name of a binary (\code{0/1}) column in \code{data}. Only rows with value \code{1} are used to compute total AF and AN and per-time results are returned only for the filtered rows.}
 
-\item{dir}{Character; direction of the algorithm to calculate attributable measures. \code{"back"} (default) calculates AF and AN attributing current-day outcome to past exposures; \code{"forw"} calculates AF and AN attributing current-day exposure to future outcomes.}
+\item{dir}{Character; direction of the algorithm to calculate attributable measures. \code{"back"} (default) calculates AF and AN attributing current-time outcome to past exposures; \code{"forw"} calculates AF and AN attributing current-time exposure to future outcomes.}
 
 \item{cen}{Numeric scalar; centering exposure value used to compute predictions. If missing the function will attempt to read it from \code{attr(basis, "argvar")$cen}. If no centering is available the function aborts.}
 
 \item{range}{Optional numeric vector of length 2 with the exposure range for which attributable measures will be calculated. Values outside \code{range} are coerced to \code{cen} before prediction.}
 
-\item{average}{Logical (default \code{TRUE}). When \code{TRUE} use lag-averaged contributions to compute AN in the forward algorithm; when \code{FALSE} use the full lag-structured contributions instead.}
+\item{lag_average}{Logical (default \code{TRUE}). When \code{TRUE} use lag-averaged contributions to compute AN in the forward algorithm; when \code{FALSE} use the full lag-structured contributions instead.}
 }
 \value{
 A list with components:
 \itemize{
 \item \code{af}: matrix (rows = time points, columns = posterior samples) with attributable fractions per time point.
 \item \code{an}: matrix (rows = time points, columns = posterior samples) with attributable numbers per time point.
-\item \code{aftotal}: numeric vector (length = posterior samples) with total AF across all the selected period.
-\item \code{antotal}: numeric vector (length = posterior samples) with total AN across all the selected period.
+\item \code{aftotal}: numeric vector (length = number of posterior samples) with posterior samples of total AF across all the selected period.
+\item \code{antotal}: numeric vector (length = number of posterior samples) with posterior samples of total AN across all the selected period.
 \item \code{af.summary}: data.frame with summary statistics (mean, sd, quantiles, mode) for AF per time point.
 \item \code{an.summary}: data.frame with summary statistics (mean, sd, quantiles, mode) for AN per time point.
 \item \code{aftotal.summary}: data.frame with summary statistics (mean, sd, quantiles, mode) for total AF.
@@ -63,12 +63,12 @@ The function first obtains posterior predicted effects at the observed exposure 
 Two different algorithms can be chosen to calculate attributable measures:
 \itemize{
 \item Backward (\code{dir = "back"}): for each time point, contributions from past exposures (over the lag window) are combined to calculate the daily AF/AN.
-\item Forward (\code{dir = "forw"}): for each day, the contribution of that day exposure to future outcomes (over the lag window) is combined to calculate the daily AF/AN.
+\item Forward (\code{dir = "forw"}): for each time point, the contribution of that time point exposure to future outcomes (over the lag window) is combined to calculate the daily AF/AN.
 }
 
 Both algorithms are fully described by Gasparrini and Leone (2014), see references below.
 
-Required columns to calculate \code{AF} and \code{AN} are \code{name_exposure} and \code{name_cases} columns. If \code{name_cases} is not supplied only AF per time can be computed. If \code{name_date} is provided the function checks that dates are regularly spaced (checks seconds, minutes, hours, days, weeks, months or years). Time series have to be regularly spaced because the algorithms used to calculate attributable measures rely on neighbour time points over the lag window,. For example, if you only have seasonal observations (e.g., summers) expand the data to the full sequence and insert \code{NA} for missing exposures/cases and use \code{name_filter} to compute measures only for the seasonal subset.
+Required columns to calculate \code{AF} and \code{AN} are \code{name_exposure} and \code{name_cases} columns. If \code{name_cases} is not supplied only AF per time can be computed. If \code{name_date} is provided the function checks that dates are regularly spaced (checks seconds, minutes, hours, days, weeks, months or years). Time series have to be regularly spaced because the algorithms used to calculate attributable measures rely on consecutive time points over the lag window,. For example, if you only have seasonal observations (e.g., summers) expand the data to the full sequence and insert \code{NA} for missing exposures/cases and use \code{name_filter} to compute measures only for the seasonal subset.
 
 Only \code{"bdlnm"} objects fitted with a cross-basis are supported; models fitted with a one-basis (no lag) are not suitable for attributable calculations.
 }
@@ -122,7 +122,7 @@ mmt <- optimal_exposure(mod, cb, at = temp)
 cen <- mmt$summary[["0.5quant"]]
 
 # Attributable numbers and fractions (using the backwards algorithm):
-ar <- attributable(mod, cb, london, name_date = "date",
+attr <- attributable(mod, cb, london, name_date = "date",
 name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 
 
@@ -130,6 +130,8 @@ name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 }
 \references{
 Gasparrini A, Leone M. Attributable risk from distributed lag models. BMC Med Res Methodol 2014;14:55.
+
+Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
 }
 \seealso{
 \code{\link[=bcrosspred]{bcrosspred()}} to predict exposure–lag–response associations for a \code{"bdlnm"} object,
@@ -139,5 +141,5 @@ Gasparrini A, Leone M. Attributable risk from distributed lag models. BMC Med Re
 \code{\link[=optimal_exposure]{optimal_exposure()}} to estimate exposure values that optimize the predicted effect for a \code{"bdlnm"} object.
 }
 \author{
-Pau Satorra, Marcos Quijal.
+Pau Satorra, Marcos Quijal-Zamorano.
 }

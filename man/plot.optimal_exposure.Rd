@@ -4,12 +4,12 @@
 \alias{plot.optimal_exposure}
 \title{Plot posterior distribution of optimal effect exposure values}
 \usage{
-\method{plot}{optimal_exposure}(x, vline = TRUE, vline.arg = NULL, ...)
+\method{plot}{optimal_exposure}(x, show_median = TRUE, vline.arg = NULL, ...)
 }
 \arguments{
 \item{x}{An object of class \code{"optimal_exposure"} returned by \code{\link[=optimal_exposure]{optimal_exposure()}}.}
 
-\item{vline}{Logical. If \code{TRUE} (default) the function draws a vertical line for the median of all the posterior samples. If \code{FALSE} it doesn't draw any additional line.}
+\item{show_median}{Logical. If \code{TRUE} (default) the function draws a vertical line for the median of all the posterior samples. If \code{FALSE} it doesn't draw any additional line.}
 
 \item{vline.arg}{Optional list of graphical arguments passed to \code{\link[graphics:abline]{graphics::abline()}} when drawing the median vertical line.}
 
@@ -19,7 +19,7 @@
 It plots a histogram of the posterior distribution of the optimal effect exposure values returned by \code{\link[=optimal_exposure]{optimal_exposure()}}.
 }
 \details{
-The histogram uses the original prediction grid in \code{attr(object, "xvar")} as breaks so bars align with prediction exposure values. The function plots the posterior distribution of the optimal exposure values (stored in \code{x$est}) and highlights the posterior median across samples (stored in \code{x$summary[["0.5quant"]]}) with a vertical line if \code{vline = TRUE}. Use \code{vline.arg} to change the appearance of that line passed to \code{\link[graphics:abline]{graphics::abline()}} and \code{...} to change the graphical parameters of the histogram passed to \code{\link[graphics:hist]{graphics::hist()}} (to control axis labels, title, colours, etc.). See the original functions for a complete list of the arguments. Some arguments, if not specified, are set to different default values than the original functions.
+The histogram uses the original prediction grid in \code{attr(object, "xvar")} as the x-axis values, ensuring that the bars align with prediction exposure values. The function plots the posterior distribution of the optimal exposure values (stored in \code{x$est}) and highlights the posterior median across samples (stored in \code{x$summary[["0.5quant"]]}) with a vertical line if \code{show_median = TRUE}. Use \code{vline.arg} to change the appearance of that line passed to \code{\link[graphics:abline]{graphics::abline()}} and \code{...} to change the graphical parameters of the histogram passed to \code{\link[graphics:hist]{graphics::hist()}} (to control axis labels, title, colours, etc.). See the original functions for a complete list of the arguments. Some arguments, if not specified, are set to different default values than the original functions.
 }
 \examples{
 
@@ -64,9 +64,16 @@ The histogram uses the original prediction grid in \code{attr(object, "xvar")} a
 
 
 }
+\references{
+Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
+
+Gasparrini A (2011). Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software, 43(8), 1–20.
+
+Armstrong B. Models for the relationship between ambient temperature and daily mortality. Epidemiology. 2006;17(6):624-31.
+}
 \seealso{
 \code{\link[=optimal_exposure]{optimal_exposure()}} to estimate exposure values that optimize the predicted effect for a \code{"bdlnm"} object.
 }
 \author{
-Pau Satorra, Marcos Quijal.
+Pau Satorra, Marcos Quijal-Zamorano.
 }

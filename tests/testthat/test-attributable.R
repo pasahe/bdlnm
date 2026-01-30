@@ -1,52 +1,52 @@
 test_that("attributable returns expected structure and summaries (backwards)", {
 
-  expect_silent(ar <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen))
+  expect_silent(attr <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen))
 
   # basic structure
-  expect_type(ar, "list")
-  expect_equal(names(ar), c("af", "an", "aftotal", "antotal", "af.summary", "an.summary", "aftotal.summary", "antotal.summary"))
+  expect_type(attr, "list")
+  expect_equal(names(attr), c("af", "an", "aftotal", "antotal", "af.summary", "an.summary", "aftotal.summary", "antotal.summary"))
 
   # sample count and names
-  expect_equal(dim(ar$an), c(nrow(slondon), n_sim))
-  expect_equal(dim(ar$af), c(nrow(slondon), n_sim))
-  expect_equal(colnames(ar$an), paste0("sample", seq_len(n_sim)))
-  expect_equal(colnames(ar$af), paste0("sample", seq_len(n_sim)))
+  expect_equal(dim(attr$an), c(nrow(slondon), n_sim))
+  expect_equal(dim(attr$af), c(nrow(slondon), n_sim))
+  expect_equal(colnames(attr$an), paste0("sample", seq_len(n_sim)))
+  expect_equal(colnames(attr$af), paste0("sample", seq_len(n_sim)))
 
   # summaries present and contain mean, sd and at least one quantile + mode
-  expect_true(all(c("mean", "sd", "mode") %in% colnames(ar$an.summary)))
-  expect_true(any(grepl("quant$", colnames(ar$an.summary))))
-  expect_true(all(c("mean", "sd", "mode") %in% colnames(ar$af.summary)))
-  expect_true(any(grepl("quant$", colnames(ar$af.summary))))
+  expect_true(all(c("mean", "sd", "mode") %in% colnames(attr$an.summary)))
+  expect_true(any(grepl("quant$", colnames(attr$an.summary))))
+  expect_true(all(c("mean", "sd", "mode") %in% colnames(attr$af.summary)))
+  expect_true(any(grepl("quant$", colnames(attr$af.summary))))
 
   #NA at the beginning
-  expect_equal(names(which(is.na(ar$af.summary[,"0.5quant"]))), as.character(slondon$date[1:21]))
-  expect_equal(names(which(is.na(ar$an.summary[,"0.5quant"]))), as.character(slondon$date[1:21]))
+  expect_equal(names(which(is.na(attr$af.summary[,"0.5quant"]))), as.character(slondon$date[1:21]))
+  expect_equal(names(which(is.na(attr$an.summary[,"0.5quant"]))), as.character(slondon$date[1:21]))
 
 })
 
 test_that("attributable returns expected structure and summaries (forward)", {
 
-  expect_silent(ar <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen, dir = "forw"))
+  expect_silent(attr <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen, dir = "forw"))
 
   # basic structure
-  expect_type(ar, "list")
-  expect_equal(names(ar), c("af", "an", "aftotal", "antotal", "af.summary", "an.summary", "aftotal.summary", "antotal.summary"))
+  expect_type(attr, "list")
+  expect_equal(names(attr), c("af", "an", "aftotal", "antotal", "af.summary", "an.summary", "aftotal.summary", "antotal.summary"))
 
   # sample count and names
-  expect_equal(dim(ar$an), c(nrow(slondon), n_sim))
-  expect_equal(dim(ar$af), c(nrow(slondon), n_sim))
-  expect_equal(colnames(ar$an), paste0("sample", seq_len(n_sim)))
-  expect_equal(colnames(ar$af), paste0("sample", seq_len(n_sim)))
+  expect_equal(dim(attr$an), c(nrow(slondon), n_sim))
+  expect_equal(dim(attr$af), c(nrow(slondon), n_sim))
+  expect_equal(colnames(attr$an), paste0("sample", seq_len(n_sim)))
+  expect_equal(colnames(attr$af), paste0("sample", seq_len(n_sim)))
 
   # summaries present and contain mean, sd and at least one quantile + mode
-  expect_true(all(c("mean", "sd", "mode") %in% colnames(ar$an.summary)))
-  expect_true(any(grepl("quant$", colnames(ar$an.summary))))
-  expect_true(all(c("mean", "sd", "mode") %in% colnames(ar$af.summary)))
-  expect_true(any(grepl("quant$", colnames(ar$af.summary))))
+  expect_true(all(c("mean", "sd", "mode") %in% colnames(attr$an.summary)))
+  expect_true(any(grepl("quant$", colnames(attr$an.summary))))
+  expect_true(all(c("mean", "sd", "mode") %in% colnames(attr$af.summary)))
+  expect_true(any(grepl("quant$", colnames(attr$af.summary))))
 
   #NA at the end
-  expect_equal(sum(is.na(ar$af.summary[,"0.5quant"])), 0)
-  expect_equal(names(which(is.na(ar$an.summary[,"0.5quant"]))), as.character(sort(rev(slondon$date)[1:21])))
+  expect_equal(sum(is.na(attr$af.summary[,"0.5quant"])), 0)
+  expect_equal(names(which(is.na(attr$an.summary[,"0.5quant"]))), as.character(sort(rev(slondon$date)[1:21])))
 
 })
 
@@ -57,22 +57,22 @@ test_that("attributable returns filtered time-series matrices when filter is spe
   summer_dates <- slondon$date[slondon$date >= as.Date("2011-06-01") & slondon$date <= as.Date("2011-09-30")]
   slondon$summer <- ifelse(slondon$date %in% summer_dates, 1, 0)
 
-  expect_warning(ar2 <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", "summer", cen = cen))
+  expect_warning(attr2 <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", "summer", cen = cen))
 
-  expect_equal(dim(ar2$af), c(length(summer_dates), n_sim))
-  expect_equal(dim(ar2$an), c(length(summer_dates), n_sim))
+  expect_equal(dim(attr2$af), c(length(summer_dates), n_sim))
+  expect_equal(dim(attr2$an), c(length(summer_dates), n_sim))
 
-  expect_equal(colnames(ar2$an), paste0("sample", seq_len(n_sim)))
-  expect_equal(colnames(ar2$af), paste0("sample", seq_len(n_sim)))
+  expect_equal(colnames(attr2$an), paste0("sample", seq_len(n_sim)))
+  expect_equal(colnames(attr2$af), paste0("sample", seq_len(n_sim)))
 
-  expect_equal(rownames(ar2$an), as.character(summer_dates))
-  expect_equal(rownames(ar2$af), as.character(summer_dates))
-  expect_equal(rownames(ar2$an.summary), as.character(summer_dates))
-  expect_equal(rownames(ar2$af.summary), as.character(summer_dates))
+  expect_equal(rownames(attr2$an), as.character(summer_dates))
+  expect_equal(rownames(attr2$af), as.character(summer_dates))
+  expect_equal(rownames(attr2$an.summary), as.character(summer_dates))
+  expect_equal(rownames(attr2$af.summary), as.character(summer_dates))
 
   # no missings
-  expect_equal(sum(is.na(ar2$af.summary[,"0.5quant"])), 0)
-  expect_equal(sum(is.na(ar2$an.summary[,"0.5quant"])), 0)
+  expect_equal(sum(is.na(attr2$af.summary[,"0.5quant"])), 0)
+  expect_equal(sum(is.na(attr2$an.summary[,"0.5quant"])), 0)
 
 
 })
@@ -81,13 +81,13 @@ test_that("attributable works when cases = NULL (only AF returned)", {
 
   # Expect a warning (informing that only AF will be calculated)
   expect_warning(
-    ar3 <- attributable(mod, cb, slondon, "date", "tmean", cen = cen)
+    attr3 <- attributable(mod, cb, slondon, "date", "tmean", cen = cen)
   )
 
-  expect_type(ar3, "list")
-  expect_equal(names(ar3), c("af", "af.summary"))
-  expect_equal(dim(ar3$af), c(nrow(slondon), n_sim))
-  expect_equal(dim(ar3$af.summary), c(nrow(slondon), 6))
+  expect_type(attr3, "list")
+  expect_equal(names(attr3), c("af", "af.summary"))
+  expect_equal(dim(attr3$af), c(nrow(slondon), n_sim))
+  expect_equal(dim(attr3$af.summary), c(nrow(slondon), 6))
 
 })
 

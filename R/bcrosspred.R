@@ -15,9 +15,9 @@
 #'
 #' @details
 #'
-#' The function computes predictions for specific combinations of the requested exposure and lag grids. The values in `at` can be provided as a vector; in this case, they are replicated for each lag. Alternatively, `at` can be provided as a matrix of complete exposure histories over the same lag period used for estimation to compute the association with a specific exposure pattern.
+#' The function computes predictions for specific combinations of the requested exposure and lag grids. The values in `at` can be provided as a vector; in this case, they are replicated for each lag. Alternatively, `at` can be provided as a matrix of complete exposure histories over the lag period.
 #'
-#' Predictions are computed relative to a centering/reference value (`cen`). If `NULL`, the default `cen` depends on the exposure-response basis function: for `strata`, `thr` and `integer` the reference corresponds to the reference region, and for `lin` the reference is set to 0. For other choices, such as `ns`, `bs`, `poly` or other existing or user-defined functions, the default centering value is set to an approximate mid-range value. For non-linear exposure-response associations is sometimes recommended to manually set the centering value to a data-driven center such as the optimal exposure value (see [optimal_exposure()]).
+#' Predictions are computed relative to a centering/reference value (`cen`). If `NULL`, the default `cen` depends on the exposure-response basis function: for `strata`, `thr` and `integer` the reference corresponds to the reference category, and for `lin` the reference is set to 0. For other choices, such as `ns`, `bs`, `poly` or other existing or user-defined functions, the default centering value is set to an approximate mid-range value. For non-linear exposure-response associations is sometimes recommended to manually set the centering value to a data-driven center such as the optimal exposure value (see [optimal_exposure()]).
 #'
 #' Posterior sample of the predicted associations are stored as matrices for the overall cumulative effect and 3D arrays for the exposure-lag-specific predictions. Summaries across these samples are computed using the mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to `ci.level`) and an approximate mode obtained from a kernel density estimate. Relative risks versions of these associations (exponentiated predictions) are also included if `model.link` is equal to `"log"` or `"logit"`. The `model.link` can be manually specified or, if `NULL`, it is tried to be inferred from the `model` type in `object`.
 #'
@@ -42,13 +42,15 @@
 #' - `cen`: centering value used.
 #' - `ci.level`, `model.class`, `model.link`.
 #'
-#' @author Pau Satorra, Marcos Quijal.
+#' @author Pau Satorra, Marcos Quijal-Zamorano.
 #'
 #' @note This function is inspired by [dlnm::crosspred()] (Gasparrini 2011). It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
 #'
 #' @references
 #'
 #' Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
+#'
+#' Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
 #'
 #' @seealso [plot.bcrosspred()]  to plot the predicted associations stored in a `"bcrosspred"` object,
 #' @seealso [bdlnm()] to fit a Bayesian distributed lag non-linear model (`"bdlnm"`).
