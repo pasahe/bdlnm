@@ -77,7 +77,7 @@
 #'  mmt <- optimal_exposure(mod, cb, at = temp)
 #'
 #'
-optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, by = NULL, which = "min", ci.level = 0.95) {
+optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, by = NULL, which = "min", local_optimal, ci.level = 0.95) {
 
   ## ---------------------------
   ## Basic checks
