@@ -7,6 +7,7 @@
 #' @param at Numeric vector (or matrix) of exposure values at which to compute predictions. If `NULL` the function reconstructs a grid using `from`, `to`, `by` together with the `basis` attributes.
 #' @param from,to,by Optional numeric used to construct `at` when not provided.
 #' @param which Selection criterion to calculate the optimal exposure: `"min"` (default) chooses the exposure with the minimum overall cumulative effect, `"max"` chooses the exposure with maximum overall cumulative effect.
+#' @param local_optimal Logical (default `FALSE`). When `TRUE` find a local optimal (minimum or maximum) point with the optimal effect instead of the absolute optimal point. If a local optimal point doesn't exist it will fall back to finding the absolute optimal point.
 #' @param ci.level Numeric in `(0,1)` giving the credible-interval level (default `0.95`). Credible interval quantiles are computed from the posterior samples.
 
 #' @details
@@ -14,6 +15,8 @@
 #' The function internally calls [bcrosspred()] to compute the posterior distribution of the overall cumulative exposure effect for the grid specified by `at` (or reconstructed using `from`, `to`, `by` and the attributes of `basis`). For each posterior sample the function calculates the exposure value that optimizes (minimizes or maximizes) the overall cumulative effect and then summarizes these optimal values across samples using mean, sd, credible-interval quantiles and the mode (most frequent observed value).
 #'
 #' If `basis` is a `crossbasis`, the function works on the overall cumulative effect of each exposure summed across all the lags, stored by [bcrosspred()] in `$allfit`. If `basis` is a `onebasis` instead, then the function uses the exposure effect stored in `$matfit`.
+#'
+#' The function searches for the absolute optimal value (minimum or maximum) of each sample in the posterior distribution, by default. If `local_optimal` is set to `TRUE`, the function searches for a local optimal point instead. If more than one optimal point is found, the function will return the one with the optimal effect. If a posterior sample has no local optimal values, the function returns the absolute optimal value.
 #'
 #' In the presence of a non-linear association between exposure and response, this optimal exposure value can be used as the reference exposure value for estimating effects. Therefore, it can be passed to the [bcrosspred()] and [attributable()] functions as the centre exposure value. However, note that in the Bayesian framework, this reference temperature is characterized by a full posterior distribution (in contrast to the frequentist approach, where the association is centered on a single point estimate). This distribution may be asymmetric and non-unimodal, so reporting a single summary statistic (e.g., the median) as the reference value can be misleading in such cases. Therefore, before selecting an optimal exposure value as the reference, it is recommended that you visualize the distribution of the optimal exposure values using [plot.optimal_exposure()].
 #'
@@ -109,7 +112,7 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
       pretty
     else
       seq(from = min(pretty),
-          to = to,
+        to = to,
           by = by)
   } else {
     if (!is.numeric(at)) {
@@ -126,7 +129,7 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
     }
   }
 
-  if(! which %in% c("min", "max")){
+  if (!which %in% c("min", "max")) {
     cli::cli_abort("{.arg which} has to be either {.val min} or {.val max}.")
   }
 
@@ -146,9 +149,9 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
 
   # prediction
   cpred <- tryCatch({
-    suppressWarnings(bcrosspred(object, basis, at = at, ci.level = ci.level))
+      suppressWarnings(bcrosspred(object, basis, at = at, ci.level = ci.level))
   }, error = function(e) {
-    cli::cli_abort("Failed to compute predictions via bcrosspred: {conditionMessage(e)}")
+      cli::cli_abort("Failed to compute predictions via bcrosspred: {conditionMessage(e)}")
   })
 
   ## ---------------------------
@@ -156,10 +159,18 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
   ## ---------------------------
 
   # each column of allfit corresponds to a posterior sample; find index of optimal
-  if(which == "min") {
+  if (which == "min") {
     which.fun <- which.min
-  } else {
+  }
+  if (which == "max") {
     which.fun <- which.max
+  }
+
+  if (local_optimal) {
+    which.fun <- function(x) {
+      local <- 1 + which(diff(sign(diff(x))) == 2) # local minima
+      if (length(local) == 0) which.min(x) else which.min(x[local]) # lowest local minima or absolute min
+    }
   }
 
   opt_index <- apply(cpred$allfit, 2, which.fun)
