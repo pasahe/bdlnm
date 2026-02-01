@@ -12,6 +12,7 @@ optimal_exposure(
   to = NULL,
   by = NULL,
   which = "min",
+  local_optimal = FALSE,
   ci.level = 0.95
 )
 }
@@ -26,9 +27,9 @@ optimal_exposure(
 
 \item{which}{Selection criterion to calculate the optimal exposure: \code{"min"} (default) chooses the exposure with the minimum overall cumulative effect, \code{"max"} chooses the exposure with maximum overall cumulative effect.}
 
-\item{ci.level}{Numeric in \verb{(0,1)} giving the credible-interval level (default \code{0.95}). Credible interval quantiles are computed from the posterior samples.}
-
 \item{local_optimal}{Logical (default \code{FALSE}). When \code{TRUE} find a local optimal (minimum or maximum) point with the optimal effect instead of the absolute optimal point. If a local optimal point doesn't exist it will fall back to finding the absolute optimal point.}
+
+\item{ci.level}{Numeric in \verb{(0,1)} giving the credible-interval level (default \code{0.95}). Credible interval quantiles are computed from the posterior samples.}
 }
 \value{
 An S3 object of class \code{"optimal_exposure"} containing:
