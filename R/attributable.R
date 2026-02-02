@@ -25,7 +25,7 @@
 #'
 #' Both algorithms are fully described by Gasparrini and Leone (2014), see references below.
 #'
-#' Required columns to calculate `AF` and `AN` are `name_exposure` and `name_cases` columns. If `name_cases` is not supplied only AF per time can be computed. If `name_date` is provided the function checks that dates are regularly spaced (checks seconds, minutes, hours, days, weeks, months or years). Time series have to be regularly spaced because the algorithms used to calculate attributable measures rely on consecutive time points over the lag window,. For example, if you only have seasonal observations (e.g., summers) expand the data to the full sequence and insert `NA` for missing exposures/cases and use `name_filter` to compute measures only for the seasonal subset.
+#' Required columns to calculate `AF` and `AN` are `name_exposure` and `name_cases` columns. If `name_cases` is not supplied only AF per time can be computed and the output will only contain two elements: `$af` and `$af.summary`. If `name_date` is provided the function checks that dates are equispaced (checks seconds, minutes, hours, days, weeks, months or years). Time series have to be equispaced because the algorithms used to calculate attributable measures rely on consecutive time points over the lag window,. For example, if you only have seasonal observations (e.g., summers) expand the data to the full sequence and insert `NA` for missing exposures/cases and use `name_filter` to compute measures only for the seasonal subset.
 #'
 #' Only `"bdlnm"` objects fitted with a cross-basis are supported; models fitted with a one-basis (no lag) are not suitable for attributable calculations.
 #'
