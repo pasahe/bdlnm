@@ -28,6 +28,8 @@
 #'
 #' If exponentiated effects (relative risks) are specified (`exp = TRUE`) or auto-detected if `x$model.link` is `log` or `logit`, the function will use the predicted relative risks stored in `x$matRRfit`, `x$allRRfit` or `x$cumRRfit` (if `cumul=TRUE`).
 #'
+#' In the presence of unlagged associations (i.e., a single lag), only the `overall` plot can be produced. In this case, the `overall` plot represents the effect at each predictor value, rather than the overall cumulative effect across lags.
+#'
 #' @author Pau Satorra, Marcos Quijal-Zamorano.
 #'
 #' @note This function is inspired by [dlnm::plot.crosspred()] (Gasparrini 2011). It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
@@ -216,6 +218,11 @@ plot.bcrosspred <- function(x,
   ## Plot: slices
   ## ---------------------------
   if (ptype == "slices") {
+
+    if (x$lag[1] == x$lag[2]) {
+      cli::cli_abort("slices plot is not meaningful for unlagged associations (single lag).")
+    }
+
     # graphical layout: one plot per requested var/lag value
     npanels <- length(var) + length(lag)
 

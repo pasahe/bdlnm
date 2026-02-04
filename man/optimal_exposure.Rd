@@ -2,7 +2,7 @@
 % Please edit documentation in R/optimal_exposure.R
 \name{optimal_exposure}
 \alias{optimal_exposure}
-\title{Calculate the exposure value that minimizes or maximizes the effect of a Bayesian distributed lag non-linear model (B-DLNM)}
+\title{Calculate the exposure value that minimizes or maximizes the overall cumulative effect of a Bayesian distributed lag non-linear model (B-DLNM)}
 \usage{
 optimal_exposure(
   object,
@@ -49,6 +49,8 @@ If \code{basis} is a \code{crossbasis}, the function works on the overall cumula
 The function searches for the absolute optimal value (minimum or maximum) of each sample in the posterior distribution, by default. If \code{local_optimal} is set to \code{TRUE}, the function searches for a local optimal point instead. If more than one optimal point is found, the function will return the one with the optimal effect. If a posterior sample has no local optimal values, the function returns the absolute optimal value.
 
 This optimal exposure value can be used as the reference exposure value to estimate effects passing it to the \code{\link[=bcrosspred]{bcrosspred()}} and \code{\link[=attributable]{attributable()}} functions as the center exposure. In temperature-mortality studies, for example, the minimum exposure value is typically used as the optimal exposure value to center the effects and it's called Minimum Mortality Temperature (MMT). However, note that in the Bayesian framework, this reference temperature is characterized by a full posterior distribution (in contrast to the frequentist approach, where the association is centered on a single point estimate). This distribution may be asymmetric and non-unimodal, so reporting a single summary statistic (e.g., the median) as the reference value can be misleading in such cases. Therefore, before selecting an optimal exposure value as the center, it is recommended that you visualize the distribution of the optimal exposure values using \code{\link[=plot.optimal_exposure]{plot.optimal_exposure()}}.
+
+This function cannot be used when the basis function is one of \code{thr}, \code{strata}, \code{integer}, or \code{lin}. The exposure-response relationship is discrete, piecewise, or strictly linear in these situations, so searching for an optimum is not meaningful.
 }
 \examples{
 # Set exposure-response and lag-response spline parameters

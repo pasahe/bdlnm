@@ -55,6 +55,8 @@ The function will call the specified original base plotting functions for each d
 Credible intervals will only be drawn for \code{ptype} equal to \code{"slices"} or \code{"overall"}. The type of credible interval will be given by the \code{ci} argument, with options \code{"area"} (default), \code{"bars"}, \code{"lines"}, \code{"sampling"} (draw a line for each posterior sample) or \code{"none"} (no credible intervals). Their appearance may be modified through \code{ci.arg}, a list of arguments passed to to low-level plotting functions: \code{\link[=polygon]{polygon()}} for \code{"area"}, \code{\link[=segments]{segments()}} for \code{"bars"} and \code{\link[=lines]{lines()}} for \code{"lines"}. See the original functions for a complete list of the arguments. As above, some unspecified arguments are set to different default values. The credible interval level will be given by \code{ci.level} or inferred from \code{x$ci.level} by default.
 
 If exponentiated effects (relative risks) are specified (\code{exp = TRUE}) or auto-detected if \code{x$model.link} is \code{log} or \code{logit}, the function will use the predicted relative risks stored in \code{x$matRRfit}, \code{x$allRRfit} or \code{x$cumRRfit} (if \code{cumul=TRUE}).
+
+In the presence of unlagged associations (i.e., a single lag), only the \code{overall} plot can be produced. In this case, the \code{overall} plot represents the effect at each predictor value, rather than the overall cumulative effect across lags.
 }
 \note{
 This function is inspired by \code{\link[dlnm:plot.crosspred]{dlnm::plot.crosspred()}} (Gasparrini 2011). It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.

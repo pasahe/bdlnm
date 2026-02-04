@@ -89,7 +89,7 @@ plot.optimal_exposure <- function(x, show_median = TRUE, vline.arg = NULL, ...) 
     breaks = attr(x, "xvar"),
     xaxt = "n",
     xlab = "Exposure",
-    main = paste0(which, "effect values (Median = ", x$summary[["0.5quant"]], ")"),
+    main = paste0("Optimal exposure value (Median = ", x$summary[["0.5quant"]], ")"),
     xlim = c(floor(min(x$est)), ceiling(max(x$est)))
   )
 

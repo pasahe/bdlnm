@@ -20,6 +20,8 @@
 #'
 #' This optimal exposure value can be used as the reference exposure value to estimate effects passing it to the [bcrosspred()] and [attributable()] functions as the center exposure. In temperature-mortality studies, for example, the minimum exposure value is typically used as the optimal exposure value to center the effects and it's called Minimum Mortality Temperature (MMT). However, note that in the Bayesian framework, this reference temperature is characterized by a full posterior distribution (in contrast to the frequentist approach, where the association is centered on a single point estimate). This distribution may be asymmetric and non-unimodal, so reporting a single summary statistic (e.g., the median) as the reference value can be misleading in such cases. Therefore, before selecting an optimal exposure value as the center, it is recommended that you visualize the distribution of the optimal exposure values using [plot.optimal_exposure()].
 #'
+#' This function cannot be used when the basis function is one of `thr`, `strata`, `integer`, or `lin`. The exposure-response relationship is discrete, piecewise, or strictly linear in these situations, so searching for an optimum is not meaningful.
+#'
 #' @return An S3 object of class `"optimal_exposure"` containing:
 #'  - `est`: numeric vector with the optimal exposure value for each posterior sample (named sample1, sample2, ...).
 #'  - `summary`: a one-row data frame with summary statistics for the optimal values across all samples (mean, sd, quantiles, mode).
@@ -87,14 +89,42 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
   check_bdlnm(object)
 
   # check basis
-  if(missing(basis) || !inherits(basis, "crossbasis")) {
-    cli::cli_abort("The {.arg basis} argument must be an object of class {.cls crossbasis}.")
+  if (missing(basis)) {
+    cli::cli_abort(
+      "A basis of class {.cls 'crossbasis'} or {.cls 'onebasis'} must be provided to {.arg basis}."
+    )
+  }
+
+  # Basis type:
+  if (inherits(basis, "crossbasis")) {
+    type <- "cb"
+  } else if (inherits(basis, "onebasis")) {
+    type <- "one"
+  } else {
+    cli::cli_abort(
+      "Unsupported {.arg basis} class. Expected {.cls 'crossbasis'} or {.cls 'onebasis'}."
+    )
+  }
+
+  fun <- switch(type,
+                cb = attributes(basis)$argvar$fun,
+                one = attributes(basis)$fun)
+
+  if (!is.null(fun) && fun %in% c("thr", "strata", "integer", "lin")) {
+    cli::cli_abort(
+      "The optimal exposure value cannot be computed when the basis function is {.fun {fun}}."
+    )
   }
 
   # extract basis attributes
   attr <- attributes(basis)
   range <- attr(basis,"range")
-  lag <- attr(basis,"lag")
+
+  if(type == "cb") {
+    lag <- attr(basis,"lag")
+  } else {
+    lag <- c(0, 0)
+  }
 
   # determine number of posterior samples
   n_sample <- attr(object, "n_sim")

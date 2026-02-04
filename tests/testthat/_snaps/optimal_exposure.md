@@ -4,9 +4,9 @@
 
 ---
 
-    The `basis` argument must be an object of class <crossbasis>.
+    A basis of class <'crossbasis'> or <'onebasis'> must be provided to `basis`.
 
 ---
 
-    The `basis` argument must be an object of class <crossbasis>.
+    Unsupported `basis` class. Expected <'crossbasis'> or <'onebasis'>.
 

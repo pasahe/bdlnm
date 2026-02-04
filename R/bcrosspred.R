@@ -250,7 +250,7 @@ bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL,
 
   if (is.logical(int) && int) cen <- NULL
 
-  if (!is.numeric(cen) || length(cen) != 1L) {
+  if (!is.null(cen) && (!is.numeric(cen) || length(cen) != 1L)) {
     cli::cli_abort("{.arg cen} must be a numeric scalar.")
   }
 
@@ -276,10 +276,21 @@ bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL,
     }
     Xpred <- crs::tensor.prod.model.matrix(list(basisvar, basislag))
   } else if (type == "one") {
+    #Get the argument names needed for each function
+    arg_fun <- switch(fun,
+           ns   = names(formals(splines::ns)),
+           bs   = names(formals(splines::bs)),
+           poly = names(formals(stats::poly)),
+           ps      = c("x","df","knots","degree","intercept", "fx", "S", "diff"),
+           cr      = c("x","df","knots","intercept","fx", "S"),
+           strata  = c("x","df","breaks","ref","intercept"),
+           thr     = c("x","thr.value","side","intercept"),
+           integer = c("x","values","intercept"),
+           lin     = c("x","intercept"),
+           stop("Unsupported function")
+    )
     # Call onebasis function (DLNM)
-    ind <- match(c("fun", names(formals(
-      attr(basis, "fun")
-    ))), names(attributes(basis)), nomatch = 0)
+    ind <- match(c("fun", arg_fun), names(attributes(basis)), nomatch = 0)
     basisvar <- do.call(dlnm::onebasis, c(list(x = varvec), attributes(basis)[ind]))
     if (!is.null(cen)) {
       basiscen <- do.call(dlnm::onebasis, c(list(x = cen), attributes(basis)[ind]))

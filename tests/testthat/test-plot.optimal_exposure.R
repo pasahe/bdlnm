@@ -1,6 +1,23 @@
-#review
-test_that("does a plot of the optimal effect exposure value", {
+test_that("does a plot of the optimal effect exposure value (crossbasis)", {
 
   expect_no_error(plot(mmt, xlab = "Temperature (ºC)", main = paste0("MMT (Median = ", round(mmt$summary[["0.5quant"]], 1), "ºC)")))
+
+})
+
+test_that("does a plot of the optimal effect exposure value (onebasis)", {
+
+  ob <- dlnm::onebasis(slondon$tmean, fun = dlnm_var$var_fun, knots = stats::quantile(slondon$tmean, dlnm_var$var_prc/100, na.rm = TRUE), Bound = range(slondon$tmean, na.rm = TRUE))
+  expect_warning(
+    mod_2 <- bdlnm(
+      mort_75plus ~ ob + factor(dow) + seas,
+      basis = ob,
+      data = slondon,
+      family = "poisson",
+      sample.arg = list(n = n_sim, seed = 1L)
+    )
+  )
+  expect_warning(cpred_2 <- bcrosspred(mod_2, ob, at = temp))
+  mmt_2 <- optimal_exposure(mod_2, ob, at = temp)
+  expect_no_error(plot(mmt_2, xlab = "Temperature (ºC)", main = paste0("MMT (Median = ", round(mmt$summary[["0.5quant"]], 1), "ºC)")))
 
 })
