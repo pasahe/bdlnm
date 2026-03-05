@@ -20,9 +20,9 @@ library(utils)
 library(ggplot2)
 ```
 
-This article is a short tutorial to calculate attributable measures using the `attributable()` function. We will use the built-in `london` dataset. 
+This article provides a short tutorial on how to calculate attributable measures using the `attributable()` function. The built-in london dataset is used as an example to estimate mortality attributable fractions and attributable numbers associated with temperature among the population aged 75 years or older in London during the period 2000–2012.
 
-First, we have to prepare the data, build the DLNM crossbasis, fit the B-DLNM model and obtain the minimum mortality temperature value to center the risks in order to calculate properly attributable measures. 
+First, we prepare the data, construct the DLNM cross-basis, fit the Bayesian DLNM model, and estimate the minimum mortality temperature (MMT) used to center the risks when computing attributable measures. More detailed information about these steps can be found in the main vignette.
 
 ```{r warning=FALSE}
 # Exposure-response and lag-response spline parameters
@@ -55,36 +55,33 @@ temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 # Model
 
 mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
-           basis = cb,
            data = london,
            family = "poisson",
            sample.arg = list(seed = 432))
 
-# Predict
-cpred <- bcrosspred(mod, cb, at = temp)
-
-# compute centering (MMT) using optimal_exposure
-mmt <- optimal_exposure(mod, cb, at = temp)
+# compute MMT centering value using optimal_exposure
+mmt <- optimal_exposure(mod, exp_at = temp)
 cen <- mmt$summary[["0.5quant"]]
 cen
 ```
 
-The MMT value in which values will be centered is `r cen`ºC. Now, we can calculate attributable numbers and fractions. 
+The MMT used to center the relative risks is `r cen`ºC. 
 
-We can calculate them using the backwards algorithm, which will give the current burden due to the set of exposure events experienced in the past:
+With all set, we can calculate attributable numbers and fractions. we can compute attributable numbers and attributable fractions. Gasparrini and Leone (2014) describe the methodology in detail: [Attributable risk from distributed lag models](https://doi.org/10.1186/1471-2288-14-55).
+
+We can compute attributable fractions and attributable numbers using the backward algorithm, which quantifies the current burden attributable to the set of exposure events experienced in the past:
 
 ```{r}
-tictoc::tic()
-attr_back <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
-tictoc::toc()
+attr_back <- attributable(mod, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 ```
-The output will be a list containing the posterior samples of all attributable fractions and numbers per day and for the entire period, accompanied by their summaries:
+
+The output is a list containing posterior samples of attributable fractions and attributable numbers computed per day and for the full study period, together with summaries across posterior samples:
 
 ```{r}
 str(attr_back)
 ```
 
-Let's plot the time series of attributable fractions and numbers per day:
+Using `ggplot2` we can visualize the time series of daily attributable fractions and attributable numbers:
 
 ```{r fig.width = 10}
 london |> 
@@ -102,7 +99,7 @@ london |>
   theme_bw()
 ```
 
-The total attributable fraction and number are:
+The total attributable fraction and attributable number over the full period are:
 
 ```{r}
 options(scipen=999)
@@ -114,15 +111,15 @@ rbind(
   knitr::kable(digits = 2)
 ```
 
-
-Alternatively, we can use the forward algorithm which will give the future burden due to a given exposure event:
+Alternatively, we can use the forward algorithm, which quantifies the future burden attributable to a given exposure event:
 
 ```{r}
 tictoc::tic()
-attr_forw <- attributable(mod, cb, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "forw")
+attr_forw <- attributable(mod, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "forw")
 tictoc::toc()
 ```
-Let's plot the time series of attributable fractions and numbers per day, with the forward algorithm:
+
+We can plot the time series of daily attributable fractions and attributable numbers based on the forward algorithm:
 
 ```{r fig.width = 10}
 london |> 
@@ -140,7 +137,7 @@ london |>
   theme_bw()
 ```
 
-The total attributable fraction and number, with the forward algorithm, are:
+The total attributable fraction and attributable number over the full period (forward algorithm) are:
 
 ```{r}
 rbind(
@@ -150,7 +147,7 @@ rbind(
   knitr::kable(digits = 2)
 ```
 
-Finally, we can also filter for some specific time points. For example, imagine we can calculate attributable measures only for summers:
+Finally, we can restrict the calculation to specific time periods using a filter variable. For example, we can compute attributable measures only for summer months:
 
 ```{r}
 slondon <- london |> 
@@ -162,11 +159,11 @@ slondon <- london |>
   )
 
 # tictoc::tic()
-attr_summer <- attributable(mod, cb, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", name_filter = "summer", cen = cen, dir = "back")
+attr_summer <- attributable(mod, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", name_filter = "summer", cen = cen, dir = "back")
 # tictoc::toc()
 ```
 
-Let's plot the time series of attributable fractions and numbers per day, only for summers:
+We can plot the time series of daily attributable fractions and attributable numbers for summers only:
 
 ```{r fig.width = 10}
 slondon |> 

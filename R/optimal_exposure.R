@@ -3,24 +3,24 @@
 #' Find exposure values that optimize the overall effect for each posterior sample drawn from a Bayesian distributed lag non-linear model ([bdlnm()]). The function returns the exposure value that minimizes or maximizes the overall cumulative effect (summed across lags) for each posterior sample, together with summary statistics (mean, sd, credible-interval quantiles and mode). When used to find the minimum effect in temperature–mortality analyses this optimal exposure value is commonly called the Minimum Mortality Temperature (MMT).
 #'
 #' @param object A fitted `"bdlnm"` object returned by [bdlnm()].
-#' @param basis A DLNM basis object produced by `dlnm`. It must be of class `"crossbasis"` ([dlnm::crossbasis()]) or `"onebasis"` ([dlnm::onebasis()]).
-#' @param at Numeric vector (or matrix) of exposure values at which to compute predictions. If `NULL` the function reconstructs a grid using `from`, `to`, `by` together with the `basis` attributes.
-#' @param from,to,by Optional numeric used to construct `at` when not provided.
+#' @param basis If the `bdlnm` model has more than one basis, the name of the basis to use to compute predictions. It must be one of `names(object$basis)`. If the model contains only one basis it is selected automatically.
+#' @param exp_at Numeric vector of exposure values at which to evaluate predictions. If `NULL`, the exposure range is extracted from the attributes of the specified `basis` and a grid of 50 values is constructed using [pretty()].
+#' @param lag_at Numeric vector of integer lag values ver which to compute the overall cumulative effect.  Only used when `basis` is a `crossbasis`. If `NULL`, the overall effect is computed by summing over the full lag range stored in `basis` (with step size `1`).
 #' @param which Selection criterion to calculate the optimal exposure: `"min"` (default) chooses the exposure with the minimum overall cumulative effect, `"max"` chooses the exposure with maximum overall cumulative effect.
 #' @param local_optimal Logical (default `FALSE`). When `TRUE` find a local optimal (minimum or maximum) point with the optimal effect instead of the absolute optimal point. If a local optimal point doesn't exist it will fall back to finding the absolute optimal point.
 #' @param ci.level Numeric in `(0,1)` giving the credible-interval level (default `0.95`). Credible interval quantiles are computed from the posterior samples.
 
 #' @details
 #'
-#' The function internally calls [bcrosspred()] to compute the posterior distribution of the overall cumulative exposure effect for the grid specified by `at` (or reconstructed using `from`, `to`, `by` and the attributes of `basis`). For each posterior sample the function calculates the exposure value that optimizes (minimizes or maximizes) the overall cumulative effect and then summarizes these optimal values across samples using mean, sd, credible-interval quantiles and the mode (most frequent observed value).
+#' The function internally calls [bcrosspred()] to compute the posterior distribution of the overall cumulative exposure effect for the grid specified by `exp_at`. For each posterior sample the function calculates the exposure value that optimizes (minimizes or maximizes) the overall cumulative effect and then summarizes these optimal values across samples using mean, sd, credible-interval quantiles and the mode (most frequent observed value).
 #'
-#' If `basis` is a `crossbasis`, the function works on the overall cumulative effect of each exposure summed across all the lags, stored by [bcrosspred()] in `$allfit`. If `basis` is a `onebasis` instead, then the function uses the exposure effect stored in `$matfit`.
+#' The overall cumulative effect is computed by summing for each exposure the lag-specific effects over the lags specified in `lag_at`. If `lag_at` is `NULL`, the cumulative effect is computed for each exposure by summing over the full lag range stored in `basis` (with step size 1). If `basis` is a `onebasis`, the function optimizes the exposure-response association stored in `$matfit`, and `lag_at` is ignored.
 #'
 #' The function searches for the absolute optimal value (minimum or maximum) of each sample in the posterior distribution, by default. If `local_optimal` is set to `TRUE`, the function searches for a local optimal point instead. If more than one optimal point is found, the function will return the one with the optimal effect. If a posterior sample has no local optimal values, the function returns the absolute optimal value.
 #'
 #' This optimal exposure value can be used as the reference exposure value to estimate effects passing it to the [bcrosspred()] and [attributable()] functions as the center exposure. In temperature-mortality studies, for example, the minimum exposure value is typically used as the optimal exposure value to center the effects and it's called Minimum Mortality Temperature (MMT). However, note that in the Bayesian framework, this reference temperature is characterized by a full posterior distribution (in contrast to the frequentist approach, where the association is centered on a single point estimate). This distribution may be asymmetric and non-unimodal, so reporting a single summary statistic (e.g., the median) as the reference value can be misleading in such cases. Therefore, before selecting an optimal exposure value as the center, it is recommended that you visualize the distribution of the optimal exposure values using [plot.optimal_exposure()].
 #'
-#' This function cannot be used when the basis function is one of `thr`, `strata`, `integer`, or `lin`. The exposure-response relationship is discrete, piecewise, or strictly linear in these situations, so searching for an optimum is not meaningful.
+#' This function cannot be used when the specified basis function is one of `thr`, `strata`, `integer`, or `lin`. The exposure-response relationship is discrete, piecewise, or strictly linear in these situations, so searching for an optimum is not meaningful.
 #'
 #' @return An S3 object of class `"optimal_exposure"` containing:
 #'  - `est`: numeric vector with the optimal exposure value for each posterior sample (named sample1, sample2, ...).
@@ -73,14 +73,21 @@
 #'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
 #'  # Fit the model
-#'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+#'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
 #'
 #'  # Find minimum risk exposure value
-#'  mmt <- optimal_exposure(mod, cb, at = temp)
+#'  mmt <- optimal_exposure(mod, "cb", exp_at = temp)
 #'
 #'
-optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, by = NULL, which = "min", local_optimal = FALSE, ci.level = 0.95) {
-
+optimal_exposure <- function(
+  object,
+  basis = NULL,
+  exp_at = NULL,
+  lag_at = NULL,
+  which = "min",
+  local_optimal = FALSE,
+  ci.level = 0.95
+) {
   ## ---------------------------
   ## Basic checks
   ## ---------------------------
@@ -88,11 +95,32 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
   # check object
   check_bdlnm(object)
 
+  name_basis <- basis
+  obj_basis <- object$basis
+
   # check basis
-  if (missing(basis)) {
-    cli::cli_abort(
-      "A basis of class {.cls 'crossbasis'} or {.cls 'onebasis'} must be provided to {.arg basis}."
-    )
+  if (!is.null(basis)) {
+    if (is.character(basis) && length(basis) == 1) {
+      if (!basis %in% names(obj_basis)) {
+        cli::cli_abort(
+          "The name of the basis in {.arg basis} must match the name of the basis stored in {.arg object$basis}: {.or {.val {names(obj_basis)}}}."
+        )
+      } else {
+        basis <- obj_basis[[basis]]
+      }
+    } else {
+      cli::cli_abort(
+        "The {.arg basis} argument must be a character element specifying the name of the basis stored in {.arg object$basis}."
+      )
+    }
+  } else {
+    if (length(obj_basis) > 1) {
+      cli::cli_abort(
+        "{.arg basis} must be provided containing the name of the basis to select for predictions (stored in {.arg object$basis}): {.or {.val {names(obj_basis)}}}."
+      )
+    } else {
+      basis <- obj_basis[[1]]
+    }
   }
 
   # Basis type:
@@ -102,13 +130,15 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
     type <- "one"
   } else {
     cli::cli_abort(
-      "Unsupported {.arg basis} class. Expected {.cls 'crossbasis'} or {.cls 'onebasis'}."
+      "Unsupported {.arg basis} class. Expected {.cls crossbasis} or {.cls onebasis}."
     )
   }
 
-  fun <- switch(type,
-                cb = attributes(basis)$argvar$fun,
-                one = attributes(basis)$fun)
+  fun <- switch(
+    type,
+    cb = attributes(basis)$argvar$fun,
+    one = attributes(basis)$fun
+  )
 
   if (!is.null(fun) && fun %in% c("thr", "strata", "integer", "lin")) {
     cli::cli_abort(
@@ -118,71 +148,48 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
 
   # extract basis attributes
   attr <- attributes(basis)
-  range <- attr(basis,"range")
-
-  if(type == "cb") {
-    lag <- attr(basis,"lag")
-  } else {
-    lag <- c(0, 0)
-  }
+  range <- attr(basis, "range")
 
   # determine number of posterior samples
   n_sample <- attr(object, "n_sim")
-
-  # Set at if not provided
-  if (is.null(at)) {
-    if (is.null(from))
-      from <- range[1]
-    if (is.null(to))
-      to <- range[2]
-    nobs <- ifelse(is.null(by), 50, max(1, diff(range) / by))
-    pretty <- pretty(c(from, to), n = nobs)
-    pretty <- pretty[pretty >= from & pretty <= to]
-    at <- if (is.null(by))
-      pretty
-    else
-      seq(from = min(pretty),
-        to = to,
-          by = by)
-  } else {
-    if (!is.numeric(at)) {
-      cli::cli_abort("{.arg at} must be an integer vector or matrix.")
-    } else {
-      if (is.matrix(at)) {
-        if (dim(at)[2] != diff(lag) + 1L)
-          cli::cli_abort("matrix in {.arg at} must have {.val {diff(lag)+1}} columns.")
-        if (is.null(rownames(at)))
-          rownames(at) <- seq(nrow(at))
-      } else {
-        at <- sort(unique(at))
-      }
-    }
-  }
 
   if (!which %in% c("min", "max")) {
     cli::cli_abort("{.arg which} has to be either {.val min} or {.val max}.")
   }
 
   # 0 < ci.level < 1
-  if (!is.numeric(ci.level) || length(ci.level) != 1 || ci.level <= 0 || ci.level >= 1) {
-    cli::cli_abort("{.arg ci.level} must be a single numeric value strictly between 0 and 1.")
+  if (
+    !is.numeric(ci.level) ||
+      length(ci.level) != 1 ||
+      ci.level <= 0 ||
+      ci.level >= 1
+  ) {
+    cli::cli_abort(
+      "{.arg ci.level} must be a single numeric value strictly between 0 and 1."
+    )
   }
 
   ## ---------------------------
   ## Predict using bcrosspred()
   ## ---------------------------
 
-  # define the matrix of temperatures and lags in which predictions will be made
-  predvar <- if (is.matrix(at)) rownames(at) else at
-
-  predlag <- seq(from = lag[1], to = lag[2], by = 1)
-
   # prediction
-  cpred <- tryCatch({
-      suppressWarnings(bcrosspred(object, basis, at = at, ci.level = ci.level))
-  }, error = function(e) {
-      cli::cli_abort("Failed to compute predictions via bcrosspred: {conditionMessage(e)}")
-  })
+  cpred <- tryCatch(
+    {
+      suppressWarnings(bcrosspred(
+        object,
+        basis = name_basis,
+        exp_at = exp_at,
+        lag_at = lag_at,
+        ci.level = ci.level
+      ))
+    },
+    error = function(e) {
+      cli::cli_abort(
+        "Failed to compute predictions via bcrosspred: {conditionMessage(e)}"
+      )
+    }
+  )
 
   ## ---------------------------
   ## Find the optimal
@@ -204,7 +211,7 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
   }
 
   opt_index <- apply(cpred$allfit, 2, which.fun)
-  opt_values <- predvar[opt_index]
+  opt_values <- cpred$exp_at[opt_index]
 
   names(opt_values) <- paste0("sample", seq_len(n_sample))
 
@@ -221,17 +228,24 @@ optimal_exposure <- function(object, basis, at = NULL, from = NULL, to = NULL, b
   quant_cols <- grep("quant$", colnames(cpred$allfit.summary), value = TRUE)
   quant_val <- as.numeric(gsub("quant$", "", quant_cols))
 
-  for(i in seq_along(quant_cols)) {
+  for (i in seq_along(quant_cols)) {
     optsum[quant_cols[i]] <- stats::quantile(opt_values, quant_val[i])
   }
 
   # approximate mode as most frequent observed value among samples
-  optsum["mode"] <- unique(opt_values)[which.max(tabulate(match(opt_values, unique(opt_values))))]
+  optsum["mode"] <- unique(opt_values)[which.max(tabulate(match(
+    opt_values,
+    unique(opt_values)
+  )))]
 
   #
   res <- list(est = opt_values, summary = optsum)
 
-  attr(res, "xvar") <- predvar
+  attr(res, "exp_at") <- cpred$exp_at
+
+  if (!is.null(cpred$lag_at)) {
+    attr(res, "lag_at") <- cpred$lag_at
+  }
 
   attr(res, "which") <- which
 

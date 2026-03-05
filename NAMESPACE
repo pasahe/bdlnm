@@ -2,9 +2,6 @@
 
 S3method(plot,bcrosspred)
 S3method(plot,optimal_exposure)
-S3method(summary,bcrosspred)
-S3method(summary,bdlnm)
-S3method(summary,optimal_exposure)
 export(attributable)
 export(bcrosspred)
 export(bdlnm)

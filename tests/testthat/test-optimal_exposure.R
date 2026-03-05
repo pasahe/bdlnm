@@ -1,6 +1,5 @@
 
 test_that("optimal_exposure returns object of class optimal_exposure with expected components (crossbasis)", {
-
   # Basic structure
   expect_s3_class(mmt, "optimal_exposure")
   expect_true(is.list(mmt))
@@ -13,9 +12,11 @@ test_that("optimal_exposure returns object of class optimal_exposure with expect
   # names of mmt vector follow sample convention
   expect_equal(names(mmt$est), paste0("sample", seq_len(n_sim)))
 
-  # optimal values belong to the prediction grid (xvar)
-  expect_equal(attr(mmt, "xvar"), temp)
-  expect_true(all(mmt$est %in% as.numeric(attr(mmt, "xvar"))))
+  # optimal values belong to the prediction grid (exp)
+  expect_equal(attr(mmt, "exp_at"), temp)
+  expect_true(all(mmt$est %in% as.numeric(attr(mmt, "exp"))))
+
+  expect_equal(attr(mmt, "lag_at"), seq(attr(cb, "lag")[1], attr(cb, "lag")[2], by = 1))
 
   # summary format: must contain mean, sd, mode and at least one quantile
   ms_cols <- names(mmt$summary)
@@ -29,14 +30,13 @@ test_that("optimal_exposure returns object of class optimal_exposure with expect
   expect_warning(
     mod_2 <- bdlnm(
       mort_75plus ~ ob + factor(dow) + seas,
-      basis = ob,
       data = slondon,
       family = "poisson",
       sample.arg = list(n = n_sim, seed = 1L)
     )
   )
-  expect_warning(cpred_2 <- bcrosspred(mod_2, ob, at = temp))
-  mmt_2 <- optimal_exposure(mod_2, ob, at = temp)
+  expect_warning(cpred_2 <- bcrosspred(mod_2, exp_at = temp))
+  mmt_2 <- optimal_exposure(mod_2, exp_at = temp)
 
   # Basic structure
   expect_s3_class(mmt_2, "optimal_exposure")
@@ -50,9 +50,11 @@ test_that("optimal_exposure returns object of class optimal_exposure with expect
   # names of mmt vector follow sample convention
   expect_equal(names(mmt_2$est), paste0("sample", seq_len(n_sim)))
 
-  # optimal values belong to the prediction grid (xvar)
-  expect_equal(attr(mmt_2, "xvar"), temp)
-  expect_true(all(mmt_2$est %in% as.numeric(attr(mmt_2, "xvar"))))
+  # optimal values belong to the prediction grid (exp)
+  expect_equal(attr(mmt_2, "exp_at"), temp)
+  expect_true(all(mmt_2$est %in% as.numeric(attr(mmt_2, "exp_at"))))
+
+  expect_equal(attr(mmt_2, "lag_at"), NULL)
 
   # summary format: must contain mean, sd, mode and at least one quantile
   ms_cols <- names(mmt_2$summary)
@@ -63,24 +65,24 @@ test_that("optimal_exposure returns object of class optimal_exposure with expect
 test_that("optimal_exposure works with default at (reconstructs grid from basis)", {
 
   # Should not error when 'at' is not provided
-  expect_silent(mmt2 <- optimal_exposure(mod, cb))
+  expect_silent(mmt2 <- optimal_exposure(mod))
 
-  # Must return class and xvar attribute
+  # Must return class and exp attribute
   expect_s3_class(mmt2, "optimal_exposure")
 
-  expect_equal(length(attr(mmt2, "xvar")), 48)
+  expect_equal(length(attr(mmt2, "exp_at")), 48)
 
 })
 
 test_that("optimal_exposure errors when object is not a bdlnm output or basis wrong", {
 
   # NULL x should error
-  expect_snapshot_error(optimal_exposure(cb, at = temp))
+  expect_snapshot_error(optimal_exposure(exp_at = temp))
 
-  # NULL basis should error
-  expect_snapshot_error(optimal_exposure(mod, at = temp))
+  # NULL basis should not error
+  expect_silent(optimal_exposure(mod, exp_at = temp))
 
   # wrong basis type should error
-  expect_snapshot_error(optimal_exposure(mod, basis = 1:5, at = temp))
+  expect_snapshot_error(optimal_exposure(mod, basis = "ob", exp_at = temp))
 
 })

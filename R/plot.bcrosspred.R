@@ -4,20 +4,20 @@
 #'
 #' @param x An object of class `"bcrosspred"` returned by [bcrosspred()].
 #' @param ptype Character. Plot type: one of `"slices"`, `"overall"`, `"3d"` or `"contour"`.
-#' @param var Numeric vector of predictor values (exposure) for the `"slices"` plot type (maximum length of 4).
-#' @param lag Numeric vector of lags for the `"slices"` plot type (maximum length of 4).
+#' @param exp_at Numeric vector of exposure values (predictor) for the `"slices"` plot type (maximum length of 4).
+#' @param lag_at Numeric vector of lags for the `"slices"` plot type (maximum length of 4).
 #' @param ci Character. How to plot credible intervals: one of `"area"`, `"bars"`, `"lines"`, `"sampling"` (draw a line for each posterior sample) or `"none"`. Default: `"area"`.
 #' @param ci.arg List of graphical arguments for the plotting of credible intervals passed to base plotting functions (see `Details`).
 #' @param ci.level Numeric in `(0,1)`. Credible interval level. Default is taken from `x$ci.level`.
 #' @param cumul Logical. If `TRUE`, plot incremental cumulative predictions (requires cumulative predictions in `x`).
-#' @param exp Logical. Set to `TRUE` to plot exponentiated effects (relative risks) and to `FALSE` to not plot them. The default is `NULL` in which the function uses `x$model.link` to automatically detect wheteher to use relative risks (when link is `log` or `logit`).
+#' @param exponentiate Logical. Set to `TRUE` to plot exponentiated effects (relative risks) and to `FALSE` to not plot them. The default is `NULL` in which the function uses `x$model.link` to automatically detect whether to use relative risks (when link is `log` or `logit`).
 #' @param ... Additional graphical arguments passed to base plotting functions (see `Details`).
 #'
 #' @details
 #'
 #' The function supports different visualizations for posterior effects predicted by [bcrosspred()] specified in `ptype`:
 #'
-#' - `"slices"`: (optionally multi-panel) line plot of the predicted effect over lag(s) for selected exposure value(s) or over exposure value(s) for selected lag(s). Use `var` and/or `lag` to specify which slices to draw (at least one must be supplied). At most 4 slices of each type are allowed to keep layouts readable. See [plot.default()], [lines()] and [points()] for information on additional graphical arguments.
+#' - `"slices"`: (optionally multi-panel) line plot of the predicted effect over lag(s) for selected exposure value(s) or over exposure value(s) for selected lag(s). Use `exp_at` and/or `lag_at` to specify which slices to draw (at least one must be supplied). At most 4 slices of each type are allowed to keep layouts readable. See [plot.default()], [lines()] and [points()] for information on additional graphical arguments.
 #' - `"overall"`: plot the predicted overall cumulative effect over the whole lag period for each exposure value in the prediction grid. See [plot.default()], [lines()] and [points()] for information on additional graphical arguments.
 #' - `"3d"`: 3D plot of the surface of the predicted effect for each exposure and lag. Uses the median of the posterior samples. Not meaningful for single lag models. Additional graphical arguments can be included, such as `theta` or `phi` (perspective), `border` or `shade` (surface), `xlab`, `ylab` or `zlab` (axis labelling) and `col.` See [persp()] for additional information.
 #' - `"contour"`: filled contour of the surface of the predicted effect for each exposure and lag. Uses the median of the posterior samples. Not meaningful for single lag models. Additional graphical arguments can be included, such as `plot.title`, `plot.axes` or `key.title` for titles and axis and key labelling. See [filled.contour()] for additional information.
@@ -26,9 +26,9 @@
 #'
 #' Credible intervals will only be drawn for `ptype` equal to `"slices"` or `"overall"`. The type of credible interval will be given by the `ci` argument, with options `"area"` (default), `"bars"`, `"lines"`, `"sampling"` (draw a line for each posterior sample) or `"none"` (no credible intervals). Their appearance may be modified through `ci.arg`, a list of arguments passed to to low-level plotting functions: [polygon()] for `"area"`, [segments()] for `"bars"` and [lines()] for `"lines"`. See the original functions for a complete list of the arguments. As above, some unspecified arguments are set to different default values. The credible interval level will be given by `ci.level` or inferred from `x$ci.level` by default.
 #'
-#' If exponentiated effects (relative risks) are specified (`exp = TRUE`) or auto-detected if `x$model.link` is `log` or `logit`, the function will use the predicted relative risks stored in `x$matRRfit`, `x$allRRfit` or `x$cumRRfit` (if `cumul=TRUE`).
+#' If exponentiated effects (relative risks) are specified (`exponentiate = TRUE`) or auto-detected if `x$model.link` is `log` or `logit`, the function will use the predicted relative risks stored in `x$matRRfit`, `x$allRRfit` or `x$cumRRfit` (if `cumul=TRUE`).
 #'
-#' In the presence of unlagged associations (i.e., a single lag), only the `overall` plot can be produced. In this case, the `overall` plot represents the effect at each predictor value, rather than the overall cumulative effect across lags.
+#' In the presence of unlagged or single lag associations, only the `overall` plot can be produced. In this case, the `overall` plot represents the effect at each predictor value, rather than the overall cumulative effect across lags.
 #'
 #' @author Pau Satorra, Marcos Quijal-Zamorano.
 #'
@@ -75,10 +75,10 @@
 #'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
 #'  # Fit the model
-#'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+#'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
 #'
 #'  # Prediction
-#'  cpred <- bcrosspred(mod, cb, at = temp)
+#'  cpred <- bcrosspred(mod, exp_at = temp)
 #'
 #'  # Perform the plots:
 #'
@@ -95,31 +95,34 @@
 #'
 #'  #Slices (for a high temperature)
 #'  htemp <- 23
-#'  plot(cpred , "slices", var = htemp, col=3, ylab="RR",
+#'  plot(cpred , "slices", exp_at = htemp, col=3, ylab="RR",
 #'  main=paste0("Association for a high temperature (", htemp, "ºC)"))
 #'
 #'  #Slices (for lag 0)
-#'  plot(cpred , "slices", lag = 0, col=4, ylab="RR", main=paste0("Association at Lag 0"))
+#'  plot(cpred , "slices", lag_at = 0, col=4, ylab="RR", main=paste0("Association at Lag 0"))
 #'
 #'
-plot.bcrosspred <- function(x,
-                            ptype,
-                            var = NULL,
-                            lag = NULL,
-                            ci = "area",
-                            ci.arg,
-                            ci.level = x$ci.level,
-                            cumul = FALSE,
-                            exp = NULL,
-                            ...) {
-
+plot.bcrosspred <- function(
+  x,
+  ptype,
+  exp_at = NULL,
+  lag_at = NULL,
+  ci = "area",
+  ci.arg,
+  ci.level = x$ci.level,
+  cumul = FALSE,
+  exponentiate = NULL,
+  ...
+) {
   ## ---------------------------
   ## Basic checks
   ## ---------------------------
 
   # Check x object
   if (missing(x) || !is.list(x) || !inherits(x, "bcrosspred")) {
-    cli::cli_abort("{.arg x} must be a {.cls bcrosspred} object as returned by {.fn bcrosspred}.")
+    cli::cli_abort(
+      "{.arg x} must be a {.cls bcrosspred} object as returned by {.fn bcrosspred}."
+    )
   }
 
   # Check ptype
@@ -136,61 +139,64 @@ plot.bcrosspred <- function(x,
     )
   }
 
-  if(missing(ci.arg)) {
+  if (missing(ci.arg)) {
     ci.arg <- list()
-  } else if(!is.list(ci.arg)) {
+  } else if (!is.list(ci.arg)) {
     cli::cli_abort("{.arg ci.arg} must be a list.")
   }
 
-  if(!is.numeric(ci.level) || ci.level>=1 || ci.level<=0) {
-    cli::cli_abort("{.arg ci.level} must be numeric and between {.val 0} and {.val 1}.")
+  if (!is.numeric(ci.level) || ci.level >= 1 || ci.level <= 0) {
+    cli::cli_abort(
+      "{.arg ci.level} must be numeric and between {.val 0} and {.val 1}."
+    )
   }
 
-  # Validate var & lag inputs for slices
+  # Validate exp_at & lag_at inputs for slices
   if (ptype == "slices") {
-    if (is.null(var) && is.null(lag)) {
+    if (is.null(exp_at) && is.null(lag_at)) {
       cli::cli_abort(
-        "At least one of {.arg var} or {.arg lag} must be supplied when {.arg ptype} = {.val 'slices'}."
+        "At least one of {.arg exp_at} or {.arg lag_at} must be supplied when {.arg ptype} = {.val 'slices'}."
       )
     }
 
-    if (!is.null(var)) {
-      if (!is.numeric(var)) {
-        cli::cli_abort("{.arg var} must be numeric.")
+    if (!is.null(exp_at)) {
+      if (!is.numeric(exp_at)) {
+        cli::cli_abort("{.arg exp_at} must be numeric.")
       }
-      if (length(var) > 4L) {
-        cli::cli_abort("{.arg var} length must be <= 4.")
+      if (length(exp_at) > 4L) {
+        cli::cli_abort("{.arg exp_at} length must be <= 4.")
       }
-      # Check that requested var values are present in predictions
-      if (!all(var %in% x$predvar)) {
-        cli::cli_abort("All {.arg var} values must be present in {.code x$predvar}.")
-      }
-    }
-
-    if (!is.null(lag)) {
-      if (!is.numeric(lag)) {
-        cli::cli_abort("{.arg lag} must be numeric.")
-      }
-      if (length(lag) > 4L) {
-        cli::cli_abort("{.arg lag} length must be <= 4.")
-      }
-      # check lag validity against predicted lags
-      predlag <- seq(from = x$lag[1],
-                     to = x$lag[2],
-                     by = x$bylag)
-
-      if (!all(lag %in% predlag)) {
-        cli::cli_abort("All {.arg lag} values must be present in {.val predlag}.")
+      # Check that requested exp_at values are present in predictions
+      if (!all(exp_at %in% x$exp_at)) {
+        cli::cli_abort(
+          "All {.arg exp_at} values must be present in {.code x$exp_at}."
+        )
       }
     }
 
+    if (!is.null(lag_at)) {
+      if (!is.numeric(lag_at)) {
+        cli::cli_abort("{.arg lag_at} must be numeric.")
+      }
+      if (length(lag_at) > 4L) {
+        cli::cli_abort("{.arg lag_at} length must be <= 4.")
+      }
+      # check lag_at validity against predicted lags
+      if (!all(lag_at %in% x$lag_at)) {
+        cli::cli_abort(
+          "All {.arg lag_at} values must be present in {.val x$lag_at}."
+        )
+      }
+    }
   }
 
   # decide whether to compute CI from matfit directly or use stored summaries
   ci_compute <- !identical(ci.level, x$ci.level)
 
   # exp
-  if (!is.null(exp) && !is.logical(exp)) cli::cli_abort("{.arg exp} must be logical")
+  if (!is.null(exponentiate) && !is.logical(exponentiate)) {
+    cli::cli_abort("{.arg exponentiate} must be logical")
+  }
 
   ## ---------------------------
   ## Prepare data
@@ -198,7 +204,12 @@ plot.bcrosspred <- function(x,
 
   # exponentiate if requested or if detected model.link suggests it
   noeff <- 0L
-  if ((is.null(exp) && !is.null(x$model.link) && x$model.link %in% c("log", "logit")) || (!is.null(exp) && exp)) {
+  if (
+    (is.null(exponentiate) &&
+      !is.null(x$model.link) &&
+      x$model.link %in% c("log", "logit")) ||
+      (!is.null(exponentiate) && exponentiate)
+  ) {
     matfit <- if (!cumul) x$matRRfit else x$cumRRfit
     allfit <- x$allRRfit
     matfitsum <- if (!cumul) x$matRRfit.summary else x$cumRRfit.summary
@@ -212,19 +223,22 @@ plot.bcrosspred <- function(x,
     noeff <- 0L
   }
 
-  #Revisar: ensure par is restored on exit??
-
   ## ---------------------------
   ## Plot: slices
   ## ---------------------------
   if (ptype == "slices") {
-
-    if (x$lag[1] == x$lag[2]) {
-      cli::cli_abort("slices plot is not meaningful for unlagged associations (single lag).")
+    if (is.null(x$lag_at)) {
+      cli::cli_abort("slices plot is not meaningful for unlagged associations.")
     }
 
-    # graphical layout: one plot per requested var/lag value
-    npanels <- length(var) + length(lag)
+    if (min(x$lag_at) == max(x$lag_at)) {
+      cli::cli_abort(
+        "slices plot is not meaningful for single lag associations."
+      )
+    }
+
+    # graphical layout: one plot per requested exp_at/lag_at value
+    npanels <- length(exp_at) + length(lag_at)
 
     # set frame and grey scale
     mar.old <- graphics::par()$mar
@@ -233,49 +247,53 @@ plot.bcrosspred <- function(x,
     grey <- grey(0.9)
 
     if (npanels > 1) {
-      graphics::layout(matrix(1:npanels, ncol = sum(!is.null(var), !is.null(lag))))
+      graphics::layout(matrix(
+        1:npanels,
+        ncol = sum(!is.null(exp_at), !is.null(lag_at))
+      ))
       grey <- grey(0.8)
-      graphics::par(mgp = c(2, 0.7, 0),
-          mar = c(4.1, 4.1, 2.1, 1.1))
+      graphics::par(mgp = c(2, 0.7, 0), mar = c(4.1, 4.1, 2.1, 1.1))
     }
 
-    predlag <- seq(from = x$lag[1],
-                   to = x$lag[2],
-                   by = x$bylag)
-
     # medians: use stored summary
-    matfitmed <- matfitsum[, , "0.5quant"]
+    matfitmed <- matfitsum[,, "0.5quant"]
 
     # low / high intervals
     if (!ci_compute) {
       #use stored summary
       quantiles <- grep("quant$", dimnames(matfitsum)[[3]])
-      matfitlow <- matfitsum[, , quantiles[1]]
-      matfithigh <- matfitsum[, , rev(quantiles)[1]]
+      matfitlow <- matfitsum[,, quantiles[1]]
+      matfithigh <- matfitsum[,, rev(quantiles)[1]]
     } else {
       #recompute quantiles again
       quantiles <- c((1 - ci.level) / 2, 1 - (1 - ci.level) / 2)
       matfitlow <- apply(matfit, c(1, 2), stats::quantile, probs = quantiles[1])
-      matfithigh <- apply(matfit, c(1, 2), stats::quantile, probs = quantiles[2])
+      matfithigh <- apply(
+        matfit,
+        c(1, 2),
+        stats::quantile,
+        probs = quantiles[2]
+      )
     }
 
     # plot by requested lags
-    if (!is.null(lag)) {
-      for (i in lag) {
-
-        # filter for i-th lag
-        matfit_i <- matfit[, which(predlag == i), ]
+    if (!is.null(lag_at)) {
+      for (i in lag_at) {
+        # filter for i-th lag_at
+        matfit_i <- matfit[, which(x$lag_at == i), ]
 
         # set default plot arguments
         plot.arg <- list(
           type = "l",
-          xlab = "Var",
+          xlab = "Exposure",
           ylab = "Outcome",
           ylim = c(min(matfit_i, na.rm = TRUE), max(matfit_i, na.rm = TRUE)),
           bty = "l"
         )
 
-        if (npanels > 1L) plot.arg$cex.axis <- 0.7
+        if (npanels > 1L) {
+          plot.arg$cex.axis <- 0.7
+        }
 
         # merge user args
         plot.arg <- utils::modifyList(plot.arg, list(...))
@@ -285,41 +303,46 @@ plot.bcrosspred <- function(x,
           panel.first = call(
             "fci",
             ci = ci,
-            x = x$predvar,
+            x = x$exp_at,
             y = matfit_i,
-            high = matfithigh[, which(predlag == i)],
-            low = matfitlow[, which(predlag == i)],
+            high = matfithigh[, which(x$lag_at == i)],
+            low = matfitlow[, which(x$lag_at == i)],
             ci.arg,
             plot.arg,
             noeff = noeff
           )
         )
 
-        plot.arg <- utils::modifyList(plot.arg, c(ci.list, list(
-          x = x$predvar, y = matfitmed[, which(predlag == i)]
-        )))
+        plot.arg <- utils::modifyList(
+          plot.arg,
+          c(
+            ci.list,
+            list(
+              x = x$exp_at,
+              y = matfitmed[, which(x$lag_at == i)]
+            )
+          )
+        )
 
         col <- plot.arg$col
 
         if (npanels > 1) {
           plot.arg$main <- ""
-          plot.arg$xlab <- "Var"
+          plot.arg$xlab <- "Exposure"
         }
 
         # plot
         do.call("plot", plot.arg)
 
-        if (length(lag) > 1) graphics::mtext(paste("Lag =", i), cex = 0.8)
-
+        if (length(lag_at) > 1) graphics::mtext(paste("Lag =", i), cex = 0.8)
       }
     }
 
-    # plot by requested predictor values (var)
-    if (!is.null(var)) {
-      for (i in var) {
-
+    # plot by requested predictor values (exp_at)
+    if (!is.null(exp_at)) {
+      for (i in exp_at) {
         # filter for i-th exposure value
-        matfit_i <- matfit[which(x$predvar == i), , ]
+        matfit_i <- matfit[which(x$exp_at == i), , ]
 
         # set default plot arguments
         plot.arg <- list(
@@ -330,7 +353,9 @@ plot.bcrosspred <- function(x,
           bty = "l"
         )
 
-        if (npanels > 1L) plot.arg$cex.axis <- 0.7
+        if (npanels > 1L) {
+          plot.arg$cex.axis <- 0.7
+        }
 
         # merge user args
         plot.arg <- utils::modifyList(plot.arg, list(...))
@@ -340,18 +365,20 @@ plot.bcrosspred <- function(x,
           panel.first = call(
             "fci",
             ci = ci,
-            x = predlag,
+            x = x$lag_at,
             y = matfit_i,
-            high = matfithigh[which(x$predvar == i), ],
-            low = matfitlow[which(x$predvar == i), ],
+            high = matfithigh[which(x$exp_at == i), ],
+            low = matfitlow[which(x$exp_at == i), ],
             ci.arg,
             plot.arg,
             noeff = noeff
           )
         )
 
-        plot.arg <- utils::modifyList(plot.arg, c(ci.list, list(x = predlag, y = matfitmed[which(x$predvar == i), ])))
-
+        plot.arg <- utils::modifyList(
+          plot.arg,
+          c(ci.list, list(x = x$lag_at, y = matfitmed[which(x$exp_at == i), ]))
+        )
 
         if (npanels > 1L) {
           plot.arg$main <- ""
@@ -361,14 +388,13 @@ plot.bcrosspred <- function(x,
         # plot
         do.call("plot", plot.arg)
 
-        if (length(lag) > 1) graphics::mtext(paste("Var =", var[i]), cex = 0.8)
-
+        if (length(lag_at) > 1) {
+          graphics::mtext(paste("Exposure =", i), cex = 0.8)
+        }
       }
     }
     if (npanels > 1L) {
-      graphics::par(mar = mar.old,
-          mfrow = mfrow.old,
-          mgp = mgp.old)
+      graphics::par(mar = mar.old, mfrow = mfrow.old, mgp = mgp.old)
     }
   }
 
@@ -377,7 +403,6 @@ plot.bcrosspred <- function(x,
   ## ---------------------------
 
   if (ptype == "overall") {
-
     # set default values
     min_all <- min(allfit, na.rm = TRUE)
     max_all <- max(allfit, na.rm = TRUE)
@@ -385,7 +410,7 @@ plot.bcrosspred <- function(x,
     plot.arg <- list(
       type = "l",
       ylim = c(min_all, max_all),
-      xlab = "Var",
+      xlab = "Exposure",
       ylab = "Outcome",
       bty = "l"
     )
@@ -394,10 +419,6 @@ plot.bcrosspred <- function(x,
     plot.arg <- utils::modifyList(plot.arg, list(...))
 
     col <- plot.arg$col
-
-    predlag <- seq(from = x$lag[1],
-                   to = x$lag[2],
-                   by = x$bylag)
 
     # medians: use stored summary
     allfitmed <- allfitsum[, "0.5quant"]
@@ -420,7 +441,7 @@ plot.bcrosspred <- function(x,
       panel.first = call(
         "fci",
         ci = ci,
-        x = x$predvar,
+        x = x$exp_at,
         y = allfit,
         high = allfithigh,
         low = allfitlow,
@@ -429,11 +450,13 @@ plot.bcrosspred <- function(x,
         noeff = noeff
       )
     )
-    plot.arg <- utils::modifyList(plot.arg, c(ci.list, list(x = x$predvar, y = allfitmed)))
+    plot.arg <- utils::modifyList(
+      plot.arg,
+      c(ci.list, list(x = x$exp_at, y = allfitmed))
+    )
 
     # plot
     do.call("plot", plot.arg)
-
   }
 
   ## ---------------------------
@@ -441,23 +464,25 @@ plot.bcrosspred <- function(x,
   ## ---------------------------
 
   if (ptype == "3d") {
-    if (x$lag[1] == x$lag[2]) {
-      cli::cli_abort("3D plot is not meaningful for unlagged associations (single lag).")
+    if (is.null(x$lag_at)) {
+      cli::cli_abort("slices plot is not meaningful for unlagged associations.")
     }
 
-    predlag <- seq(from = x$lag[1],
-                   to = x$lag[2],
-                   by = x$bylag)
+    if (min(x$lag_at) == max(x$lag_at)) {
+      cli::cli_abort(
+        "slices plot is not meaningful for single lag associations."
+      )
+    }
 
     # get the median summary
-    matfitmed <- matfitsum[, , "0.5quant"]
+    matfitmed <- matfitsum[,, "0.5quant"]
 
     # set plot defaults
     plot.arg <- list(
       ticktype = "detailed",
       theta = 210,
       phi = 30,
-      xlab = "Var",
+      xlab = "Exposure",
       ylab = "Lag",
       zlab = "Outcome",
       col = "lightskyblue",
@@ -472,15 +497,17 @@ plot.bcrosspred <- function(x,
     # merge with the user args
     plot.arg <- utils::modifyList(plot.arg, list(...))
 
-    plot.arg <- utils::modifyList(plot.arg, list(
-      x = x$predvar,
-      y = predlag,
-      z = matfitmed
-    ))
+    plot.arg <- utils::modifyList(
+      plot.arg,
+      list(
+        x = x$exp_at,
+        y = x$lag_at,
+        z = matfitmed
+      )
+    )
 
     # plot
     do.call("persp", plot.arg)
-
   }
 
   ## ---------------------------
@@ -488,16 +515,18 @@ plot.bcrosspred <- function(x,
   ## ---------------------------
 
   if (ptype == "contour") {
-    if (x$lag[2] == 0) {
-      cli::cli_abort("Contour plot is not meaningful for unlagged associations.")
+    if (is.null(x$lag_at)) {
+      cli::cli_abort("slices plot is not meaningful for unlagged associations.")
     }
 
-    predlag <- seq(from = x$lag[1],
-                   to = x$lag[2],
-                   by = x$bylag)
+    if (min(x$lag_at) == max(x$lag_at)) {
+      cli::cli_abort(
+        "slices plot is not meaningful for single lag associations."
+      )
+    }
 
     # get the median summary
-    matfitmed <- matfitsum[, , "0.5quant"]
+    matfitmed <- matfitsum[,, "0.5quant"]
 
     # set default values
     levels <- pretty(matfitmed, n = 20)
@@ -505,13 +534,12 @@ plot.bcrosspred <- function(x,
     col2 <- grDevices::colorRampPalette(c("white", "red"))
     col <- c(col1(sum(levels < noeff)), col2(sum(levels > noeff)))
     graphics::filled.contour(
-      x = x$predvar,
-      y = predlag,
+      x = x$exp_at,
+      y = x$lag_at,
       z = matfitmed,
       col = col,
       levels = levels,
       ...
     )
   }
-
 }

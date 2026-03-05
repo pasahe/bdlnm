@@ -1,26 +1,39 @@
 #' Fit a Bayesian distributed lag non-linear model (B-DLNM)
 #'
-#' Fit a distributed lag non-linear model (DLNM) using a Bayesian framework. The function calls [INLA::inla()] to fit the model and then draws posterior samples of the model latent field with [INLA::inla.posterior.sample()]. See the package vignette for worked examples and recommended workflows.
+#' Fit a distributed lag non-linear model (DLNM) using a Bayesian framework. The function calls [INLA::inla()] to fit the model and then draws posterior samples of the model fixed effects with [INLA::inla.posterior.sample()]. See the package vignette for worked examples and recommended workflows.
 #'
-#' @param formula A model formula (as for [INLA::inla()]).
-#' @param basis A DLNM basis object produced by `dlnm`. It must be of class `"crossbasis"` ([dlnm::crossbasis()]) or `"onebasis"` ([dlnm::onebasis()]).
-#' @param data A data frame containing the variables referenced in `formula` used by [INLA::inla()].
+#' @param formula A model formula (as for [INLA::inla()]). The model must be a distributed lag linear or non-linear model (DLNM), so a `"crossbasis"` ([dlnm::crossbasis()]) or a `"onebasis"` ([dlnm::onebasis()]) must be included.
+#' @param data an optional data frame, list or environment (or object coercible by [as.data.frame] to a data frame) containing the variables in the model. If not found in data, the variables are taken from `environment(formula)`, typically the environment from which `bdlnm` is called.
 #' @param family Character. Family name passed to [INLA::inla()] (default `"gaussian"`).
 #' @param sample.arg List of arguments passed to [INLA::inla.posterior.sample()]. Defaults to `list(n = 1000, seed = 0L)` (draws `1000` posterior samples; seed at random). For reproducible sampling set a non-zero numeric `seed`.
 #' @param ci.level Numeric in `(0,1)` giving the credible interval level (default `0.95`). Credible interval quantiles are computed to summarize coefficients from the posterior samples.
+#' @param na.action A function specifying how to handle NA values when constructing the model frame. The default is taken from the na.action setting of [options], which is by default [na.omit] (drops rows with any `NA` among the variables referenced in formula). In the presence of a random effect term `f()` in the formula, this argument is ignored and `NA`s are not discarded. When rows containing missing values are retained, `INLA` handles them internally (see `Details` below).
 #' @param ... Additional arguments passed to [INLA::inla()].
 #'
 #' @section Distributed lag non-linear model:
-#' Distributed lag non-linear models (DLNMs) describe simultaneous non-linear and delayed (lagged) dependencies, commonly called exposure-lag-response associations. This modelling framework is based on the definition of a cross-basis (a bi-dimensional space of functions) built with [dlnm::crossbasis()] that defines the dependency along the space of the predictor (exposure-response) and along lags (lag-response). This cross-basis matrix has to be supplied in the `basis` argument and included in `formula`. A basis object built with [dlnm::onebasis()] can be used instead, when simplifying the model in a uni-dimensional exposure-response relationship.
+#' The fitted model must be a distributed lag linear or non-linear model (DLNM). DLNMs describe potentially non-linear and delayed (lagged) associations between an exposure and an outcome, commonly referred to as exposure–lag–response relationships. This modelling framework is based on the definition of a cross-basis (a bi-dimensional space of functions) constructed with [dlnm::crossbasis()], which defines the exposure–response and lag–response functions simultaneously. The cross-basis object must be created beforehand and supplied as an object in the calling environment (not as a column inside data) and explicitly included in the model formula (e.g., y ~ cb + ...). A basis object constructed with [dlnm::onebasis()] can be used instead when the model is restricted to a uni-dimensional exposure–response relationship (i.e., without lagged effects). All basis objects included in the model `formula` are stored and returned as a named list in the `basis` component. Any of these basis objects can later be supplied to [bcrosspred()] to extract predictions for the corresponding exposure–lag–response (or exposure-response, if created with `onebasis`) association.
 #'
 #' @section INLA:
 #' Models are fit using Integrated Nested Laplace approximation (INLA) via [INLA::inla()]. INLA is a method for approximate Bayesian inference. In the last years it has established itself as an alternative to other methods such as Markov chain Monte Carlo because of its speed and ease of use via the R-INLA package (\href{https://www.r-inla.org/what-is-inla}{What is INLA?}).
 #'
 #' Additional arguments supplied via `...` are forwarded to [INLA::inla()] (see documentation for all available arguments). Internally, the function ensures that `control.compute = list(config = TRUE)` in order to enable posterior sample drawing with [INLA::inla.posterior.sample()].
 #'
+#' In the presence of missing values in variables referenced in formula, the `na.action` argument controls how the model frame is constructed. If `na.action` is set to [na.omit] (the default set by [options]), a complete-case analysis is performed and any row with a missing value in a variable appearing in formula is removed. If `na.action` is set to [na.pass] instead, missing values are retained in the model frame and passed to INLA.
+#'
+#' Note that when the model formula includes a random effect term, specified via `f(k, model = ...)`, the `na.action` is ignored and rows with missing values are not dropped.
+#'
+#' When missing values are present in the data supplied to [INLA::inla()] (either because a random effect term is included or because `na.action = na.pass`), `INLA` handles them internally as follows:
+#'
+#' - If `NA` values occur in the response, the corresponding observation contributes nothing to the likelihood (the response is treated as unobserved for that observation).
+#' - If `NA` values occur in fixed-effect covariates, [INLA::inla()] replaces them internally with zero so that the covariate does not contribute to the linear predictor for that observation.
+#' - If `NA` values occur in a fixed-effect covariate that is a factor, this is not allowed unless `NA` is explicitly included as a level, or `control.fixed = list(expand.factor.strategy = "inla")` is specified. With this option, `NA` is interpreted similarly as in the fixed-effect case, producing no contribution from that covariate to the linear predictor.
+#' - If `NA` values occur in a random effect, the random effect does not contribute to the linear predictor for the corresponding observation.
+#'
+#' See the INLA FAQ for further details: <https://www.r-inla.org/faq#h.dbamew4fomc>.
+#'
 #' @section Posterior samples:
 #'
-#' After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via [INLA::inla.posterior.sample()]. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a cross-basis built from an exposure basis with C parameters and a lag basis with L parameters, there will be C × L cross-basis associated coefficients (named e.g. v1.l1, ..., vC.lL). For a `"onebasis"` object the coefficients follow the simpler form b1, ... bC.
+#' After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via [INLA::inla.posterior.sample()]. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a `"crossbasis"` built from an exposure basis with C parameters and a lag basis with L parameters, there will be C × L cross-basis associated coefficients (named e.g. v1.l1, ..., vC.lL). For a `"onebasis"` object the coefficients follow the simpler form b1, ... bC.
 #'
 #' Additional arguments supplied via `sample.arg` are forwarded to [INLA::inla.posterior.sample()] (see documentation for all available arguments). By default, the number of samples is `1000`. Be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric `seed` in `sample.arg`.
 #'
@@ -31,6 +44,7 @@
 #'
 #' @return An S3 object of class `"bdlnm"` with the following components:
 #' - `model`: the fitted `INLA` model returned by [INLA::inla()].
+#' - `basis`: a named list containing all basis of class `crossbasis` or `onebasis` included in the model `formula`.
 #' - `coefficients`: a matrix whose columns are posterior sample draws returned by [INLA::inla.posterior.sample()] (named `sample1`, `sample2`, ...) and whose rows are all model coefficients.
 #' - `coefficients.summary`: a matrix of summary statistics for all the posterior samples stored in `coefficients` (mean, sd, quantiles, mode).
 #'
@@ -84,40 +98,32 @@
 #'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
 #'  # Fit the model
-#'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+#'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
 #'
 #'
 #'
-bdlnm <- function(formula,
-                  basis,
-                  data,
-                  family = "gaussian",
-                  sample.arg = list(n = 1000, seed = 0L),
-                  ci.level = 0.95,
-                  ...) {
-
+bdlnm <- function(
+  formula,
+  data,
+  family = "gaussian",
+  sample.arg = list(n = 1000, seed = 0L),
+  ci.level = 0.95,
+  na.action = getOption("na.action"),
+  ...
+) {
   # ----------------------------
   # Basic checks
   # ----------------------------
-  if (missing(data) || is.null(data)) {
-    cli::cli_abort("A {.arg data} data.frame must be provided.")
-  }
-
-  if (missing(basis)) {
+  if (is.null(formula)) {
     cli::cli_abort(
-      "A basis of class {.cls 'crossbasis'} or {.cls 'onebasis'} must be provided to {.arg basis}."
+      "A {.arg formula} must be provided."
     )
-  }
-
-  # Determine basis type
-  type <- if (inherits(basis, "crossbasis")) {
-    "cb"
-  } else if (inherits(basis, "onebasis")) {
-    "one"
   } else {
-    cli::cli_abort(
-      "Unsupported class for {.arg basis}. Expected {.cls 'crossbasis'} or {.cls 'onebasis'}."
-    )
+    if (!inherits(formula, "formula")) {
+      cli::cli_abort(
+        "An object of class {.cls formula} must be provided in {.arg formula}."
+      )
+    }
   }
 
   if (!is.list(sample.arg)) {
@@ -126,17 +132,57 @@ bdlnm <- function(formula,
     )
   }
 
+  # detect that formula must contain a crossbasis/onebasis and store them in a list to be returned
+  terms <- all.vars(formula)
+  envir <- parent.frame()
+  basis <- list()
+  for (t in terms) {
+    obj <- NULL
+
+    # Search first in the dataframe and then in the environment
+    if (!is.null(data) && t %in% names(as.data.frame(data))) {
+      obj <- data[[t]]
+    } else if (exists(t, envir = envir, inherits = TRUE)) {
+      obj <- get(t, envir = envir, inherits = TRUE)
+    }
+
+    if (!is.null(obj) && inherits(obj, c("crossbasis", "onebasis"))) {
+      basis[[t]] <- obj
+    }
+  }
+
+  if (length(basis) == 0) {
+    cli::cli_abort(
+      "A basis of class {.cls crossbasis} and/or {.cls onebasis} must be included in {.arg formula}."
+    )
+  }
+
   # ----------------------------
-  # Remove observations when onebasis/crossbasis is NA
+  # Build model frame, model design matrix and response
   # ----------------------------
 
-  # Insert NA's at the data first max(predlag) rows
-  if (type == "cb") {
-    na_rows <- which(apply(basis, 1, function(x) all(is.na(x))))
-  } else if (type == "one") {
-    na_rows <- which(is.na(basis))
+  # In case there is no random effect, we can fit the model using model frame:
+
+  fterms <- terms(formula, specials = "f")
+
+  if (is.null(attr(fterms, "specials")$f)) {
+    has_random_terms <- FALSE
+    .bdlnm_mframe <- stats::model.frame(
+      formula,
+      data = data,
+      na.action = na.action
+    )
+    .bdlnm_mmatrix <- stats::model.matrix(formula, data = .bdlnm_mframe)
+    .bdlnm_mresponse <- stats::model.response(.bdlnm_mframe)
+  } else {
+    has_random_terms <- TRUE
+    cli::cli_inform(
+      c(
+        "A random term has been detected in {.arg formula}, so {.arg na.action} will be ignored.",
+        "i" = "Missing values will be treated as documented in {.url https://www.r-inla.org/faq#h.dbamew4fomc}."
+      )
+    )
   }
-  data[na_rows,] <- NA
 
   # ----------------------------
   # Check for INLA availability
@@ -172,19 +218,38 @@ bdlnm <- function(formula,
 
   inla_options[["control.compute"]] <- cc
 
-  inla_options <- c(list(
-    formula = formula,
-    family = family,
-    data = data
-  ),
-  inla_options)
+  if (!has_random_terms) {
+    inla_options <- c(
+      list(
+        formula = .bdlnm_mresponse ~ -1 + .bdlnm_mmatrix,
+        family = family,
+        data = list(
+          .bdlnm_mresponse = .bdlnm_mresponse,
+          .bdlnm_mmatrix = .bdlnm_mmatrix
+        )
+      ),
+      inla_options
+    )
+  } else {
+    inla_options <- c(
+      list(
+        formula = formula,
+        family = family,
+        data = data
+      ),
+      inla_options
+    )
+  }
 
   #Fit model
   model <- tryCatch(
     do.call(INLA::inla, inla_options),
     error = function(e) {
       cli::cli_abort(
-        c("Failed to fit INLA model: {.emph {e$message}}", "i" = "Check the model formula, family, data, and additional options passed via `...`.")
+        c(
+          "Failed to fit INLA model: {.emph {e$message}}",
+          "i" = "Check the model formula, family, data, and additional options passed via `...`."
+        )
       )
     }
   )
@@ -196,7 +261,7 @@ bdlnm <- function(formula,
   # Validate presence of fixed-effect summaries
   if (is.null(model$summary.fixed) || nrow(model$summary.fixed) == 0L) {
     cli::cli_abort(
-      "Fitted {.pkg INLA} model contains no fixed-effect summaries in {.code model$summary.fixed}; cannot extract basis coefficients."
+      "Fitted {.pkg INLA} model contains no fixed-effect summaries in {.code model$summary.fixed}."
     )
   }
 
@@ -223,19 +288,22 @@ bdlnm <- function(formula,
 
   sample.arg <- c(list(result = model, selection = list_sel), sample.arg)
 
-  posterior <- tryCatch({
-    do.call(INLA::inla.posterior.sample, sample.arg)
-  }, error = function(e) {
-    cli::cli_abort(
-      c(
-        "Failed to draw posterior samples via {.fn INLA::inla.posterior.sample}: {.emph {e$message}}",
-        "i" = "Check the additional options passed via {.arg sample.arg}."
+  posterior <- tryCatch(
+    {
+      do.call(INLA::inla.posterior.sample, sample.arg)
+    },
+    error = function(e) {
+      cli::cli_abort(
+        c(
+          "Failed to draw posterior samples via {.fn INLA::inla.posterior.sample}: {.emph {e$message}}",
+          "i" = "Check the additional options passed via {.arg sample.arg}."
+        )
       )
-    )
-  })
+    }
+  )
 
   # Combine posterior latent vectors into a matrix (columns = samples)
-  coef <- do.call(cbind, lapply(posterior, function (x) x$latent))
+  coef <- do.call(cbind, lapply(posterior, function(x) x$latent))
 
   if (is.null(ncol(coef))) {
     # If only one sample, ensure matrix form
@@ -269,12 +337,16 @@ bdlnm <- function(formula,
     with(dv, x[which.max(y)])
   })
 
-  res <- list(model = model, coefficients = coef, coefficients.summary = coefsum)
+  res <- list(
+    model = model,
+    basis = basis,
+    coefficients = coef,
+    coefficients.summary = coefsum
+  )
 
   attr(res, "n_sim") <- sample.arg$n
 
   class(res) <- c("bdlnm")
 
   return(res)
-
 }

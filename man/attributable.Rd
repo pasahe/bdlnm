@@ -6,13 +6,13 @@
 \usage{
 attributable(
   object,
-  basis,
   data,
   name_date = NULL,
   name_exposure,
   name_cases = NULL,
   name_filter = NULL,
   dir = "back",
+  basis = NULL,
   cen,
   range = NULL,
   lag_average = TRUE
@@ -20,8 +20,6 @@ attributable(
 }
 \arguments{
 \item{object}{A fitted \code{"bdlnm"} class object returned by \code{\link[=bdlnm]{bdlnm()}}.}
-
-\item{basis}{A DLNM cross-basis object produced by \code{dlnm}. It must be of class \code{"crossbasis"} (\code{\link[dlnm:crossbasis]{dlnm::crossbasis()}}).}
 
 \item{data}{A data frame containing the temporal series needed to calculate attributable measures. It can include a date column (optional, see \code{name_date}), the exposure values (mandatory, see \code{name_exposure}), the number of cases (optional, see \code{name_cases}) and a binary (\code{0/1}) filter column (optional, see \code{name_filter}).}
 
@@ -35,7 +33,9 @@ attributable(
 
 \item{dir}{Character; direction of the algorithm to calculate attributable measures. \code{"back"} (default) calculates AF and AN attributing current-time outcome to past exposures; \code{"forw"} calculates AF and AN attributing current-time exposure to future outcomes.}
 
-\item{cen}{Numeric scalar; centering exposure value used to compute predictions. If missing the function will attempt to read it from \code{attr(basis, "argvar")$cen}. If no centering is available the function aborts.}
+\item{basis}{If the \code{bdlnm} model has more than one basis, the name of the basis to use to compute predictions. It must be one of \code{names(object$basis)}. If the model contains only one basis it is selected automatically.}
+
+\item{cen}{Numeric scalar; centering exposure value used to compute predictions. If missing the function will attempt to read it from the attributes of the specified \code{basis}. If no centering is available the function aborts.}
 
 \item{range}{Optional numeric vector of length 2 with the exposure range for which attributable measures will be calculated. Values outside \code{range} are coerced to \code{cen} before prediction.}
 
@@ -58,7 +58,7 @@ A list with components:
 Compute attributable numbers (AN) and attributable fractions (AF) from a fitted Bayesian distributed lag non-linear model (\code{\link[=bdlnm]{bdlnm()}}). The function uses posterior predicted relative risks from \code{\link[=bcrosspred]{bcrosspred()}} and applies a forward or backward lag algorithm to compute per-time and total attributable measures, optionally filtering the calculation to a subset of time points.
 }
 \details{
-The function first obtains posterior predicted effects at the observed exposure values by calling \code{\link[=bcrosspred]{bcrosspred()}} with \code{at = data[[name_exposure]]}. Predictions must include relative-risk scale predictions so the previously fitted \code{"bdlnm"} model must have a \code{log} or \code{logit} link; otherwise the function aborts. These predictions require a defined centering value (\code{cen}), as attributable measures are always computed with respect to a reference exposure. This reference exposure is usually an optimal exposure computed with the \code{\link[=optimal_exposure]{optimal_exposure()}} function, such as the Minimum Mortality Temperature (MMT).
+The function first obtains posterior predicted effects at the observed exposure values by calling \code{\link[=bcrosspred]{bcrosspred()}} with \code{exp_at = data[[name_exposure]]}. Predictions must include relative-risk scale predictions so the previously fitted \code{"bdlnm"} model must have a \code{log} or \code{logit} link; otherwise the function aborts. These predictions require a defined centering value (\code{cen}), as attributable measures are always computed with respect to a reference exposure. This reference exposure is usually an optimal exposure computed with the \code{\link[=optimal_exposure]{optimal_exposure()}} function, such as the Minimum Mortality Temperature (MMT).
 
 Two different algorithms can be chosen to calculate attributable measures:
 \itemize{
@@ -109,20 +109,19 @@ temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 # Model
 
 mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
-            basis = cb,
              data = london,
              family = "poisson",
              sample.arg = list(seed = 432))
 
 # Predict
-cpred <- bcrosspred(mod, cb, at = temp)
+cpred <- bcrosspred(mod, exp_at = temp)
 
 # compute centering (MMT) using optimal_exposure
-mmt <- optimal_exposure(mod, cb, at = temp)
+mmt <- optimal_exposure(mod, exp_at = temp)
 cen <- mmt$summary[["0.5quant"]]
 
 # Attributable numbers and fractions (using the backwards algorithm):
-attr <- attributable(mod, cb, london, name_date = "date",
+attr <- attributable(mod, london, name_date = "date",
 name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 
 

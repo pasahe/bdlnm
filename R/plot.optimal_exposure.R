@@ -56,25 +56,31 @@
 #'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
 #'  # Fit the model
-#'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london,
+#'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london,
 #'  family = "poisson")
 #'
 #'  # Find minimum risk exposure value
-#'  mmt <- optimal_exposure(mod, cb, at = temp)
+#'  mmt <- optimal_exposure(mod, exp_at = temp)
 #'
 #'  # Plot
 #'  plot(mmt, xlab = "Temperature (ºC)",
 #'  main = paste0("MMT (Median = ", round(mmt$summary[["0.5quant"]], 1), "ºC)"))
 #'
 #'
-plot.optimal_exposure <- function(x, show_median = TRUE, vline.arg = NULL, ...) {
-
+plot.optimal_exposure <- function(
+  x,
+  show_median = TRUE,
+  vline.arg = NULL,
+  ...
+) {
   ## ---------------------------
   ## Basic checks
   ## ---------------------------
 
   if (missing(x) || !inherits(x, "optimal_exposure")) {
-    cli::cli_abort("{.arg x} must be an x of class {.cls optimal_exposure} as returned by {.fn optimal_exposure}.")
+    cli::cli_abort(
+      "{.arg x} must be an x of class {.cls optimal_exposure} as returned by {.fn optimal_exposure}."
+    )
   }
 
   ## ---------------------------
@@ -86,10 +92,14 @@ plot.optimal_exposure <- function(x, show_median = TRUE, vline.arg = NULL, ...) 
 
   plot.arg <- list(
     x = x$est,
-    breaks = attr(x, "xvar"),
+    breaks = attr(x, "exp_at"),
     xaxt = "n",
     xlab = "Exposure",
-    main = paste0("Optimal exposure value (Median = ", x$summary[["0.5quant"]], ")"),
+    main = paste0(
+      "Optimal exposure value (Median = ",
+      x$summary[["0.5quant"]],
+      ")"
+    ),
     xlim = c(floor(min(x$est)), ceiling(max(x$est)))
   )
 
@@ -103,10 +113,11 @@ plot.optimal_exposure <- function(x, show_median = TRUE, vline.arg = NULL, ...) 
   graphics::axis(side = 1, at = attr(x, "xvar"))
 
   # if vertical line with median has to be drawn
-  if(show_median) {
-
+  if (show_median) {
     # by default set the following arguments
-    if(is.null(vline.arg)) vline.arg <- list()
+    if (is.null(vline.arg)) {
+      vline.arg <- list()
+    }
 
     vline.arg.def <- list(
       col = "red",
@@ -121,7 +132,5 @@ plot.optimal_exposure <- function(x, show_median = TRUE, vline.arg = NULL, ...) 
 
     # draw median line
     do.call(graphics::abline, vline.arg)
-
   }
-
 }

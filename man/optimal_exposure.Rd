@@ -6,11 +6,9 @@
 \usage{
 optimal_exposure(
   object,
-  basis,
-  at = NULL,
-  from = NULL,
-  to = NULL,
-  by = NULL,
+  basis = NULL,
+  exp_at = NULL,
+  lag_at = NULL,
   which = "min",
   local_optimal = FALSE,
   ci.level = 0.95
@@ -19,11 +17,11 @@ optimal_exposure(
 \arguments{
 \item{object}{A fitted \code{"bdlnm"} object returned by \code{\link[=bdlnm]{bdlnm()}}.}
 
-\item{basis}{A DLNM basis object produced by \code{dlnm}. It must be of class \code{"crossbasis"} (\code{\link[dlnm:crossbasis]{dlnm::crossbasis()}}) or \code{"onebasis"} (\code{\link[dlnm:onebasis]{dlnm::onebasis()}}).}
+\item{basis}{If the \code{bdlnm} model has more than one basis, the name of the basis to use to compute predictions. It must be one of \code{names(object$basis)}. If the model contains only one basis it is selected automatically.}
 
-\item{at}{Numeric vector (or matrix) of exposure values at which to compute predictions. If \code{NULL} the function reconstructs a grid using \code{from}, \code{to}, \code{by} together with the \code{basis} attributes.}
+\item{exp_at}{Numeric vector of exposure values at which to evaluate predictions. If \code{NULL}, the exposure range is extracted from the attributes of the specified \code{basis} and a grid of 50 values is constructed using \code{\link[=pretty]{pretty()}}.}
 
-\item{from, to, by}{Optional numeric used to construct \code{at} when not provided.}
+\item{lag_at}{Numeric vector of integer lag values ver which to compute the overall cumulative effect.  Only used when \code{basis} is a \code{crossbasis}. If \code{NULL}, the overall effect is computed by summing over the full lag range stored in \code{basis} (with step size \code{1}).}
 
 \item{which}{Selection criterion to calculate the optimal exposure: \code{"min"} (default) chooses the exposure with the minimum overall cumulative effect, \code{"max"} chooses the exposure with maximum overall cumulative effect.}
 
@@ -42,15 +40,15 @@ An S3 object of class \code{"optimal_exposure"} containing:
 Find exposure values that optimize the overall effect for each posterior sample drawn from a Bayesian distributed lag non-linear model (\code{\link[=bdlnm]{bdlnm()}}). The function returns the exposure value that minimizes or maximizes the overall cumulative effect (summed across lags) for each posterior sample, together with summary statistics (mean, sd, credible-interval quantiles and mode). When used to find the minimum effect in temperature–mortality analyses this optimal exposure value is commonly called the Minimum Mortality Temperature (MMT).
 }
 \details{
-The function internally calls \code{\link[=bcrosspred]{bcrosspred()}} to compute the posterior distribution of the overall cumulative exposure effect for the grid specified by \code{at} (or reconstructed using \code{from}, \code{to}, \code{by} and the attributes of \code{basis}). For each posterior sample the function calculates the exposure value that optimizes (minimizes or maximizes) the overall cumulative effect and then summarizes these optimal values across samples using mean, sd, credible-interval quantiles and the mode (most frequent observed value).
+The function internally calls \code{\link[=bcrosspred]{bcrosspred()}} to compute the posterior distribution of the overall cumulative exposure effect for the grid specified by \code{exp_at}. For each posterior sample the function calculates the exposure value that optimizes (minimizes or maximizes) the overall cumulative effect and then summarizes these optimal values across samples using mean, sd, credible-interval quantiles and the mode (most frequent observed value).
 
-If \code{basis} is a \code{crossbasis}, the function works on the overall cumulative effect of each exposure summed across all the lags, stored by \code{\link[=bcrosspred]{bcrosspred()}} in \verb{$allfit}. If \code{basis} is a \code{onebasis} instead, then the function uses the exposure effect stored in \verb{$matfit}.
+The overall cumulative effect is computed by summing for each exposure the lag-specific effects over the lags specified in \code{lag_at}. If \code{lag_at} is \code{NULL}, the cumulative effect is computed for each exposure by summing over the full lag range stored in \code{basis} (with step size 1). If \code{basis} is a \code{onebasis}, the function optimizes the exposure-response association stored in \verb{$matfit}, and \code{lag_at} is ignored.
 
 The function searches for the absolute optimal value (minimum or maximum) of each sample in the posterior distribution, by default. If \code{local_optimal} is set to \code{TRUE}, the function searches for a local optimal point instead. If more than one optimal point is found, the function will return the one with the optimal effect. If a posterior sample has no local optimal values, the function returns the absolute optimal value.
 
 This optimal exposure value can be used as the reference exposure value to estimate effects passing it to the \code{\link[=bcrosspred]{bcrosspred()}} and \code{\link[=attributable]{attributable()}} functions as the center exposure. In temperature-mortality studies, for example, the minimum exposure value is typically used as the optimal exposure value to center the effects and it's called Minimum Mortality Temperature (MMT). However, note that in the Bayesian framework, this reference temperature is characterized by a full posterior distribution (in contrast to the frequentist approach, where the association is centered on a single point estimate). This distribution may be asymmetric and non-unimodal, so reporting a single summary statistic (e.g., the median) as the reference value can be misleading in such cases. Therefore, before selecting an optimal exposure value as the center, it is recommended that you visualize the distribution of the optimal exposure values using \code{\link[=plot.optimal_exposure]{plot.optimal_exposure()}}.
 
-This function cannot be used when the basis function is one of \code{thr}, \code{strata}, \code{integer}, or \code{lin}. The exposure-response relationship is discrete, piecewise, or strictly linear in these situations, so searching for an optimum is not meaningful.
+This function cannot be used when the specified basis function is one of \code{thr}, \code{strata}, \code{integer}, or \code{lin}. The exposure-response relationship is discrete, piecewise, or strictly linear in these situations, so searching for an optimum is not meaningful.
 }
 \examples{
 # Set exposure-response and lag-response spline parameters
@@ -82,10 +80,10 @@ This function cannot be used when the basis function is one of \code{thr}, \code
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
  # Fit the model
- mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+ mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
 
  # Find minimum risk exposure value
- mmt <- optimal_exposure(mod, cb, at = temp)
+ mmt <- optimal_exposure(mod, "cb", exp_at = temp)
 
 
 }

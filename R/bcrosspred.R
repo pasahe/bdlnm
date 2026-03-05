@@ -3,19 +3,17 @@
 #' Calculate predictions from a fitted Bayesian distributed lag non-linear model ([bdlnm()]). Predicted associations are computed on a grid of values of the exposure and lags, relative to a reference exposure center value. The function gives posterior samples of exposure–lag-specific associations, overall cumulative associations (summed across lags) and optionally incremental cumulative associations, together with summary statistics (mean, sd, credible interval quantiles and mode).
 #'
 #' @param object A fitted `"bdlnm"` object returned by [bdlnm()].
-#' @param basis A DLNM basis object produced by `dlnm`. It must be of class `"crossbasis"` ([dlnm::crossbasis()]) or `"onebasis"` ([dlnm::onebasis()]).
-#' @param model.link Optional character specifying the model link (if `NULL` it is inferred from the fitted model).
-#' @param at Numeric vector (or matrix) of exposure values at which to compute predictions. If `NULL` the function reconstructs a grid using `from`, `to`, `by` together with the `basis` attributes.
-#' @param from,to,by Optional numeric used to construct `at` when not provided.
-#' @param lag Optional lag specification; when `NULL` the original lag from `basis` is used. If supplied it must be of length 1 or 2 and represent the lag interval.
-#' @param bylag Integer lag step (default `1L`).
+#' @param basis If the `bdlnm` model has more than one basis, the name of the basis to use to compute predictions. It must be one of `names(object$basis)`. If the model contains only one basis it is selected automatically.
+#' @param exp_at Numeric vector of exposure values at which to evaluate predictions. If `NULL`, the exposure range is extracted from the attributes of `basis` and a grid of 50 values is constructed using [pretty()].
+#' @param lag_at Numeric vector of integer lag values at which to evaluate predictions. Only used when `basis` is a `crossbasis`. If `NULL`, the full lag range stored in `basis` is used with a step of `1`.
 #' @param cen Centering exposure value for predictions. If `NULL` the centering value depends on the exposure basis function or set to a mid-range value (see Details).
+#' @param model.link Optional character specifying the model link (if `NULL` it is inferred from the fitted model).
 #' @param ci.level Numeric in `(0,1)` giving the credible interval level (default `0.95`). Credible interval quantiles are computed from the posterior samples.
 #' @param cumul Logical; if `TRUE` compute incremental cumulative effects along lags (default `FALSE`). It will give the cumulative effect from lag 0 up to each subsequent lag (e.g., lag `0`, lag `0–1`, lag `0–2`, etc.).
 #'
 #' @details
 #'
-#' The function computes predictions for specific combinations of the requested exposure and lag grids. The values in `at` can be provided as a vector; in this case, they are replicated for each lag. Alternatively, `at` can be provided as a matrix of complete exposure histories over the lag period.
+#' The function computes predictions for specific combinations of exposure and lag values specified in `exp_at` and `lag_at.` All values must lie within the range defined by the specified `basis.` Note that if the specified `basis` is a `onebasis`, `lag_at` is ignored. If either argument is `NULL`, the grid is derived from the attributes of the specified `basis`: for exposure values, a grid of approximately 50 values is constructed using [pretty()] within the exposure range; for lag values, an integer sequence covering the full lag range with a step of 1 is used.
 #'
 #' Predictions are computed relative to a centering/reference value (`cen`). If `NULL`, the default `cen` depends on the exposure-response basis function: for `strata`, `thr` and `integer` the reference corresponds to the reference category, and for `lin` the reference is set to 0. For other choices, such as `ns`, `bs`, `poly` or other existing or user-defined functions, the default centering value is set to an approximate mid-range value. For non-linear exposure-response associations is sometimes recommended to manually set the centering value to a data-driven center such as the optimal exposure value (see [optimal_exposure()]).
 #'
@@ -23,23 +21,22 @@
 #'
 #' Be aware of memory usage: exposure-lag-specific predictions are stored in 3D arrays of dimension `length(predvar)` × `length(predlag)` × `n_sim`. For dense grids and many posterior samples this can be computationally intensive.
 #'
-#' This function can also be used to compute predictions for models with simple uni-dimensional basis functions not including lags, if the basis supplied is `"onebasis"` instead of `"crossbasis"`. In this case, only unlagged predicted associations are returned.
+#' This function can also be used to compute predictions for models with simple uni-dimensional basis functions not including lags, if the specified basis is `"onebasis"` instead of `"crossbasis"`. In this case, only unlagged predicted associations are returned.
 #'
 #'
 #' @return An object of class `"bcrosspred"` (a list) with elements including:
-#' - `predvar`: the exposure grid used for prediction (vector).
-#' - `lag`: numeric vector of length 2 with the lag interval used.
-#' - `bylag`: the lag step used.
+#' - `exp_at`: the exposure grid used for prediction as supplied via the `exp_at` argument (vector).
+#' - `lag_at`: if basis is `crossbasis`, the lag grid used for prediction as supplied via the `lag_at` argument (vector).
+#' - `cen`: the exposure centering value used for prediction (number).
 #' - `coefficients`: matrix of posterior coefficient draws (columns = samples).
 #' - `coefficients.summary`: matrix of coefficient summaries (mean, sd, quantiles, mode).
-#' - `matfit`: 3D array of sampled lag-specific effects (predvar × predlag × samples).
-#' - `matfit.summary`: 3D array of summaries for `matfit` (predvar × predlag × summary-statistics).
-#' - `allfit`: matrix of sampled overall cumulative (summed across lags) effects (predvar × samples).
-#' - `allfit.summary`: matrix of summaries for `allfit` (predvar x summary-statistics).
-#' - `cumfit`: (optional) 3D array of sampled incremental cumulative effects (predvar × predlag × samples).
-#' - `cumfit.summary`: (optional) 3D array of summaries for `cumfit` (predvar × predlag × summary-statistics).
+#' - `matfit`: 3D array of sampled lag-specific effects (exp × lag × samples).
+#' - `matfit.summary`: 3D array of summaries for `matfit` (exp × lag × summary-statistics).
+#' - `allfit`: matrix of sampled overall cumulative (summed across lags) effects (exp × samples).
+#' - `allfit.summary`: matrix of summaries for `allfit` (exp x summary-statistics).
+#' - `cumfit`: (optional) 3D array of sampled incremental cumulative effects (exp × lag × samples).
+#' - `cumfit.summary`: (optional) 3D array of summaries for `cumfit` (exp × lag × summary-statistics).
 #' - `matRRfit`, `allRRfit`, `matRRfit.summary`, `allRRfit.summary`, `cumRRfit.summary` (optional), `cumRRfit.summary` (optional: relative-risk versions (only when link is `log` or `logit`).
-#' - `cen`: centering value used.
 #' - `ci.level`, `model.class`, `model.link`.
 #'
 #' @author Pau Satorra, Marcos Quijal-Zamorano.
@@ -89,27 +86,55 @@
 #'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
 #'  # Fit the model
-#'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+#'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
 #'
 #'  # Prediction
-#'  cpred <- bcrosspred(mod, cb, at = temp)
+#'  cpred <- bcrosspred(mod, exp_at = temp)
 #'
 
-bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL, to = NULL, by = NULL, lag = NULL, bylag = 1L, cen = NULL, ci.level = 0.95, cumul = FALSE) {
-
+bcrosspred <- function(
+  object,
+  basis = NULL,
+  exp_at = NULL,
+  lag_at = NULL,
+  cen = NULL,
+  model.link = NULL,
+  ci.level = 0.95,
+  cumul = FALSE
+) {
   ## -----------------------
   ## Basic checks
   ## -----------------------
 
   check_bdlnm(object)
 
-  #Get model and coefficients
+  #Get model basis and coefficients
   model <- object$model
 
-  if (missing(basis)) {
-    cli::cli_abort(
-      "A basis of class {.cls 'crossbasis'} or {.cls 'onebasis'} must be provided to {.arg basis}."
-    )
+  obj_basis <- object$basis
+
+  if (!is.null(basis)) {
+    if (is.character(basis) && length(basis) == 1) {
+      if (!basis %in% names(obj_basis)) {
+        cli::cli_abort(
+          "The name of the basis in {.arg basis} must match the name of the basis stored in {.arg object$basis}: {.or {.val {names(obj_basis)}}}."
+        )
+      } else {
+        basis <- obj_basis[[basis]]
+      }
+    } else {
+      cli::cli_abort(
+        "The {.arg basis} argument must be a character element specifying the name of the basis stored in {.arg object$basis}."
+      )
+    }
+  } else {
+    if (length(obj_basis) > 1) {
+      cli::cli_abort(
+        "{.arg basis} must be provided containing the name of the basis to select for predictions (stored in {.arg object$basis}): {.or {.val {names(obj_basis)}}}."
+      )
+    } else {
+      basis <- obj_basis[[1]]
+    }
   }
 
   # Basis type:
@@ -119,143 +144,144 @@ bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL,
     type <- "one"
   } else {
     cli::cli_abort(
-      "Unsupported {.arg basis} class. Expected {.cls 'crossbasis'} or {.cls 'onebasis'}."
+      "Unsupported {.arg basis} class. Expected {.cls crossbasis} or {.cls onebasis}."
     )
   }
 
   #Get only CB coefficients
-  coef <- extract_coef(object$coefficients, basis)
+  coef <- extract_coef(object, basis)
 
   #Get model link
-  if (is.null(model.link)) model.link <- get_link(model)
+  if (is.null(model.link)) {
+    model.link <- get_link(model)
+  }
 
   #Get number of posterior samples
   n_sample <- attr(object, "n_sim")
 
-
-  #Get default lag
-  origlag <- switch(type, cb  = attr(basis, "lag"), one = c(0, 0))
-
-  # if missing we use original lag; if provided, attempt to convert
-  if (is.null(lag)) {
-    lag <- origlag
-  } else {
-    #  Lag must be a postive integer vector
-    if (any(!is.numeric(lag)) || length(lag) > 2) {
-      cli::cli_abort("{.arg lag} must be a integer vector of length {.val 2} or {.val 1}")
-    }
-    if (length(lag) == 1L) {
-      lag <- if (lag < 0L) c(lag, 0L)
-    } else {
-      c(0L, lag)
-    }
-
-    if (diff(lag) < 0L) cli::cli_abort("{.code lag[1]} must be lower or equal than {.code lag[2]}")
-
-    lag <- round(lag[1L:2L])
-  }
-
-  # cumul not allowed if a subperiod of lags is specified
-  if (!identical(origlag, lag) && cumul) {
-    cli::cli_abort(
-      "{.arg cumul = TRUE} is not allowed when {.arg lag} differs from the original lag specified in the basis attribute."
-    )
-  }
-
-  lagfun <- switch(type, cb = attr(basis, "arglag")$fun, one = NULL)
-  # check on lagfun 'integer'
-  if (bylag != 1L && !is.null(lagfun) && identical(lagfun, "integer")) {
-    cli::cli_abort(
-      "{.arg bylag} != 1 is not allowed when the lag function for {.arg basis} is {.val integer}."
-    )
-  }
-
   # 0 < ci.level < 1
-  if (!is.numeric(ci.level) || length(ci.level) != 1 || ci.level <= 0 || ci.level >= 1) {
-    cli::cli_abort("{.arg ci.level} must be a single numeric value strictly between 0 and 1.")
+  if (
+    !is.numeric(ci.level) ||
+      length(ci.level) != 1 ||
+      ci.level <= 0 ||
+      ci.level >= 1
+  ) {
+    cli::cli_abort(
+      "{.arg ci.level} must be a single numeric value strictly between 0 and 1."
+    )
   }
 
-
   ## -----------------------
-  ## Construct prediction grid (at / predvar / predlag) & centering
+  ## Construct prediction grid & centering
   ## -----------------------
 
-  # RANGE
   #Get range of the exposure stored in the attributes of the crossbasis
-  range <- attr(basis, "range")
+  exp_range <- attr(basis, "range")
+  exp_from <- exp_range[1]
+  exp_to <- exp_range[2]
 
-  # Set at if not provided
-  if (is.null(at)) {
-    if (is.null(from)) from <- range[1]
-    if (is.null(to)) to <- range[2]
-    nobs <- ifelse(is.null(by), 50, max(1, diff(range) / by))
-    pretty <- pretty(c(from, to), n = nobs)
-    pretty <- pretty[pretty >= from & pretty <= to]
-    at <- if (is.null(by)) pretty
-    else {
-      seq(from = min(pretty),
-          to = to,
-          by = by)
-    }
+  # Set exposure at if not provided
+  if (is.null(exp_at)) {
+    exp_pretty <- pretty(c(exp_from, exp_to), n = 50)
+    predvar <- exp_pretty[exp_pretty >= exp_from & exp_pretty <= exp_to]
   } else {
-    if (!is.numeric(at)) {
-      cli::cli_abort("{.arg at} must be an integer vector or matrix.")
+    if (!is.numeric(exp_at)) {
+      cli::cli_abort("{.arg exp_at} must be a numeric vector.")
     } else {
-      if (is.matrix(at)) {
-        if (dim(at)[2] != diff(lag) + 1L) cli::cli_abort("matrix in {.arg at} must have {.val {diff(lag)+1}} columns.")
-        if (bylag != 1) cli::cli_abort("{.arg bylag} cannot be different from {val 1}, if {.arg at} is in matrix form")
-        if (is.null(rownames(at))) rownames(at) <- seq(nrow(at))
+      # check if exposure is contained in range
+      if (any(exp_at > exp_to | exp_at < exp_from)) {
+        cli::cli_abort(
+          "{.arg exp_at} is outside the range of exposure values defined by the specified {.arg basis}."
+        )
       } else {
-        at <- sort(unique(at))
+        # if values are duplicated or not sorted
+        predvar <- sort(unique(exp_at))
       }
     }
   }
 
-  # define the matrix of temperatures and lags in which predictions will be made
-  predvar <- if (is.matrix(at)) rownames(at) else at
+  lag_range <- switch(type, cb = attr(basis, "lag"), one = c(0, 0))
+  lag_from <- lag_range[1]
+  lag_to <- lag_range[2]
 
-  predlag <- seq(from = lag[1], to = lag[2], by = 1)
+  if (type == "one" && !is.null(lag_at)) {
+    cli::cli_warn(
+      "{.arg lag_at} is ignored when {.arg basis} is a {.cls onebasis}."
+    )
+    lag_at <- NULL
+  }
+
+  if (is.null(lag_at)) {
+    predlag <- seq(lag_from, lag_to, by = 1)
+  } else {
+    if (!is.numeric(lag_at) || !all(lag_at == floor(lag_at))) {
+      cli::cli_abort(
+        "{.arg lag_at} must be a numeric vector containing integer values."
+      )
+    } else {
+      # check if lag values are contained in range
+      if (any(lag_at > lag_to | lag_at < lag_from)) {
+        cli::cli_abort(
+          "{.arg lag_at} is outside the range of lag values defined by the specified {.arg basis}."
+        )
+      } else {
+        # if values are duplicated or not sorted
+        predlag <- sort(unique(lag_at))
+      }
+    }
+  }
 
   #Define centering value
   nocen <- FALSE
   # If NULL try to extract it from basis
   if (is.null(cen)) {
     nocen <- TRUE
-    cen <- switch(type,
-                  cb = attributes(basis)$argvar$cen,
-                  one = attributes(basis)$cen)
-
+    cen <- switch(
+      type,
+      cb = attributes(basis)$argvar$cen,
+      one = attributes(basis)$cen
+    )
   }
 
-  fun <- switch(type,
-                cb = attributes(basis)$argvar$fun,
-                one = attributes(basis)$fun)
+  fun <- switch(
+    type,
+    cb = attributes(basis)$argvar$fun,
+    one = attributes(basis)$fun
+  )
 
   if (!is.null(fun) && fun %in% c("thr", "strata", "integer", "lin")) {
     if (is.logical(cen)) cen <- NULL
   } else {
-    # If we cannot infer it from the function basis, set to mid-range (approximately)
+    # If we cannot infer it from the function basis, set to median of exposure values
     if (is.null(cen) || (is.logical(cen) && cen)) {
-      cen <- stats::median(pretty(range))
+      cen <- stats::median(predvar)
     }
     # If FALSE set to NULL
-    if (is.logical(cen) && !cen)
+    if (is.logical(cen) && !cen) {
       cen <- NULL
+    }
   }
 
   # If intercept is present, set to NULL
-  int <- switch(type,
-                cb = attributes(basis)$argvar$intercept,
-                one = attributes(basis)$intercept)
+  int <- switch(
+    type,
+    cb = attributes(basis)$argvar$intercept,
+    one = attributes(basis)$intercept
+  )
 
-  if (is.logical(int) && int) cen <- NULL
+  if (is.logical(int) && int) {
+    cen <- NULL
+  }
 
   if (!is.null(cen) && (!is.numeric(cen) || length(cen) != 1L)) {
     cli::cli_abort("{.arg cen} must be a numeric scalar.")
   }
 
-  if (nocen && !is.null(cen))
-    cli::cli_warn("Centering value unspecified ({.arg cen}). Automatically set to: {cen}.")
+  if (nocen && !is.null(cen)) {
+    cli::cli_warn(
+      "Centering value unspecified ({.arg cen}). Automatically set to: {cen}."
+    )
+  }
 
   ## -----------------------
   ## Prediction of lag-specific effects
@@ -263,48 +289,68 @@ bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL,
 
   #Create the matrix of transformed centered exposure-lags values
 
-  varvec <- if (is.matrix(at)) as.numeric(at) else rep(at, length(predlag))
+  varvec <- rep(predvar, length(predlag))
   lagvec <- rep(predlag, each = length(predvar))
-  #
+  # Reconstruct basis with the specified grid predictor values in exp_at and lag_at
   if (type == "cb") {
     # Marginal basis with onebasis (DLNM) and tensor product
-    basisvar <- do.call(dlnm::onebasis, c(list(x = varvec), attr(basis, "argvar")))
-    basislag <- do.call(dlnm::onebasis, c(list(x = lagvec), attr(basis, "arglag")))
+    basisvar <- do.call(
+      dlnm::onebasis,
+      c(list(x = varvec), attr(basis, "argvar"))
+    )
+    basislag <- do.call(
+      dlnm::onebasis,
+      c(list(x = lagvec), attr(basis, "arglag"))
+    )
     if (!is.null(cen)) {
-      basiscen <- do.call(dlnm::onebasis, c(list(x = cen), attr(basis, "argvar")))
+      basiscen <- do.call(
+        dlnm::onebasis,
+        c(list(x = cen), attr(basis, "argvar"))
+      )
       basisvar <- scale(basisvar, center = basiscen, scale = FALSE)
     }
     Xpred <- crs::tensor.prod.model.matrix(list(basisvar, basislag))
   } else if (type == "one") {
     #Get the argument names needed for each function
-    arg_fun <- switch(fun,
-           ns   = names(formals(splines::ns)),
-           bs   = names(formals(splines::bs)),
-           poly = names(formals(stats::poly)),
-           ps      = c("x","df","knots","degree","intercept", "fx", "S", "diff"),
-           cr      = c("x","df","knots","intercept","fx", "S"),
-           strata  = c("x","df","breaks","ref","intercept"),
-           thr     = c("x","thr.value","side","intercept"),
-           integer = c("x","values","intercept"),
-           lin     = c("x","intercept"),
-           stop("Unsupported function")
+    arg_fun <- switch(
+      fun,
+      ns = names(formals(splines::ns)),
+      bs = names(formals(splines::bs)),
+      poly = names(formals(stats::poly)),
+      ps = c("x", "df", "knots", "degree", "intercept", "fx", "S", "diff"),
+      cr = c("x", "df", "knots", "intercept", "fx", "S"),
+      strata = c("x", "df", "breaks", "ref", "intercept"),
+      thr = c("x", "thr.value", "side", "intercept"),
+      integer = c("x", "values", "intercept"),
+      lin = c("x", "intercept"),
+      stop("Unsupported function")
     )
     # Call onebasis function (DLNM)
     ind <- match(c("fun", arg_fun), names(attributes(basis)), nomatch = 0)
-    basisvar <- do.call(dlnm::onebasis, c(list(x = varvec), attributes(basis)[ind]))
+    basisvar <- do.call(
+      dlnm::onebasis,
+      c(list(x = varvec), attributes(basis)[ind])
+    )
     if (!is.null(cen)) {
-      basiscen <- do.call(dlnm::onebasis, c(list(x = cen), attributes(basis)[ind]))
+      basiscen <- do.call(
+        dlnm::onebasis,
+        c(list(x = cen), attributes(basis)[ind])
+      )
       basisvar <- scale(basisvar, center = basiscen, scale = FALSE)
     }
     Xpred <- basisvar
   }
 
   # Create the estimated lag-specific effects (each sample in each column)
-  matfit <- array(Xpred %*% coef,
-                  dim = c(length(predvar), length(predlag), n_sample),
-                  dimnames = list(predvar,
-                                  paste0("lag", predlag),
-                                  paste0("sample", seq_len(n_sample))))
+  matfit <- array(
+    Xpred %*% coef,
+    dim = c(length(predvar), length(predlag), n_sample),
+    dimnames = list(
+      predvar,
+      paste0("lag", predlag),
+      paste0("sample", seq_len(n_sample))
+    )
+  )
 
   ## ----------------------
   ## Overall & cumulative
@@ -326,11 +372,15 @@ bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL,
   }
 
   # convert to array
-  cumfit <- array(cumfit,
-                  dim = c(length(predvar), length(predlag), n_sample),
-                  dimnames = list(predvar,
-                                  paste0("lag", predlag),
-                                  paste0("sample", seq_len(n_sample))))
+  cumfit <- array(
+    cumfit,
+    dim = c(length(predvar), length(predlag), n_sample),
+    dimnames = list(
+      predvar,
+      paste0("lag", predlag),
+      paste0("sample", seq_len(n_sample))
+    )
+  )
 
   allfit <- Xpredall %*% coef
   rownames(allfit) <- predvar
@@ -341,44 +391,63 @@ bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL,
   ## ----------------------
 
   # Initial list then add components
-  res <- list(predvar = predvar)
-  if (!is.null(cen)) res$cen <- cen
+  res <- list(exp_at = predvar)
+
+  if (type == "cb") {
+    res$lag_at <- predlag
+  }
+
+  if (!is.null(cen)) {
+    res$cen <- cen
+  }
 
   colnames(coef) <- paste0("sample", seq_len(n_sample))
 
-  res <- c(res,
-           list(
-             lag = lag,
-             bylag = bylag,
-             coefficients = coef,
-             matfit = matfit,
-             allfit = allfit
-           ))
+  res <- c(
+    res,
+    list(
+      coefficients = coef,
+      matfit = matfit,
+      allfit = allfit
+    )
+  )
 
-  if (cumul) res$cumfit <- cumfit
+  if (cumul) {
+    res$cumfit <- cumfit
+  }
 
   ## inverse link
   if (!is.na(model.link) && model.link %in% c("log", "logit")) {
     res$matRRfit <- exp(matfit)
     res$allRRfit <- exp(allfit)
-    if(cumul) res$cumRRfit <- exp(cumfit)
+    if (cumul) res$cumRRfit <- exp(cumfit)
   }
-
 
   ## -----------------------
   ## summaries
   ## -----------------------
-  coefsum <- extract_coef(object$coefficients.summary, basis)
+  coefsum <- extract_coef(object, basis, "coefficients.summary")
 
   # recalculate quantiles if another ci.level is provided
   quantiles <- c((1 - ci.level) / 2, 0.5, 1 - (1 - ci.level) / 2)
-  quantiles_orig <- as.numeric(gsub("[^0-9.]", "", grep("quant", colnames(coefsum), value = TRUE)))
+  quantiles_orig <- as.numeric(gsub(
+    "[^0-9.]",
+    "",
+    grep("quant", colnames(coefsum), value = TRUE)
+  ))
   ci_compute <- !identical(quantiles, quantiles_orig)
 
-  if(ci_compute) {
+  if (ci_compute) {
     for (i in seq_along(quantiles)) {
-      colnames(coefsum)[colnames(coefsum) == paste0(quantiles_orig[i], "quant")] <- paste0(quantiles[i], "quant")
-      coefsum[, paste0(quantiles[i], "quant")] <- apply(coef, 1, stats::quantile, probs = quantiles[i])
+      colnames(coefsum)[
+        colnames(coefsum) == paste0(quantiles_orig[i], "quant")
+      ] <- paste0(quantiles[i], "quant")
+      coefsum[, paste0(quantiles[i], "quant")] <- apply(
+        coef,
+        1,
+        stats::quantile,
+        probs = quantiles[i]
+      )
     }
   }
 
@@ -387,36 +456,52 @@ bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL,
   res$coefficients.summary <- coefsum
 
   #matfit summary
-  matfitsum <- array(dim = c(length(predvar), length(predlag), length(sumcols)), dimnames = list(predvar, paste0("lag", predlag), sumcols))
+  matfitsum <- array(
+    dim = c(length(predvar), length(predlag), length(sumcols)),
+    dimnames = list(predvar, paste0("lag", predlag), sumcols)
+  )
 
-  matfitsum[, , "mean"] <- apply(res$matfit, c(1, 2), mean)
-  matfitsum[, , "sd"] <- apply(res$matfit, c(1, 2), stats::sd)
+  matfitsum[,, "mean"] <- apply(res$matfit, c(1, 2), mean)
+  matfitsum[,, "sd"] <- apply(res$matfit, c(1, 2), stats::sd)
 
   for (q in quantiles) {
-    matfitsum[, , paste0(q, "quant")] <- apply(res$matfit, c(1, 2), stats::quantile, probs = q)
+    matfitsum[,, paste0(q, "quant")] <- apply(
+      res$matfit,
+      c(1, 2),
+      stats::quantile,
+      probs = q
+    )
   }
 
   #calculate mode (using default kernel density estimate, revisar...)
-  matfitsum[, , "mode"] <- apply(res$matfit, c(1, 2), function(v) {
+  matfitsum[,, "mode"] <- apply(res$matfit, c(1, 2), function(v) {
     dv <- stats::density(v)
     with(dv, x[which.max(y)])
   })
 
   res$matfit.summary <- matfitsum
 
-  if(cumul) {
+  if (cumul) {
     #cumfit summary
-    cumfitsum <- array(dim = c(length(predvar), length(predlag), length(sumcols)), dimnames = list(predvar, paste0("lag", predlag), sumcols))
+    cumfitsum <- array(
+      dim = c(length(predvar), length(predlag), length(sumcols)),
+      dimnames = list(predvar, paste0("lag", predlag), sumcols)
+    )
 
-    cumfitsum[, , "mean"] <- apply(res$cumfit, c(1, 2), mean)
-    cumfitsum[, , "sd"] <- apply(res$cumfit, c(1, 2), stats::sd)
+    cumfitsum[,, "mean"] <- apply(res$cumfit, c(1, 2), mean)
+    cumfitsum[,, "sd"] <- apply(res$cumfit, c(1, 2), stats::sd)
 
     for (q in quantiles) {
-      cumfitsum[, , paste0(q, "quant")] <- apply(res$cumfit, c(1, 2), stats::quantile, probs = q)
+      cumfitsum[,, paste0(q, "quant")] <- apply(
+        res$cumfit,
+        c(1, 2),
+        stats::quantile,
+        probs = q
+      )
     }
 
     #calculate mode (using default kernel density estimate, revisar...)
-    cumfitsum[, , "mode"] <- apply(res$cumfit, c(1, 2), function(v) {
+    cumfitsum[,, "mode"] <- apply(res$cumfit, c(1, 2), function(v) {
       dv <- stats::density(v)
       with(dv, x[which.max(y)])
     })
@@ -433,7 +518,12 @@ bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL,
   allfitsum[, "sd"] <- apply(res$allfit, 1, stats::sd)
 
   for (q in quantiles) {
-    allfitsum[, paste0(q, "quant")] <- apply(res$allfit, 1, stats::quantile, probs = q)
+    allfitsum[, paste0(q, "quant")] <- apply(
+      res$allfit,
+      1,
+      stats::quantile,
+      probs = q
+    )
   }
 
   #calculate mode (using default kernel density estimate, revisar...)
@@ -447,7 +537,9 @@ bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL,
   # Relative-risk summaries
   if (!is.na(model.link) && model.link %in% c("log", "logit")) {
     res$matRRfit.summary <- exp(res$matfit.summary)
-    if(cumul) res$cumRRfit.summary <- exp(res$cumfit.summary)
+    if (cumul) {
+      res$cumRRfit.summary <- exp(res$cumfit.summary)
+    }
     res$allRRfit.summary <- exp(res$allfit.summary)
   }
 
@@ -458,5 +550,4 @@ bcrosspred <- function(object, basis, model.link = NULL, at = NULL, from = NULL,
   class(res) <- "bcrosspred"
 
   return(res)
-
 }

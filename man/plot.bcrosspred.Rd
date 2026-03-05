@@ -7,13 +7,13 @@
 \method{plot}{bcrosspred}(
   x,
   ptype,
-  var = NULL,
-  lag = NULL,
+  exp_at = NULL,
+  lag_at = NULL,
   ci = "area",
   ci.arg,
   ci.level = x$ci.level,
   cumul = FALSE,
-  exp = NULL,
+  exponentiate = NULL,
   ...
 )
 }
@@ -22,9 +22,9 @@
 
 \item{ptype}{Character. Plot type: one of \code{"slices"}, \code{"overall"}, \code{"3d"} or \code{"contour"}.}
 
-\item{var}{Numeric vector of predictor values (exposure) for the \code{"slices"} plot type (maximum length of 4).}
+\item{exp_at}{Numeric vector of exposure values (predictor) for the \code{"slices"} plot type (maximum length of 4).}
 
-\item{lag}{Numeric vector of lags for the \code{"slices"} plot type (maximum length of 4).}
+\item{lag_at}{Numeric vector of lags for the \code{"slices"} plot type (maximum length of 4).}
 
 \item{ci}{Character. How to plot credible intervals: one of \code{"area"}, \code{"bars"}, \code{"lines"}, \code{"sampling"} (draw a line for each posterior sample) or \code{"none"}. Default: \code{"area"}.}
 
@@ -34,7 +34,7 @@
 
 \item{cumul}{Logical. If \code{TRUE}, plot incremental cumulative predictions (requires cumulative predictions in \code{x}).}
 
-\item{exp}{Logical. Set to \code{TRUE} to plot exponentiated effects (relative risks) and to \code{FALSE} to not plot them. The default is \code{NULL} in which the function uses \code{x$model.link} to automatically detect wheteher to use relative risks (when link is \code{log} or \code{logit}).}
+\item{exponentiate}{Logical. Set to \code{TRUE} to plot exponentiated effects (relative risks) and to \code{FALSE} to not plot them. The default is \code{NULL} in which the function uses \code{x$model.link} to automatically detect whether to use relative risks (when link is \code{log} or \code{logit}).}
 
 \item{...}{Additional graphical arguments passed to base plotting functions (see \code{Details}).}
 }
@@ -44,7 +44,7 @@ It plots the lag-specific, overall, slices, contour or 3D representations for pr
 \details{
 The function supports different visualizations for posterior effects predicted by \code{\link[=bcrosspred]{bcrosspred()}} specified in \code{ptype}:
 \itemize{
-\item \code{"slices"}: (optionally multi-panel) line plot of the predicted effect over lag(s) for selected exposure value(s) or over exposure value(s) for selected lag(s). Use \code{var} and/or \code{lag} to specify which slices to draw (at least one must be supplied). At most 4 slices of each type are allowed to keep layouts readable. See \code{\link[=plot.default]{plot.default()}}, \code{\link[=lines]{lines()}} and \code{\link[=points]{points()}} for information on additional graphical arguments.
+\item \code{"slices"}: (optionally multi-panel) line plot of the predicted effect over lag(s) for selected exposure value(s) or over exposure value(s) for selected lag(s). Use \code{exp_at} and/or \code{lag_at} to specify which slices to draw (at least one must be supplied). At most 4 slices of each type are allowed to keep layouts readable. See \code{\link[=plot.default]{plot.default()}}, \code{\link[=lines]{lines()}} and \code{\link[=points]{points()}} for information on additional graphical arguments.
 \item \code{"overall"}: plot the predicted overall cumulative effect over the whole lag period for each exposure value in the prediction grid. See \code{\link[=plot.default]{plot.default()}}, \code{\link[=lines]{lines()}} and \code{\link[=points]{points()}} for information on additional graphical arguments.
 \item \code{"3d"}: 3D plot of the surface of the predicted effect for each exposure and lag. Uses the median of the posterior samples. Not meaningful for single lag models. Additional graphical arguments can be included, such as \code{theta} or \code{phi} (perspective), \code{border} or \code{shade} (surface), \code{xlab}, \code{ylab} or \code{zlab} (axis labelling) and \code{col.} See \code{\link[=persp]{persp()}} for additional information.
 \item \code{"contour"}: filled contour of the surface of the predicted effect for each exposure and lag. Uses the median of the posterior samples. Not meaningful for single lag models. Additional graphical arguments can be included, such as \code{plot.title}, \code{plot.axes} or \code{key.title} for titles and axis and key labelling. See \code{\link[=filled.contour]{filled.contour()}} for additional information.
@@ -54,9 +54,9 @@ The function will call the specified original base plotting functions for each d
 
 Credible intervals will only be drawn for \code{ptype} equal to \code{"slices"} or \code{"overall"}. The type of credible interval will be given by the \code{ci} argument, with options \code{"area"} (default), \code{"bars"}, \code{"lines"}, \code{"sampling"} (draw a line for each posterior sample) or \code{"none"} (no credible intervals). Their appearance may be modified through \code{ci.arg}, a list of arguments passed to to low-level plotting functions: \code{\link[=polygon]{polygon()}} for \code{"area"}, \code{\link[=segments]{segments()}} for \code{"bars"} and \code{\link[=lines]{lines()}} for \code{"lines"}. See the original functions for a complete list of the arguments. As above, some unspecified arguments are set to different default values. The credible interval level will be given by \code{ci.level} or inferred from \code{x$ci.level} by default.
 
-If exponentiated effects (relative risks) are specified (\code{exp = TRUE}) or auto-detected if \code{x$model.link} is \code{log} or \code{logit}, the function will use the predicted relative risks stored in \code{x$matRRfit}, \code{x$allRRfit} or \code{x$cumRRfit} (if \code{cumul=TRUE}).
+If exponentiated effects (relative risks) are specified (\code{exponentiate = TRUE}) or auto-detected if \code{x$model.link} is \code{log} or \code{logit}, the function will use the predicted relative risks stored in \code{x$matRRfit}, \code{x$allRRfit} or \code{x$cumRRfit} (if \code{cumul=TRUE}).
 
-In the presence of unlagged associations (i.e., a single lag), only the \code{overall} plot can be produced. In this case, the \code{overall} plot represents the effect at each predictor value, rather than the overall cumulative effect across lags.
+In the presence of unlagged or single lag associations, only the \code{overall} plot can be produced. In this case, the \code{overall} plot represents the effect at each predictor value, rather than the overall cumulative effect across lags.
 }
 \note{
 This function is inspired by \code{\link[dlnm:plot.crosspred]{dlnm::plot.crosspred()}} (Gasparrini 2011). It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
@@ -91,10 +91,10 @@ This function is inspired by \code{\link[dlnm:plot.crosspred]{dlnm::plot.crosspr
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
  # Fit the model
- mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+ mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
 
  # Prediction
- cpred <- bcrosspred(mod, cb, at = temp)
+ cpred <- bcrosspred(mod, exp_at = temp)
 
  # Perform the plots:
 
@@ -111,11 +111,11 @@ This function is inspired by \code{\link[dlnm:plot.crosspred]{dlnm::plot.crosspr
 
  #Slices (for a high temperature)
  htemp <- 23
- plot(cpred , "slices", var = htemp, col=3, ylab="RR",
+ plot(cpred , "slices", exp_at = htemp, col=3, ylab="RR",
  main=paste0("Association for a high temperature (", htemp, "ºC)"))
 
  #Slices (for lag 0)
- plot(cpred , "slices", lag = 0, col=4, ylab="RR", main=paste0("Association at Lag 0"))
+ plot(cpred , "slices", lag_at = 0, col=4, ylab="RR", main=paste0("Association at Lag 0"))
 
 
 }

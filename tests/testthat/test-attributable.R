@@ -1,6 +1,6 @@
 test_that("attributable returns expected structure and summaries (backwards)", {
 
-  expect_silent(attr <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen))
+  expect_silent(attr <- attributable(mod, slondon, "date", "tmean", "mort_75plus", cen = cen))
 
   # basic structure
   expect_type(attr, "list")
@@ -26,7 +26,7 @@ test_that("attributable returns expected structure and summaries (backwards)", {
 
 test_that("attributable returns expected structure and summaries (forward)", {
 
-  expect_silent(attr <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", cen = cen, dir = "forw"))
+  expect_silent(attr <- attributable(mod, slondon, "date", "tmean", "mort_75plus", cen = cen, dir = "forw"))
 
   # basic structure
   expect_type(attr, "list")
@@ -57,7 +57,7 @@ test_that("attributable returns filtered time-series matrices when filter is spe
   summer_dates <- slondon$date[slondon$date >= as.Date("2011-06-01") & slondon$date <= as.Date("2011-09-30")]
   slondon$summer <- ifelse(slondon$date %in% summer_dates, 1, 0)
 
-  expect_warning(attr2 <- attributable(mod, cb, slondon, "date", "tmean", "mort_75plus", "summer", cen = cen))
+  expect_warning(attr2 <- attributable(mod, slondon, "date", "tmean", "mort_75plus", "summer", cen = cen))
 
   expect_equal(dim(attr2$af), c(length(summer_dates), n_sim))
   expect_equal(dim(attr2$an), c(length(summer_dates), n_sim))
@@ -81,7 +81,7 @@ test_that("attributable works when cases = NULL (only AF returned)", {
 
   # Expect a warning (informing that only AF will be calculated)
   expect_warning(
-    attr3 <- attributable(mod, cb, slondon, "date", "tmean", cen = cen)
+    attr3 <- attributable(mod, slondon, "date", "tmean", cen = cen)
   )
 
   expect_type(attr3, "list")
@@ -95,24 +95,24 @@ test_that("attributable works when cases = NULL (only AF returned)", {
 test_that("attributable gives error when time series are not ordered or not provided on a regular basis", {
 
   slondon2 <- slondon[order(slondon$tmean),]
-  expect_snapshot_error(attributable(mod, cb, slondon2, "date", "tmean", "mort_75plus", cen = cen))
+  expect_snapshot_error(attributable(mod, slondon2, "date", "tmean", "mort_75plus", cen = cen))
 
   slondon2 <- slondon[-2,]
-  expect_snapshot_error(attributable(mod, cb, slondon2, "date", "tmean", "mort_75plus", cen = cen))
+  expect_snapshot_error(attributable(mod, slondon2, "date", "tmean", "mort_75plus", cen = cen))
 
   # Works if date is provided on a weekly basis
   slondon2 <- slondon
   slondon2$date <- seq(as.Date("1900-01-01"), as.Date("2010-01-01"), by = "week")[seq_len(nrow(slondon2))]
-  expect_silent(attributable(mod, cb, slondon2, "date", "tmean", "mort_75plus", cen = cen))
+  expect_silent(attributable(mod, slondon2, "date", "tmean", "mort_75plus", cen = cen))
 
   # Works if date is provided on a monthly basis
   slondon2 <- slondon
   slondon2$date <- seq(as.Date("1900-01-01"), as.Date("2010-01-01"), by = "month")[seq_len(nrow(slondon2))]
-  expect_silent(attributable(mod, cb, slondon2, "date", "tmean", "mort_75plus", cen = cen))
+  expect_silent(attributable(mod, slondon2, "date", "tmean", "mort_75plus", cen = cen))
 
   # Works if date is provided on a yearly basis
   slondon2 <- slondon
   slondon2$date <- seq(as.Date("1500-01-01"), as.Date("2010-01-01"), by = "year")[seq_len(nrow(slondon2))]
-  expect_silent(attributable(mod, cb, slondon2, "date", "tmean", "mort_75plus", cen = cen))
+  expect_silent(attributable(mod, slondon2, "date", "tmean", "mort_75plus", cen = cen))
 
 })

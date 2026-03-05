@@ -6,15 +6,11 @@
 \usage{
 bcrosspred(
   object,
-  basis,
-  model.link = NULL,
-  at = NULL,
-  from = NULL,
-  to = NULL,
-  by = NULL,
-  lag = NULL,
-  bylag = 1L,
+  basis = NULL,
+  exp_at = NULL,
+  lag_at = NULL,
   cen = NULL,
+  model.link = NULL,
   ci.level = 0.95,
   cumul = FALSE
 )
@@ -22,19 +18,15 @@ bcrosspred(
 \arguments{
 \item{object}{A fitted \code{"bdlnm"} object returned by \code{\link[=bdlnm]{bdlnm()}}.}
 
-\item{basis}{A DLNM basis object produced by \code{dlnm}. It must be of class \code{"crossbasis"} (\code{\link[dlnm:crossbasis]{dlnm::crossbasis()}}) or \code{"onebasis"} (\code{\link[dlnm:onebasis]{dlnm::onebasis()}}).}
+\item{basis}{If the \code{bdlnm} model has more than one basis, the name of the basis to use to compute predictions. It must be one of \code{names(object$basis)}. If the model contains only one basis it is selected automatically.}
 
-\item{model.link}{Optional character specifying the model link (if \code{NULL} it is inferred from the fitted model).}
+\item{exp_at}{Numeric vector of exposure values at which to evaluate predictions. If \code{NULL}, the exposure range is extracted from the attributes of \code{basis} and a grid of 50 values is constructed using \code{\link[=pretty]{pretty()}}.}
 
-\item{at}{Numeric vector (or matrix) of exposure values at which to compute predictions. If \code{NULL} the function reconstructs a grid using \code{from}, \code{to}, \code{by} together with the \code{basis} attributes.}
-
-\item{from, to, by}{Optional numeric used to construct \code{at} when not provided.}
-
-\item{lag}{Optional lag specification; when \code{NULL} the original lag from \code{basis} is used. If supplied it must be of length 1 or 2 and represent the lag interval.}
-
-\item{bylag}{Integer lag step (default \code{1L}).}
+\item{lag_at}{Numeric vector of integer lag values at which to evaluate predictions. Only used when \code{basis} is a \code{crossbasis}. If \code{NULL}, the full lag range stored in \code{basis} is used with a step of \code{1}.}
 
 \item{cen}{Centering exposure value for predictions. If \code{NULL} the centering value depends on the exposure basis function or set to a mid-range value (see Details).}
+
+\item{model.link}{Optional character specifying the model link (if \code{NULL} it is inferred from the fitted model).}
 
 \item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}). Credible interval quantiles are computed from the posterior samples.}
 
@@ -43,19 +35,18 @@ bcrosspred(
 \value{
 An object of class \code{"bcrosspred"} (a list) with elements including:
 \itemize{
-\item \code{predvar}: the exposure grid used for prediction (vector).
-\item \code{lag}: numeric vector of length 2 with the lag interval used.
-\item \code{bylag}: the lag step used.
+\item \code{exp_at}: the exposure grid used for prediction as supplied via the \code{exp_at} argument (vector).
+\item \code{lag_at}: if basis is \code{crossbasis}, the lag grid used for prediction as supplied via the \code{lag_at} argument (vector).
+\item \code{cen}: the exposure centering value used for prediction (number).
 \item \code{coefficients}: matrix of posterior coefficient draws (columns = samples).
 \item \code{coefficients.summary}: matrix of coefficient summaries (mean, sd, quantiles, mode).
-\item \code{matfit}: 3D array of sampled lag-specific effects (predvar × predlag × samples).
-\item \code{matfit.summary}: 3D array of summaries for \code{matfit} (predvar × predlag × summary-statistics).
-\item \code{allfit}: matrix of sampled overall cumulative (summed across lags) effects (predvar × samples).
-\item \code{allfit.summary}: matrix of summaries for \code{allfit} (predvar x summary-statistics).
-\item \code{cumfit}: (optional) 3D array of sampled incremental cumulative effects (predvar × predlag × samples).
-\item \code{cumfit.summary}: (optional) 3D array of summaries for \code{cumfit} (predvar × predlag × summary-statistics).
+\item \code{matfit}: 3D array of sampled lag-specific effects (exp × lag × samples).
+\item \code{matfit.summary}: 3D array of summaries for \code{matfit} (exp × lag × summary-statistics).
+\item \code{allfit}: matrix of sampled overall cumulative (summed across lags) effects (exp × samples).
+\item \code{allfit.summary}: matrix of summaries for \code{allfit} (exp x summary-statistics).
+\item \code{cumfit}: (optional) 3D array of sampled incremental cumulative effects (exp × lag × samples).
+\item \code{cumfit.summary}: (optional) 3D array of summaries for \code{cumfit} (exp × lag × summary-statistics).
 \item \code{matRRfit}, \code{allRRfit}, \code{matRRfit.summary}, \code{allRRfit.summary}, \code{cumRRfit.summary} (optional), \code{cumRRfit.summary} (optional: relative-risk versions (only when link is \code{log} or \code{logit}).
-\item \code{cen}: centering value used.
 \item \code{ci.level}, \code{model.class}, \code{model.link}.
 }
 }
@@ -63,7 +54,7 @@ An object of class \code{"bcrosspred"} (a list) with elements including:
 Calculate predictions from a fitted Bayesian distributed lag non-linear model (\code{\link[=bdlnm]{bdlnm()}}). Predicted associations are computed on a grid of values of the exposure and lags, relative to a reference exposure center value. The function gives posterior samples of exposure–lag-specific associations, overall cumulative associations (summed across lags) and optionally incremental cumulative associations, together with summary statistics (mean, sd, credible interval quantiles and mode).
 }
 \details{
-The function computes predictions for specific combinations of the requested exposure and lag grids. The values in \code{at} can be provided as a vector; in this case, they are replicated for each lag. Alternatively, \code{at} can be provided as a matrix of complete exposure histories over the lag period.
+The function computes predictions for specific combinations of exposure and lag values specified in \code{exp_at} and \code{lag_at.} All values must lie within the range defined by the specified \code{basis.} Note that if the specified \code{basis} is a \code{onebasis}, \code{lag_at} is ignored. If either argument is \code{NULL}, the grid is derived from the attributes of the specified \code{basis}: for exposure values, a grid of approximately 50 values is constructed using \code{\link[=pretty]{pretty()}} within the exposure range; for lag values, an integer sequence covering the full lag range with a step of 1 is used.
 
 Predictions are computed relative to a centering/reference value (\code{cen}). If \code{NULL}, the default \code{cen} depends on the exposure-response basis function: for \code{strata}, \code{thr} and \code{integer} the reference corresponds to the reference category, and for \code{lin} the reference is set to 0. For other choices, such as \code{ns}, \code{bs}, \code{poly} or other existing or user-defined functions, the default centering value is set to an approximate mid-range value. For non-linear exposure-response associations is sometimes recommended to manually set the centering value to a data-driven center such as the optimal exposure value (see \code{\link[=optimal_exposure]{optimal_exposure()}}).
 
@@ -71,7 +62,7 @@ Posterior sample of the predicted associations are stored as matrices for the ov
 
 Be aware of memory usage: exposure-lag-specific predictions are stored in 3D arrays of dimension \code{length(predvar)} × \code{length(predlag)} × \code{n_sim}. For dense grids and many posterior samples this can be computationally intensive.
 
-This function can also be used to compute predictions for models with simple uni-dimensional basis functions not including lags, if the basis supplied is \code{"onebasis"} instead of \code{"crossbasis"}. In this case, only unlagged predicted associations are returned.
+This function can also be used to compute predictions for models with simple uni-dimensional basis functions not including lags, if the specified basis is \code{"onebasis"} instead of \code{"crossbasis"}. In this case, only unlagged predicted associations are returned.
 }
 \note{
 This function is inspired by \code{\link[dlnm:crosspred]{dlnm::crosspred()}} (Gasparrini 2011). It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
@@ -106,10 +97,10 @@ This function is inspired by \code{\link[dlnm:crosspred]{dlnm::crosspred()}} (Ga
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
  # Fit the model
- mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+ mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
 
  # Prediction
- cpred <- bcrosspred(mod, cb, at = temp)
+ cpred <- bcrosspred(mod, exp_at = temp)
 
 }
 \references{

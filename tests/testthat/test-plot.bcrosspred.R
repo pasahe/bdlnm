@@ -22,10 +22,10 @@ test_that("does a contour plot", {
 test_that("does a slice plot", {
 
   htemp <- 23
-  expect_no_error(plot(cpred , "slices", var = htemp, col=3, ylab="RR",
+  expect_no_error(plot(cpred , "slices", exp_at = htemp, col=3, ylab="RR",
        main=paste0("Association for a high temperature (", htemp, "ºC)")))
 
-  expect_no_error(plot(cpred , "slices", lag = 0, col=4, ylab="RR",
+  expect_no_error(plot(cpred , "slices", lag_at = 0, col=4, ylab="RR",
        main=paste0("Association at Lag 0")))
 
 })
@@ -36,13 +36,12 @@ test_that("onebasis plots", {
   expect_warning(
     mod_2 <- bdlnm(
       mort_75plus ~ ob + factor(dow) + seas,
-      basis = ob,
       data = slondon,
       family = "poisson",
       sample.arg = list(n = n_sim, seed = 1L)
     )
   )
-  cpred_2 <- bcrosspred(mod_2, ob, at = temp)
+  cpred_2 <- bcrosspred(mod_2, "ob", exp_at = temp)
 
   # overall
   expect_no_error(plot(cpred_2, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, log = "y"))
@@ -57,7 +56,7 @@ test_that("onebasis plots", {
 
   # slices
   htemp <- 23
-  expect_error(plot(cpred_2, "slices", var = htemp, col=3, ylab="RR", main=paste0("Association for a high temperature (", htemp, "ºC)")))
-  expect_error(plot(cpred_2, "slices", lag = 0, col=4, ylab="RR", main=paste0("Association at Lag 0")))
+  expect_error(plot(cpred_2, "slices", exp_at = htemp, col=3, ylab="RR", main=paste0("Association for a high temperature (", htemp, "ºC)")))
+  expect_error(plot(cpred_2, "slices", lag_at = 0, col=4, ylab="RR", main=paste0("Association at Lag 0")))
 
 })

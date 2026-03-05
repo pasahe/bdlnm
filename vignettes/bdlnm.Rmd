@@ -26,15 +26,19 @@ library(utils)
 
 # london dataset
 
-We will use the built-in dataset, `london` which contains daily temperature and mortality data from 2000 to 2012. Using Distributed Non-Linear Models (DLNM) we will estimate the effect of the temperature exposure to mortality in the population with more than 75 years old, taking 21 days of lags.
+As an example for this vignette, we will use the built-in dataset `london` which contains daily temperature and mortality data from 2000 to 2012. 
 
 ```{r}
 head(london)
 ```
 
+Using Bayesian Distributed Non-Linear Models (B-DLNM) we will estimate the lagged effect of the temperature exposure to mortality in the population with more than 75 years old, taking 21 days of lags, in the city of London (2000-2012).
+
 # Set DLNM parameters
 
-We will start by setting the basic parameters for the configuration of the crossbasis:
+We will start by building the crossbasis with the `dlnm` package.
+
+We will use a natural spline with three knots for the exposure–response function, placed at the 10th, 75th, and 90th percentiles of daily mean temperature, and a natural spline for the lag–response function, with knots equally spaced on the log scale up to a maximum lag of 21 days:
 
 ```{r}
 # Exposure-response and lag-response spline parameters
@@ -55,20 +59,21 @@ argvar <- list(fun = dlnm_var$var_fun,
 
 arglag <- list(fun = dlnm_var$lag_fun, 
                knots = logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
-```
 
-With the defined parameters, we can create now the crossbasis using the {dlnm} package:
-
-```{r}
 # Create crossbasis
 cb <- crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
 ```
 
-First, let's define the seasonality of the analysed mortality time series and the temperature exposure values for which we want to make predictions:
+Let’s define the seasonality of the mortality time series using a natural spline with 8 degrees of freedom per year, which flexibly controls for long-term and seasonal trends in mortality:
 
 ```{r}
 # Seasonality of mortality time series
 seas <- ns(london$date, df = round(8 * length(london$date) / 365.25))
+```
+
+Finally, we also define the temperature values for which predictions will be generated. These correspond to an evenly spaced grid with a 0.1ºC step covering the full range of observed temperatures in the data:
+
+```{r}
 
 # Prediction values (equidistant points)
 temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
@@ -76,40 +81,29 @@ temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
 # Fit the model and posterior samples
 
-Fit the bayesian DLNM model with the function `bdlnm()`. We will use a Poisson model:
+Fit the Bayesian DLNM using the function `bdlnm()`. In this example, we specify a Poisson model including the cross-basis term, a seasonal component, and an indicator for the day of the week. We draw 1000 samples from the posterior distribution and set a seed for reproducibility.
 
 ```{r}
-# tictoc::tic()
-mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
-# tictoc::toc()
+mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson", sample.arg = list(n = 1000, seed = 5243))
 ```
 
-We can set a seed for reproducibility:
+The returned object is of class bdlnm and contains the fitted INLA model, the crossbasis objects included in the formula, and posterior samples of the estimated coefficients together with their summaries (mean, standard deviation, and quantiles).
 
 ```{r}
-# tictoc::tic()
-mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson", sample.arg = list(seed = 5243))
-# tictoc::toc()
+str(mod, max.level = 1)
 ```
 
 # Minimum mortality temperature
 
-Let's get the minimum mortality temperature (MMT), defined as the value at which the overall mortality risk is minimized:
+We estimate the minimum mortality temperature (MMT), defined as the temperature at which the overall mortality risk is minimized. This optimal value will later be used to center the estimated relative risks.
 
 ```{r}
-# tictoc::tic()
-mmt <- optimal_exposure(mod, cb, at = temp)
-# tictoc::toc()
+mmt <- optimal_exposure(mod, exp_at = temp)
 
 str(mmt)
-
-mmt$est |> 
-  head()
-
-mmt$summary
 ```
 
-We can plot the posterior distribution of the posterior distribution sample of the MMT estimates:
+We can visualize the posterior distribution of the MMT estimates. It is useful to inspect this distribution to assess whether multiple candidate optimal exposure values exist and to verify that the median provides a reasonable centering value:
 
 ```{r fig.width = 7}
 plot(mmt, xlab = "Temperature (ºC)", main = paste0("MMT (Median = ", round(mmt$summary[["0.5quant"]], 1), "ºC)"))
@@ -122,54 +116,42 @@ cen <- mmt$summary[["0.5quant"]]
 cen
 ```
 
-# Predict risk
+# Predict exposure-lag-response effects
 
-Predict the risk at the quantile temperature values:
-
-```{r}
-# tictoc::tic()
-cpred <- bcrosspred(mod, cb, at = temp)
-# tictoc::toc()
-```
-
-We can repeat it centering the risk at the MMT median values obtained before:
+Predict the exposure–lag–response association between temperature and mortality from the fitted model at the supplied temperature grid, centering the predictions at the MMT value:
 
 ```{r}
-# tictoc::tic()
-cpred <- bcrosspred(mod, cb, at = temp, cen = cen)
-# tictoc::toc()
+cpred <- bcrosspred(mod, exp_at = temp, cen = cen)
 ```
 
-Let's see the `str` of the generated prediction:
+A `bcrosspred` object is returned containing posterior samples of the estimated exposure–lag–response association for the supplied temperature values and lags, together with their summaries.
 
 ```{r}
 str(cpred)
 ```
 
-In this object we store each of the generated samples from the posterior distribution and its summaries. 
-
-For example, we have the estimated crossbasis coefficients:
+For instance, the estimated `crossbasis` coefficients are stored as:
 
 ```{r}
 cpred$coefficients |> 
   head(c(5, 5))
 ```
 
-We have also stored all the RR effects in an array for each temperature and lag in each of the samples. For example, for the first sample:
+The relative risks (RR) for each temperature–lag combination are also stored in an array for each posterior sample. For example, for the first sample:
 
 ```{r}
 cpred$matRRfit[, , "sample1"] |> 
   head()
 ```
 
-And the overall effects for each temperature (adding up all the lags):
+The overall cumulative effects for each temperature (summing across all lags) are stored in:
 
 ```{r}
 cpred$allRRfit |> 
   head(c(5, 5))
 ```
 
-In addition, the summary of these effects is also available:
+Summaries of these effects across posterior samples are also available:
 
 ```{r}
 cpred$matRRfit.summary |> 
@@ -181,46 +163,41 @@ cpred$allRRfit.summary |>
 
 # Plot
 
-Let's plot the overall effect for each temperature exposure using the `plot()` function:
+Several visualizations can be produced from these predictions using the `plot()` method.
+
+For example, we can plot the overall cumulative effect for each temperature value (suming across all lags):
 
 ```{r fig.width = 7, fig.height = 4}
 plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, main="Overall", log = "y")
 ```
 
-We can plot the 99% credible interval, instead of the 95% used by default:
-
-```{r fig.width = 7, fig.height = 4}
-plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, main="Overall", log = "y", ci.level = 0.99)
-```
-
-We can also plot all the lines from each of the posterior samples:
+Alternatively, we can display the posterior sampling variability by plotting the curves from all posterior samples instead of the credible interval:
 
 ```{r fig.width = 7, fig.height = 4}
 plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, main="Overall", log = "y", ci = "sampling")
 ```
 
-Let's plot the 3-D plot, visualizing both the exposure-response and the lag-response relationships:
+We can also visualize the full exposure–lag–response association using a 3-D surface:
 
 ```{r fig.width = 7, fig.height = 6}
 plot(cpred, "3d", zlab = "Relative risk", col = 4, lphi = 60, cex.axis = 0.6, xlab = "Temperature (ºC)", main = "3D graph of temperature effect")
 ```
 
-Let's plot the contour plot, which is a projection in 2D of the previous relationship:
+A contour plot provides a 2-D projection of the same relationship:
 
 ```{r fig.width = 7, fig.height = 6}
-plot(cpred, "contour", xlab = "Temperature (ºC)", ylab = "Lag", main="Contour plot")
+plot(cpred, "contour", xlab = "Temperature (ºC)", ylab = "Lag", main = "Contour plot")
 ```
 
-Let's plot the lag-response effect for a high temperature (99th percentile):
+We can also examine the lag–response association for a high temperature (e.g., the 99th percentile):
 
 ```{r fig.width = 7, fig.height = 6}
 htemp <- round(quantile(london$tmean, 0.99), 1)
-plot(cpred , "slices", ci = "bars", type = "p", pch = 19, var = htemp, ylab="RR", main=paste0("Association for a high temperature (", htemp, "ºC)"))
+plot(cpred , "slices", ci = "bars", type = "p", pch = 19, exp_at = htemp, ylab="RR", main=paste0("Association for a high temperature (", htemp, "ºC)"))
 ```
 
-Or the exposure-response at lag 0:
+Or the exposure–response association at lag 0:
 
 ```{r fig.width = 7, fig.height = 6}
-plot(cpred , "slices", lag = 0, col=4, ylab="RR",
-     main=paste0("Association at Lag 0"))
+plot(cpred , "slices", lag_at = 0, col=4, ylab="RR", main=paste0("Association at lag 0"))
 ```

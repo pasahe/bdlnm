@@ -6,20 +6,18 @@
 \usage{
 bdlnm(
   formula,
-  basis,
   data,
   family = "gaussian",
   sample.arg = list(n = 1000, seed = 0L),
   ci.level = 0.95,
+  na.action = getOption("na.action"),
   ...
 )
 }
 \arguments{
-\item{formula}{A model formula (as for \code{\link[INLA:inla]{INLA::inla()}}).}
+\item{formula}{A model formula (as for \code{\link[INLA:inla]{INLA::inla()}}). The model must be a distributed lag linear or non-linear model (DLNM), so a \code{"crossbasis"} (\code{\link[dlnm:crossbasis]{dlnm::crossbasis()}}) or a \code{"onebasis"} (\code{\link[dlnm:onebasis]{dlnm::onebasis()}}) must be included.}
 
-\item{basis}{A DLNM basis object produced by \code{dlnm}. It must be of class \code{"crossbasis"} (\code{\link[dlnm:crossbasis]{dlnm::crossbasis()}}) or \code{"onebasis"} (\code{\link[dlnm:onebasis]{dlnm::onebasis()}}).}
-
-\item{data}{A data frame containing the variables referenced in \code{formula} used by \code{\link[INLA:inla]{INLA::inla()}}.}
+\item{data}{an optional data frame, list or environment (or object coercible by \link{as.data.frame} to a data frame) containing the variables in the model. If not found in data, the variables are taken from \code{environment(formula)}, typically the environment from which \code{bdlnm} is called.}
 
 \item{family}{Character. Family name passed to \code{\link[INLA:inla]{INLA::inla()}} (default \code{"gaussian"}).}
 
@@ -27,22 +25,25 @@ bdlnm(
 
 \item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}). Credible interval quantiles are computed to summarize coefficients from the posterior samples.}
 
+\item{na.action}{A function specifying how to handle NA values when constructing the model frame. The default is taken from the na.action setting of \link{options}, which is by default \link{na.omit} (drops rows with any \code{NA} among the variables referenced in formula). In the presence of a random effect term \code{f()} in the formula, this argument is ignored and \code{NA}s are not discarded. When rows containing missing values are retained, \code{INLA} handles them internally (see \code{Details} below).}
+
 \item{...}{Additional arguments passed to \code{\link[INLA:inla]{INLA::inla()}}.}
 }
 \value{
 An S3 object of class \code{"bdlnm"} with the following components:
 \itemize{
 \item \code{model}: the fitted \code{INLA} model returned by \code{\link[INLA:inla]{INLA::inla()}}.
+\item \code{basis}: a named list containing all basis of class \code{crossbasis} or \code{onebasis} included in the model \code{formula}.
 \item \code{coefficients}: a matrix whose columns are posterior sample draws returned by \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}} (named \code{sample1}, \code{sample2}, ...) and whose rows are all model coefficients.
 \item \code{coefficients.summary}: a matrix of summary statistics for all the posterior samples stored in \code{coefficients} (mean, sd, quantiles, mode).
 }
 }
 \description{
-Fit a distributed lag non-linear model (DLNM) using a Bayesian framework. The function calls \code{\link[INLA:inla]{INLA::inla()}} to fit the model and then draws posterior samples of the model latent field with \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. See the package vignette for worked examples and recommended workflows.
+Fit a distributed lag non-linear model (DLNM) using a Bayesian framework. The function calls \code{\link[INLA:inla]{INLA::inla()}} to fit the model and then draws posterior samples of the model fixed effects with \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. See the package vignette for worked examples and recommended workflows.
 }
 \section{Distributed lag non-linear model}{
 
-Distributed lag non-linear models (DLNMs) describe simultaneous non-linear and delayed (lagged) dependencies, commonly called exposure-lag-response associations. This modelling framework is based on the definition of a cross-basis (a bi-dimensional space of functions) built with \code{\link[dlnm:crossbasis]{dlnm::crossbasis()}} that defines the dependency along the space of the predictor (exposure-response) and along lags (lag-response). This cross-basis matrix has to be supplied in the \code{basis} argument and included in \code{formula}. A basis object built with \code{\link[dlnm:onebasis]{dlnm::onebasis()}} can be used instead, when simplifying the model in a uni-dimensional exposure-response relationship.
+The fitted model must be a distributed lag linear or non-linear model (DLNM). DLNMs describe potentially non-linear and delayed (lagged) associations between an exposure and an outcome, commonly referred to as exposure–lag–response relationships. This modelling framework is based on the definition of a cross-basis (a bi-dimensional space of functions) constructed with \code{\link[dlnm:crossbasis]{dlnm::crossbasis()}}, which defines the exposure–response and lag–response functions simultaneously. The cross-basis object must be created beforehand and supplied as an object in the calling environment (not as a column inside data) and explicitly included in the model formula (e.g., y ~ cb + ...). A basis object constructed with \code{\link[dlnm:onebasis]{dlnm::onebasis()}} can be used instead when the model is restricted to a uni-dimensional exposure–response relationship (i.e., without lagged effects). All basis objects included in the model \code{formula} are stored and returned as a named list in the \code{basis} component. Any of these basis objects can later be supplied to \code{\link[=bcrosspred]{bcrosspred()}} to extract predictions for the corresponding exposure–lag–response (or exposure-response, if created with \code{onebasis}) association.
 }
 
 \section{INLA}{
@@ -50,12 +51,26 @@ Distributed lag non-linear models (DLNMs) describe simultaneous non-linear and d
 Models are fit using Integrated Nested Laplace approximation (INLA) via \code{\link[INLA:inla]{INLA::inla()}}. INLA is a method for approximate Bayesian inference. In the last years it has established itself as an alternative to other methods such as Markov chain Monte Carlo because of its speed and ease of use via the R-INLA package (\href{https://www.r-inla.org/what-is-inla}{What is INLA?}).
 
 Additional arguments supplied via \code{...} are forwarded to \code{\link[INLA:inla]{INLA::inla()}} (see documentation for all available arguments). Internally, the function ensures that \code{control.compute = list(config = TRUE)} in order to enable posterior sample drawing with \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}.
+
+In the presence of missing values in variables referenced in formula, the \code{na.action} argument controls how the model frame is constructed. If \code{na.action} is set to \link{na.omit} (the default set by \link{options}), a complete-case analysis is performed and any row with a missing value in a variable appearing in formula is removed. If \code{na.action} is set to \link{na.pass} instead, missing values are retained in the model frame and passed to INLA.
+
+Note that when the model formula includes a random effect term, specified via \code{f(k, model = ...)}, the \code{na.action} is ignored and rows with missing values are not dropped.
+
+When missing values are present in the data supplied to \code{\link[INLA:inla]{INLA::inla()}} (either because a random effect term is included or because \code{na.action = na.pass}), \code{INLA} handles them internally as follows:
+\itemize{
+\item If \code{NA} values occur in the response, the corresponding observation contributes nothing to the likelihood (the response is treated as unobserved for that observation).
+\item If \code{NA} values occur in fixed-effect covariates, \code{\link[INLA:inla]{INLA::inla()}} replaces them internally with zero so that the covariate does not contribute to the linear predictor for that observation.
+\item If \code{NA} values occur in a fixed-effect covariate that is a factor, this is not allowed unless \code{NA} is explicitly included as a level, or \code{control.fixed = list(expand.factor.strategy = "inla")} is specified. With this option, \code{NA} is interpreted similarly as in the fixed-effect case, producing no contribution from that covariate to the linear predictor.
+\item If \code{NA} values occur in a random effect, the random effect does not contribute to the linear predictor for the corresponding observation.
+}
+
+See the INLA FAQ for further details: \url{https://www.r-inla.org/faq#h.dbamew4fomc}.
 }
 
 \section{Posterior samples}{
 
 
-After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a cross-basis built from an exposure basis with C parameters and a lag basis with L parameters, there will be C × L cross-basis associated coefficients (named e.g. v1.l1, ..., vC.lL). For a \code{"onebasis"} object the coefficients follow the simpler form b1, ... bC.
+After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a \code{"crossbasis"} built from an exposure basis with C parameters and a lag basis with L parameters, there will be C × L cross-basis associated coefficients (named e.g. v1.l1, ..., vC.lL). For a \code{"onebasis"} object the coefficients follow the simpler form b1, ... bC.
 
 Additional arguments supplied via \code{sample.arg} are forwarded to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}} (see documentation for all available arguments). By default, the number of samples is \code{1000}. Be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric \code{seed} in \code{sample.arg}.
 
@@ -98,7 +113,7 @@ The INLA package must be installed from the R-INLA repository (\href{https://www
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
  # Fit the model
- mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london, family = "poisson")
+ mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
 
 
 

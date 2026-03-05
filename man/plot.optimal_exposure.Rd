@@ -52,11 +52,11 @@ The histogram uses the original prediction grid in \code{attr(object, "xvar")} a
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
  # Fit the model
- mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, basis = cb, data = london,
+ mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london,
  family = "poisson")
 
  # Find minimum risk exposure value
- mmt <- optimal_exposure(mod, cb, at = temp)
+ mmt <- optimal_exposure(mod, exp_at = temp)
 
  # Plot
  plot(mmt, xlab = "Temperature (ºC)",

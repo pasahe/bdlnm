@@ -8,9 +8,5 @@
 
 ---
 
-    Unsupported `basis` class. Expected <'crossbasis'> or <'onebasis'>.
-
----
-
-    Unsupported `basis` class. Expected <'crossbasis'> or <'onebasis'>.
+    The name of the basis in `basis` must match the name of the basis stored in `object$basis`: "cb".
 
