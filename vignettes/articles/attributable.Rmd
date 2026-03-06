@@ -7,6 +7,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+inla_available <- bdlnm:::check_inla()
 ```
 
 ```{r setup}
@@ -18,8 +19,7 @@ library(stats)
 library(splines)
 library(utils)
 library(ggplot2)
-
-inla_available <- bdlnm:::check_inla()
+library(lubridate)
 ```
 
 This article provides a short tutorial on how to calculate attributable measures using the `attributable()` function. The built-in london dataset is used as an example to estimate mortality attributable fractions and attributable numbers associated with temperature among the population aged 75 years or older in London during the period 2000–2012.
@@ -153,7 +153,7 @@ Finally, we can restrict the calculation to specific time periods using a filter
 slondon <- london |> 
   mutate(
     summer = case_when(
-      lubridate::month(date) >= 6 & lubridate::month(date) <= 8 ~ 1,
+      month(date) >= 6 & month(date) <= 8 ~ 1,
       .default = 0
     )
   )

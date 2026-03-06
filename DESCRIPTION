@@ -39,6 +39,7 @@ Suggests:
   sn,
   splines,
   tidyr,
+  lubridate,
   ggplot2
 Additional_repositories: https://inla.r-inla-download.org/R/stable
 Config/Needs/website: rmarkdown

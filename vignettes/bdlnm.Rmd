@@ -14,6 +14,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+inla_available <- bdlnm:::check_inla()
 ```
 
 ```{r setup, message=FALSE}
@@ -21,8 +22,6 @@ library(bdlnm)
 library(dlnm)
 library(splines)
 library(utils)
-
-inla_available <- bdlnm:::check_inla()
 ```
 
 # london dataset
