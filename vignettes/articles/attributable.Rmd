@@ -114,9 +114,7 @@ rbind(
 Alternatively, we can use the forward algorithm, which quantifies the future burden attributable to a given exposure event:
 
 ```{r}
-tictoc::tic()
 attr_forw <- attributable(mod, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "forw")
-tictoc::toc()
 ```
 
 We can plot the time series of daily attributable fractions and attributable numbers based on the forward algorithm:
@@ -158,9 +156,7 @@ slondon <- london |>
     )
   )
 
-# tictoc::tic()
 attr_summer <- attributable(mod, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", name_filter = "summer", cen = cen, dir = "back")
-# tictoc::toc()
 ```
 
 We can plot the time series of daily attributable fractions and attributable numbers for summers only:

@@ -46,14 +46,13 @@ test_that("bcrosspred basic structure (crossbasis)", {
 
 test_that("bcrosspred basic structure (onebasis)", {
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
-  expect_warning(
-    mod_2 <- bdlnm(
-      mort_75plus ~ ob + factor(dow) + seas,
-      data = slondon,
-      family = "poisson",
-      sample.arg = list(n = n_sim, seed = 1L)
-    )
+  mod_2 <- bdlnm(
+    mort_75plus ~ ob + factor(dow) + seas,
+    data = slondon,
+    family = "poisson",
+    sample.arg = list(n = n_sim)
   )
+
   cpred_2 <- bcrosspred(mod_2, exp_at = temp)
 
   expect_s3_class(cpred_2, "bcrosspred")
@@ -95,13 +94,11 @@ test_that("bcrosspred basic structure (onebasis)", {
 
 test_that("works with two different basis", {
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
-  expect_warning(
-    mod_2 <- bdlnm(
-      mort_75plus ~ cb + ob + factor(dow) + seas,
-      data = slondon,
-      family = "poisson",
-      sample.arg = list(n = n_sim, seed = 1L)
-    )
+  mod_2 <- bdlnm(
+    mort_75plus ~ cb + ob + factor(dow) + seas,
+    data = slondon,
+    family = "poisson",
+    sample.arg = list(n = n_sim)
   )
 
   expect_error(bcrosspred(mod_2, exp_at = temp))

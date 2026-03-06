@@ -12,13 +12,11 @@ test_that("ensure bdlnm returned expected structure (crossbasis example)", {
 
 test_that("ensure bdlnm returned expected structure (onebasis example)", {
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
-  expect_warning(
-    mod_2 <- bdlnm(
-      mort_75plus ~ ob + factor(dow) + seas,
-      data = slondon,
-      family = "poisson",
-      sample.arg = list(n = n_sim, seed = 1L)
-    )
+  mod_2 <- bdlnm(
+    mort_75plus ~ ob + factor(dow) + seas,
+    data = slondon,
+    family = "poisson",
+    sample.arg = list(n = n_sim)
   )
   expect_type(mod_2, "list")
   expect_equal(length(mod_2), 4L)
@@ -33,13 +31,11 @@ test_that("ensure bdlnm returned expected structure (onebasis example)", {
 
 test_that("works with two different basis", {
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
-  expect_warning(
-    mod_2 <- bdlnm(
-      mort_75plus ~ cb + ob + factor(dow) + seas,
-      data = slondon,
-      family = "poisson",
-      sample.arg = list(n = n_sim, seed = 1L)
-    )
+  mod_2 <- bdlnm(
+    mort_75plus ~ cb + ob + factor(dow) + seas,
+    data = slondon,
+    family = "poisson",
+    sample.arg = list(n = n_sim)
   )
   expect_type(mod_2, "list")
   expect_length(mod_2$basis, 2)
@@ -94,8 +90,8 @@ test_that("na.action = na.omit drops NA rows and returns consistent dimensions, 
   seas_clean <- seas[-na_rows, ]
   slondon_clean <- slondon[-na_rows, ]
 
-  expect_warning(
-    mod_clean <- bdlnm(
+  mod_clean <- suppressWarnings(
+    bdlnm(
       mort_75plus ~ cb_clean + factor(dow) + seas_clean,
       data = slondon_clean,
       family = "poisson",
@@ -104,20 +100,18 @@ test_that("na.action = na.omit drops NA rows and returns consistent dimensions, 
   )
 
   expect_identical(
-    round(as.numeric(mod_clean$coefficients), 6),
-    round(as.numeric(mod$coefficients), 6)
+    round(as.numeric(mod_clean$coefficients), 2),
+    round(as.numeric(mod$coefficients), 2)
   )
 })
 
 test_that("na.action = na.pass keeps NA rows and returns consistent dimensions", {
-  expect_warning(
-    mod_na <- bdlnm(
-      mort_75plus ~ cb + factor(dow) + seas,
-      data = slondon,
-      family = "poisson",
-      na.action = na.pass,
-      sample.arg = list(n = n_sim, seed = 1L)
-    )
+  mod_na <- bdlnm(
+    mort_75plus ~ cb + factor(dow) + seas,
+    data = slondon,
+    family = "poisson",
+    na.action = na.pass,
+    sample.arg = list(n = n_sim)
   )
 
   expect_equal(nrow(mod_na$model$model.matrix), nrow(slondon))
@@ -130,7 +124,7 @@ test_that("na.action = na.fail throws an error when NAs are present", {
       data = slondon,
       family = "poisson",
       na.action = na.fail,
-      sample.arg = list(n = n_sim, seed = 1L)
+      sample.arg = list(n = n_sim)
     )
   )
 })

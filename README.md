@@ -25,9 +25,6 @@ You can install the development version of bdlnm like so:
 devtools::install_github("pasahe/bdlnm")
 ```
 
-Because this is a private repository, you have to get installation
-permissions.
-
 > At least the stable version of INLA 23.4.24 (or newest) must be
 > installed previously. You can install the newest stable INLA version
 > by:
@@ -35,15 +32,3 @@ permissions.
 ``` r
 install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
 ```
-
-<!-- ## Example -->
-
-<!-- This is a basic example which shows you how to solve a common problem: -->
-
-<!-- ```{r example} -->
-
-<!-- library(bdlnm) -->
-
-<!-- ## basic example code -->
-
-<!-- ``` -->
