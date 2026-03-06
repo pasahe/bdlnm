@@ -36,6 +36,9 @@ Suggests:
   knitr,
   rmarkdown,
   testthat (>= 3.0.0),
-  sn
+  sn,
+  splines,
+  tidyr,
+  ggplot2
 Additional_repositories: https://inla.r-inla-download.org/R/stable
 Config/Needs/website: rmarkdown
