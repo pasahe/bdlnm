@@ -1,0 +1,83 @@
+# bdlnm
+
+The goal of `bdlnm` is to provide tools for fitting **Bayesian
+distributed lag non-linear models (B-DLNM)** using the **INLA**
+framework. The package allows users to estimate exposure-lag-response
+associations, generate posterior predictions, compute attributable risk
+measures, and estimate optimal exposure values within a fully Bayesian
+framework.
+
+## Key features
+
+The package provides functions to:
+
+- Fit Bayesian distributed lag linear and non-linear models using `INLA`
+- Generate predictions of exposure-lag-response associations
+- Estimate attributable fractions and attributable numbers
+- Estimate optimal exposure values (e.g., minimum risk exposure)
+- Visualize exposure–lag–response associations
+
+More detailed examples and tutorials are available in the package
+vignettes.
+
+## Installation
+
+You can install the development version of bdlnm like so:
+
+``` r
+devtools::install_github("pasahe/bdlnm")
+```
+
+> At least the stable version of INLA 23.4.24 (or newest) must be
+> installed beforehand. You can install the newest stable INLA version
+> by:
+
+``` r
+install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
+```
+
+## Citation
+
+If you use `bdlnm` in your research, please cite:
+
+``` r
+citation("bdlnm")
+```
+
+## Acknowledgements
+
+This package extends the distributed lag modelling framework implemented
+in the `dlnm` package developed by [Gasparrini
+(2011)](https://doi.org/10.18637/jss.v043.i08) to a Bayesian setting.
+
+# Package index
+
+## All functions
+
+- [`attributable()`](https://pasahe.github.io/bdlnm/reference/attributable.md)
+  : Calculate attributable number and fractions from a Bayesian
+  distributed-lag model (B-DLNM).
+- [`bcrosspred()`](https://pasahe.github.io/bdlnm/reference/bcrosspred.md)
+  : Predict exposure-lag-response effects from a Bayesian
+  distributed-lag model (B-DLNM).
+- [`bdlnm()`](https://pasahe.github.io/bdlnm/reference/bdlnm.md) : Fit a
+  Bayesian distributed lag non-linear model (B-DLNM)
+- [`london`](https://pasahe.github.io/bdlnm/reference/london.md) :
+  London temperature and mortality data
+- [`optimal_exposure()`](https://pasahe.github.io/bdlnm/reference/optimal_exposure.md)
+  : Calculate the exposure value that minimizes or maximizes the overall
+  cumulative effect of a Bayesian distributed lag non-linear model
+  (B-DLNM)
+- [`plot(`*`<bcrosspred>`*`)`](https://pasahe.github.io/bdlnm/reference/plot.bcrosspred.md)
+  : Plot the predicted effects from a Bayesian distributed-lag model
+  (B-DLNM).
+- [`plot(`*`<optimal_exposure>`*`)`](https://pasahe.github.io/bdlnm/reference/plot.optimal_exposure.md)
+  : Plot posterior distribution of optimal effect exposure values
+
+# Articles
+
+### All vignettes
+
+- [Attributable
+  measures](https://pasahe.github.io/bdlnm/articles/attributable.md):
+- [bdlnm](https://pasahe.github.io/bdlnm/articles/bdlnm.md):

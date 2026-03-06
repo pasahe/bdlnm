@@ -5,24 +5,24 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>What the Package Does (One Line, Title Case) • bdlnm</title>
+<title>Bayesian Distributed Lag Non-Linear Models (B-DLNM) • bdlnm</title>
 <script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="What the Package Does (One Line, Title Case)">
-<meta name="description" content="What the package does (one paragraph).">
-<meta property="og:description" content="What the package does (one paragraph).">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Bayesian Distributed Lag Non-Linear Models (B-DLNM)">
+<meta name="description" content="Collection of functions for Bayesian distributed lag linear and non-linear models.">
+<meta property="og:description" content="Collection of functions for Bayesian distributed lag linear and non-linear models.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="index.html">bdlnm</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,6 +33,12 @@
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="articles/bdlnm.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="articles/attributable.html">Attributable measures</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -52,30 +58,44 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>The goal of bdlnm is to provide a collection of functions for distributed lag non-linear bayesian models.</p>
+<p>The goal of <code>bdlnm</code> is to provide tools for fitting <strong>Bayesian distributed lag non-linear models (B-DLNM)</strong> using the <strong>INLA</strong> framework. The package allows users to estimate exposure-lag-response associations, generate posterior predictions, compute attributable risk measures, and estimate optimal exposure values within a fully Bayesian framework.</p>
+<div class="section level2">
+<h2 id="key-features">Key features<a class="anchor" aria-label="anchor" href="#key-features"></a>
+</h2>
+<p>The package provides functions to:</p>
+<ul>
+<li>Fit Bayesian distributed lag linear and non-linear models using <code>INLA</code>
+</li>
+<li>Generate predictions of exposure-lag-response associations</li>
+<li>Estimate attributable fractions and attributable numbers</li>
+<li>Estimate optimal exposure values (e.g., minimum risk exposure)</li>
+<li>Visualize exposure–lag–response associations</li>
+</ul>
+<p>More detailed examples and tutorials are available in the package vignettes.</p>
+</div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
 <p>You can install the development version of bdlnm like so:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pkg_install.html" class="external-link">pkg_install</a></span><span class="op">(</span><span class="st">"pasahe/bdlnm"</span><span class="op">)</span></span></code></pre></div>
-<p>Because this is a private repository, you have to get installation permissions.</p>
-<!-- ## Example -->
-<!-- This is a basic example which shows you how to solve a common problem: -->
-<!-- ```{r example} -->
-<!-- library(bdlnm) -->
-<!-- ## basic example code -->
-<!-- ``` -->
-<!-- What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so: -->
-<!-- ```{r cars} -->
-<!-- summary(cars) -->
-<!-- ``` -->
-<!-- You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date. `devtools::build_readme()` is handy for this. -->
-<!-- You can also embed plots, for example: -->
-<!-- ```{r pressure, echo = FALSE} -->
-<!-- plot(pressure) -->
-<!-- ``` -->
-<!-- In that case, don't forget to commit and push the resulting figure files, so they display on GitHub and CRAN. -->
+<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"pasahe/bdlnm"</span><span class="op">)</span></span></code></pre></div>
+<blockquote>
+<p>At least the stable version of INLA 23.4.24 (or newest) must be installed beforehand. You can install the newest stable INLA version by:</p>
+</blockquote>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"INLA"</span>, repos<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"repos"</span><span class="op">)</span>, INLA<span class="op">=</span><span class="st">"https://inla.r-inla-download.org/R/stable"</span><span class="op">)</span>, dep<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
+</h2>
+<p>If you use <code>bdlnm</code> in your research, please cite:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/citation.html" class="external-link">citation</a></span><span class="op">(</span><span class="st">"bdlnm"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="acknowledgements">Acknowledgements<a class="anchor" aria-label="anchor" href="#acknowledgements"></a>
+</h2>
+<p>This package extends the distributed lag modelling framework implemented in the <code>dlnm</code> package developed by <a href="https://doi.org/10.18637/jss.v043.i08" class="external-link">Gasparrini (2011)</a> to a Bayesian setting.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
@@ -113,7 +133,12 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>First Last <br><small class="roles"> Author, maintainer </small>   </li>
+<li>Pau Satorra <br><small class="roles"> Author, maintainer </small> <a href="https://orcid.org/0000-0002-8144-4089" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li>Marcos Quijal-Zamorano <br><small class="roles"> Author </small>   </li>
+<li>Joan Ballester <br><small class="roles"> Author </small>   </li>
+<li>Miguel A. Martínez-Beneito <br><small class="roles"> Author, thesis advisor </small>   </li>
+<li>Marc Marí-Dell'Olmo <br><small class="roles"> Author, thesis advisor </small>   </li>
+<li><a href="authors.html">More about authors...</a></li>
 </ul>
 </div>
 
@@ -132,11 +157,11 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by First Last.</p>
+  <p>Developed by Pau Satorra, Marcos Quijal-Zamorano, Joan Ballester, Miguel A. Martínez-Beneito, Marc Marí-Dell’Olmo.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer>

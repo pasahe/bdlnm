@@ -16,11 +16,11 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">bdlnm</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,12 @@
       <ul class="navbar-nav me-auto">
 <li class="active nav-item"><a class="nav-link" href="../articles/bdlnm.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="../articles/attributable.html">Attributable measures</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -61,18 +67,447 @@
     
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/pasahe/bdlnm" class="external-link">bdlnm</a></span><span class="op">)</span></span></code></pre></div>
-  </main>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/pasahe/bdlnm" class="external-link">bdlnm</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gasparrini/dlnm" class="external-link">dlnm</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">splines</span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">utils</span><span class="op">)</span></span></code></pre></div>
+<div class="section level2">
+<h2 id="london-dataset">london dataset<a class="anchor" aria-label="anchor" href="#london-dataset"></a>
+</h2>
+<p>As an example for this vignette, we will use the built-in dataset
+<code>london</code> which contains daily temperature and mortality data
+from 2000 to 2012.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">london</span><span class="op">)</span></span>
+<span><span class="co">#&gt;         date year dow    tmean mort_00_74 mort_75plus mort</span></span>
+<span><span class="co">#&gt; 1 2000-01-01 2000 Sat 7.642016        101         226  327</span></span>
+<span><span class="co">#&gt; 2 2000-01-02 2000 Sun 8.351041        100         191  291</span></span>
+<span><span class="co">#&gt; 3 2000-01-03 2000 Mon 8.188446        107         205  312</span></span>
+<span><span class="co">#&gt; 4 2000-01-04 2000 Tue 6.320066         97         191  288</span></span>
+<span><span class="co">#&gt; 5 2000-01-05 2000 Wed 6.550981         92         213  305</span></span>
+<span><span class="co">#&gt; 6 2000-01-06 2000 Thu 8.728774         82         213  295</span></span></code></pre></div>
+<p>Using Bayesian Distributed Non-Linear Models (B-DLNM) we will
+estimate the lagged effect of the temperature exposure to mortality in
+the population with more than 75 years old, taking 21 days of lags, in
+the city of London (2000-2012).</p>
+</div>
+<div class="section level2">
+<h2 id="set-dlnm-parameters">Set DLNM parameters<a class="anchor" aria-label="anchor" href="#set-dlnm-parameters"></a>
+</h2>
+<p>We will start by building the crossbasis with the <code>dlnm</code>
+package.</p>
+<p>We will use a natural spline with three knots for the
+exposure–response function, placed at the 10th, 75th, and 90th
+percentiles of daily mean temperature, and a natural spline for the
+lag–response function, with knots equally spaced on the log scale up to
+a maximum lag of 21 days:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Exposure-response and lag-response spline parameters</span></span>
+<span><span class="va">dlnm_var</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    var_prc <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">75</span>, <span class="fl">90</span><span class="op">)</span>,</span>
+<span>    var_fun <span class="op">=</span> <span class="st">"ns"</span>,</span>
+<span>    lag_fun <span class="op">=</span> <span class="st">"ns"</span>,</span>
+<span>    max_lag <span class="op">=</span> <span class="fl">21</span>,</span>
+<span>    lagnk <span class="op">=</span> <span class="fl">3</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span></span>
+<span><span class="co"># Cross-basis parameters</span></span>
+<span><span class="va">argvar</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fun <span class="op">=</span> <span class="va">dlnm_var</span><span class="op">$</span><span class="va">var_fun</span>, </span>
+<span>               knots <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span>, </span>
+<span>                                <span class="va">dlnm_var</span><span class="op">$</span><span class="va">var_prc</span><span class="op">/</span><span class="fl">100</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>               Bound <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">arglag</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fun <span class="op">=</span> <span class="va">dlnm_var</span><span class="op">$</span><span class="va">lag_fun</span>, </span>
+<span>               knots <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/dlnm/man/logknots.html" class="external-link">logknots</a></span><span class="op">(</span><span class="va">dlnm_var</span><span class="op">$</span><span class="va">max_lag</span>, nk <span class="op">=</span> <span class="va">dlnm_var</span><span class="op">$</span><span class="va">lagnk</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create crossbasis</span></span>
+<span><span class="va">cb</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/dlnm/man/crossbasis.html" class="external-link">crossbasis</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span>, lag <span class="op">=</span> <span class="va">dlnm_var</span><span class="op">$</span><span class="va">max_lag</span>, <span class="va">argvar</span>, <span class="va">arglag</span><span class="op">)</span></span></code></pre></div>
+<p>Let’s define the seasonality of the mortality time series using a
+natural spline with 8 degrees of freedom per year, which flexibly
+controls for long-term and seasonal trends in mortality:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Seasonality of mortality time series</span></span>
+<span><span class="va">seas</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/splines/ns.html" class="external-link">ns</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">date</span>, df <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fl">8</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">date</span><span class="op">)</span> <span class="op">/</span> <span class="fl">365.25</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Finally, we also define the temperature values for which predictions
+will be generated. These correspond to an evenly spaced grid with a
+0.1ºC step covering the full range of observed temperatures in the
+data:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Prediction values (equidistant points)</span></span>
+<span><span class="va">temp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span>, by <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="fit-the-model-and-posterior-samples">Fit the model and posterior samples<a class="anchor" aria-label="anchor" href="#fit-the-model-and-posterior-samples"></a>
+</h2>
+<p>Fit the Bayesian DLNM using the function <code><a href="../reference/bdlnm.html">bdlnm()</a></code>. In
+this example, we specify a Poisson model including the cross-basis term,
+a seasonal component, and an indicator for the day of the week. We draw
+1000 samples from the posterior distribution and set a seed for
+reproducibility.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bdlnm.html">bdlnm</a></span><span class="op">(</span><span class="va">mort_75plus</span> <span class="op">~</span> <span class="va">cb</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">dow</span><span class="op">)</span> <span class="op">+</span> <span class="va">seas</span>, data <span class="op">=</span> <span class="va">london</span>, family <span class="op">=</span> <span class="st">"poisson"</span>, sample.arg <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">1000</span>, seed <span class="op">=</span> <span class="fl">5243</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in inla.posterior.sample(n, rfake, intern = intern, use.improved.mean =</span></span>
+<span><span class="co">#&gt; use.improved.mean, : Since 'seed!=0', parallel model is disabled and serial</span></span>
+<span><span class="co">#&gt; model is selected, num.threads='1:1'</span></span></code></pre></div>
+<p>The returned object is of class bdlnm and contains the fitted INLA
+model, the crossbasis objects included in the formula, and posterior
+samples of the estimated coefficients together with their summaries
+(mean, standard deviation, and quantiles).</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">mod</span>, max.level <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="co">#&gt; List of 4</span></span>
+<span><span class="co">#&gt;  $ model               :List of 49</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "class")= chr "inla"</span></span>
+<span><span class="co">#&gt;  $ basis               :List of 1</span></span>
+<span><span class="co">#&gt;  $ coefficients        : num [1:123, 1:1000] 5.3638 -0.1381 -0.0152 -0.0464 0.0602 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">#&gt;  $ coefficients.summary: num [1:123, 1:6] 5.2105 -0.1345 -0.0064 -0.0497 0.05 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">#&gt;  - attr(*, "n_sim")= num 1000</span></span>
+<span><span class="co">#&gt;  - attr(*, "class")= chr "bdlnm"</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="minimum-mortality-temperature">Minimum mortality temperature<a class="anchor" aria-label="anchor" href="#minimum-mortality-temperature"></a>
+</h2>
+<p>We estimate the minimum mortality temperature (MMT), defined as the
+temperature at which the overall mortality risk is minimized. This
+optimal value will later be used to center the estimated relative
+risks.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">mmt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimal_exposure.html">optimal_exposure</a></span><span class="op">(</span><span class="va">mod</span>, exp_at <span class="op">=</span> <span class="va">temp</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Registered S3 methods overwritten by 'crs':</span></span>
+<span><span class="co">#&gt;   method         from</span></span>
+<span><span class="co">#&gt;   print.crs      sf  </span></span>
+<span><span class="co">#&gt;   predict.gsl.bs np</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">mmt</span><span class="op">)</span></span>
+<span><span class="co">#&gt; List of 2</span></span>
+<span><span class="co">#&gt;  $ est    : Named num [1:1000] 19 18.8 18.8 18.8 19.2 18.8 18.9 19.1 18.9 19 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "names")= chr [1:1000] "sample1" "sample2" "sample3" "sample4" ...</span></span>
+<span><span class="co">#&gt;  $ summary: Named num [1:6] 18.9 0.147 18.6 18.9 19.2 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "names")= chr [1:6] "mean" "sd" "0.025quant" "0.5quant" ...</span></span>
+<span><span class="co">#&gt;  - attr(*, "exp_at")= num [1:326] -3.4 -3.3 -3.2 -3.1 -3 -2.9 -2.8 -2.7 -2.6 -2.5 ...</span></span>
+<span><span class="co">#&gt;  - attr(*, "lag_at")= num [1:22] 0 1 2 3 4 5 6 7 8 9 ...</span></span>
+<span><span class="co">#&gt;  - attr(*, "which")= chr "min"</span></span>
+<span><span class="co">#&gt;  - attr(*, "class")= chr "optimal_exposure"</span></span></code></pre></div>
+<p>We can visualize the posterior distribution of the MMT estimates. It
+is useful to inspect this distribution to assess whether multiple
+candidate optimal exposure values exist and to verify that the median
+provides a reasonable centering value:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">mmt</span>, xlab <span class="op">=</span> <span class="st">"Temperature (ºC)"</span>, main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"MMT (Median = "</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mmt</span><span class="op">$</span><span class="va">summary</span><span class="op">[[</span><span class="st">"0.5quant"</span><span class="op">]</span><span class="op">]</span>, <span class="fl">1</span><span class="op">)</span>, <span class="st">"ºC)"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="bdlnm_files/figure-html/unnamed-chunk-9-1.png" class="r-plt" alt="" width="672"></p>
+<p>To make the predictions, we will center the risk at the median of
+these values:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cen</span> <span class="op">&lt;-</span> <span class="va">mmt</span><span class="op">$</span><span class="va">summary</span><span class="op">[[</span><span class="st">"0.5quant"</span><span class="op">]</span><span class="op">]</span> </span>
+<span><span class="va">cen</span></span>
+<span><span class="co">#&gt; [1] 18.9</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="predict-exposure-lag-response-effects">Predict exposure-lag-response effects<a class="anchor" aria-label="anchor" href="#predict-exposure-lag-response-effects"></a>
+</h2>
+<p>Predict the exposure–lag–response association between temperature and
+mortality from the fitted model at the supplied temperature grid,
+centering the predictions at the MMT value:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cpred</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bcrosspred.html">bcrosspred</a></span><span class="op">(</span><span class="va">mod</span>, exp_at <span class="op">=</span> <span class="va">temp</span>, cen <span class="op">=</span> <span class="va">cen</span><span class="op">)</span></span></code></pre></div>
+<p>A <code>bcrosspred</code> object is returned containing posterior
+samples of the estimated exposure–lag–response association for the
+supplied temperature values and lags, together with their summaries.</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">cpred</span><span class="op">)</span></span>
+<span><span class="co">#&gt; List of 16</span></span>
+<span><span class="co">#&gt;  $ exp_at              : num [1:326] -3.4 -3.3 -3.2 -3.1 -3 -2.9 -2.8 -2.7 -2.6 -2.5 ...</span></span>
+<span><span class="co">#&gt;  $ lag_at              : num [1:22] 0 1 2 3 4 5 6 7 8 9 ...</span></span>
+<span><span class="co">#&gt;  $ cen                 : num 18.9</span></span>
+<span><span class="co">#&gt;  $ coefficients        : num [1:20, 1:1000] -0.1381 -0.0152 -0.0464 0.0602 -0.0556 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:20] "cbv1.l1" "cbv1.l2" "cbv1.l3" "cbv1.l4" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:1000] "sample1" "sample2" "sample3" "sample4" ...</span></span>
+<span><span class="co">#&gt;  $ matfit              : num [1:326, 1:22, 1:1000] -0.168 -0.167 -0.166 -0.165 -0.164 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 3</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:326] "-3.4" "-3.3" "-3.2" "-3.1" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:22] "lag0" "lag1" "lag2" "lag3" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:1000] "sample1" "sample2" "sample3" "sample4" ...</span></span>
+<span><span class="co">#&gt;  $ allfit              : num [1:326, 1:1000] 0.683 0.677 0.672 0.666 0.661 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:326] "-3.4" "-3.3" "-3.2" "-3.1" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:1000] "sample1" "sample2" "sample3" "sample4" ...</span></span>
+<span><span class="co">#&gt;  $ matRRfit            : num [1:326, 1:22, 1:1000] 0.846 0.846 0.847 0.848 0.848 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 3</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:326] "-3.4" "-3.3" "-3.2" "-3.1" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:22] "lag0" "lag1" "lag2" "lag3" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:1000] "sample1" "sample2" "sample3" "sample4" ...</span></span>
+<span><span class="co">#&gt;  $ allRRfit            : num [1:326, 1:1000] 1.98 1.97 1.96 1.95 1.94 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:326] "-3.4" "-3.3" "-3.2" "-3.1" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:1000] "sample1" "sample2" "sample3" "sample4" ...</span></span>
+<span><span class="co">#&gt;  $ coefficients.summary: num [1:20, 1:6] -0.1345 -0.0064 -0.0497 0.05 -0.0491 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:20] "cbv1.l1" "cbv1.l2" "cbv1.l3" "cbv1.l4" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:6] "mean" "sd" "0.025quant" "0.5quant" ...</span></span>
+<span><span class="co">#&gt;  $ matfit.summary      : num [1:326, 1:22, 1:6] -0.16 -0.159 -0.158 -0.157 -0.156 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 3</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:326] "-3.4" "-3.3" "-3.2" "-3.1" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:22] "lag0" "lag1" "lag2" "lag3" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:6] "mean" "sd" "0.025quant" "0.5quant" ...</span></span>
+<span><span class="co">#&gt;  $ allfit.summary      : num [1:326, 1:6] 0.61 0.606 0.601 0.597 0.593 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:326] "-3.4" "-3.3" "-3.2" "-3.1" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:6] "mean" "sd" "0.025quant" "0.5quant" ...</span></span>
+<span><span class="co">#&gt;  $ matRRfit.summary    : num [1:326, 1:22, 1:6] 0.853 0.853 0.854 0.855 0.855 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 3</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:326] "-3.4" "-3.3" "-3.2" "-3.1" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:22] "lag0" "lag1" "lag2" "lag3" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:6] "mean" "sd" "0.025quant" "0.5quant" ...</span></span>
+<span><span class="co">#&gt;  $ allRRfit.summary    : num [1:326, 1:6] 1.84 1.83 1.82 1.82 1.81 ...</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:326] "-3.4" "-3.3" "-3.2" "-3.1" ...</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:6] "mean" "sd" "0.025quant" "0.5quant" ...</span></span>
+<span><span class="co">#&gt;  $ ci.level            : num 0.95</span></span>
+<span><span class="co">#&gt;  $ model.class         : chr "inla"</span></span>
+<span><span class="co">#&gt;  $ model.link          : chr "log"</span></span>
+<span><span class="co">#&gt;  - attr(*, "class")= chr "bcrosspred"</span></span></code></pre></div>
+<p>For instance, the estimated <code>crossbasis</code> coefficients are
+stored as:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cpred</span><span class="op">$</span><span class="va">coefficients</span> <span class="op">|&gt;</span> </span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">5</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;             sample1      sample2      sample3      sample4     sample5</span></span>
+<span><span class="co">#&gt; cbv1.l1 -0.13808615 -0.132009676 -0.129815057 -0.119547680 -0.13601590</span></span>
+<span><span class="co">#&gt; cbv1.l2 -0.01517507 -0.009297762  0.008822308 -0.003421643 -0.00598265</span></span>
+<span><span class="co">#&gt; cbv1.l3 -0.04639142 -0.036821678 -0.058903768 -0.046856154 -0.04127753</span></span>
+<span><span class="co">#&gt; cbv1.l4  0.06021475  0.046470398  0.035853137  0.038675889  0.04695226</span></span>
+<span><span class="co">#&gt; cbv1.l5 -0.05556018 -0.049523828 -0.030615227 -0.036304584 -0.04953768</span></span></code></pre></div>
+<p>The relative risks (RR) for each temperature–lag combination are also
+stored in an array for each posterior sample. For example, for the first
+sample:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cpred</span><span class="op">$</span><span class="va">matRRfit</span><span class="op">[</span>, , <span class="st">"sample1"</span><span class="op">]</span> <span class="op">|&gt;</span> </span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt;           lag0     lag1     lag2     lag3     lag4     lag5     lag6     lag7</span></span>
+<span><span class="co">#&gt; -3.4 0.8457344 1.076681 1.144447 1.101760 1.065751 1.044707 1.034080 1.029875</span></span>
+<span><span class="co">#&gt; -3.3 0.8464125 1.075891 1.143224 1.100929 1.065235 1.044379 1.033854 1.029698</span></span>
+<span><span class="co">#&gt; -3.2 0.8470911 1.075103 1.142002 1.100099 1.064720 1.044051 1.033628 1.029521</span></span>
+<span><span class="co">#&gt; -3.1 0.8477701 1.074315 1.140781 1.099269 1.064204 1.043724 1.033403 1.029344</span></span>
+<span><span class="co">#&gt; -3   0.8484495 1.073528 1.139563 1.098441 1.063690 1.043396 1.033177 1.029167</span></span>
+<span><span class="co">#&gt; -2.9 0.8491293 1.072742 1.138346 1.097613 1.063175 1.043069 1.032952 1.028990</span></span>
+<span><span class="co">#&gt;          lag8     lag9    lag10    lag11    lag12    lag13    lag14    lag15</span></span>
+<span><span class="co">#&gt; -3.4 1.028368 1.027321 1.026551 1.026034 1.025748 1.025668 1.025771 1.026036</span></span>
+<span><span class="co">#&gt; -3.3 1.028214 1.027183 1.026421 1.025906 1.025616 1.025528 1.025618 1.025866</span></span>
+<span><span class="co">#&gt; -3.2 1.028061 1.027044 1.026291 1.025778 1.025485 1.025388 1.025465 1.025696</span></span>
+<span><span class="co">#&gt; -3.1 1.027908 1.026906 1.026161 1.025650 1.025353 1.025248 1.025312 1.025526</span></span>
+<span><span class="co">#&gt; -3   1.027754 1.026768 1.026031 1.025523 1.025222 1.025108 1.025159 1.025356</span></span>
+<span><span class="co">#&gt; -2.9 1.027601 1.026629 1.025901 1.025395 1.025090 1.024968 1.025006 1.025186</span></span>
+<span><span class="co">#&gt;         lag16    lag17    lag18    lag19    lag20    lag21</span></span>
+<span><span class="co">#&gt; -3.4 1.026439 1.026957 1.027567 1.028246 1.028972 1.029722</span></span>
+<span><span class="co">#&gt; -3.3 1.026248 1.026743 1.027327 1.027980 1.028677 1.029398</span></span>
+<span><span class="co">#&gt; -3.2 1.026058 1.026529 1.027088 1.027713 1.028383 1.029074</span></span>
+<span><span class="co">#&gt; -3.1 1.025867 1.026316 1.026849 1.027447 1.028088 1.028751</span></span>
+<span><span class="co">#&gt; -3   1.025677 1.026102 1.026610 1.027181 1.027794 1.028428</span></span>
+<span><span class="co">#&gt; -2.9 1.025487 1.025889 1.026372 1.026916 1.027500 1.028105</span></span></code></pre></div>
+<p>The overall cumulative effects for each temperature (summing across
+all lags) are stored in:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cpred</span><span class="op">$</span><span class="va">allRRfit</span> <span class="op">|&gt;</span> </span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">5</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;       sample1  sample2  sample3  sample4  sample5</span></span>
+<span><span class="co">#&gt; -3.4 1.979549 1.756762 1.694665 1.770495 1.831634</span></span>
+<span><span class="co">#&gt; -3.3 1.968597 1.751043 1.689260 1.762785 1.823671</span></span>
+<span><span class="co">#&gt; -3.2 1.957709 1.745343 1.683873 1.755110 1.815744</span></span>
+<span><span class="co">#&gt; -3.1 1.946884 1.739662 1.678505 1.747471 1.807853</span></span>
+<span><span class="co">#&gt; -3   1.936125 1.734002 1.673155 1.739868 1.800000</span></span></code></pre></div>
+<p>Summaries of these effects across posterior samples are also
+available:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cpred</span><span class="op">$</span><span class="va">matRRfit.summary</span> <span class="op">|&gt;</span> </span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span></span>
+<span><span class="co">#&gt; , , mean</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;           lag0     lag1     lag2     lag3     lag4     lag5     lag6     lag7</span></span>
+<span><span class="co">#&gt; -3.4 0.8525639 1.071110 1.134564 1.094336 1.060407 1.040591 1.030615 1.026706</span></span>
+<span><span class="co">#&gt; -3.3 0.8532609 1.070506 1.133563 1.093654 1.059982 1.040316 1.030419 1.026544</span></span>
+<span><span class="co">#&gt; -3.2 0.8539585 1.069903 1.132563 1.092972 1.059557 1.040041 1.030222 1.026383</span></span>
+<span><span class="co">#&gt; -3.1 0.8546564 1.069301 1.131565 1.092291 1.059132 1.039766 1.030026 1.026221</span></span>
+<span><span class="co">#&gt; -3   0.8553548 1.068699 1.130567 1.091611 1.058707 1.039491 1.029830 1.026060</span></span>
+<span><span class="co">#&gt;          lag8     lag9    lag10    lag11    lag12    lag13    lag14    lag15</span></span>
+<span><span class="co">#&gt; -3.4 1.025330 1.024364 1.023636 1.023126 1.022813 1.022677 1.022700 1.022861</span></span>
+<span><span class="co">#&gt; -3.3 1.025184 1.024229 1.023508 1.023002 1.022690 1.022554 1.022573 1.022728</span></span>
+<span><span class="co">#&gt; -3.2 1.025038 1.024094 1.023380 1.022878 1.022568 1.022431 1.022446 1.022596</span></span>
+<span><span class="co">#&gt; -3.1 1.024892 1.023959 1.023253 1.022755 1.022446 1.022307 1.022319 1.022464</span></span>
+<span><span class="co">#&gt; -3   1.024746 1.023824 1.023125 1.022631 1.022324 1.022184 1.022193 1.022331</span></span>
+<span><span class="co">#&gt;         lag16    lag17    lag18    lag19    lag20    lag21</span></span>
+<span><span class="co">#&gt; -3.4 1.023140 1.023518 1.023975 1.024491 1.025048 1.025624</span></span>
+<span><span class="co">#&gt; -3.3 1.023000 1.023370 1.023817 1.024323 1.024868 1.025433</span></span>
+<span><span class="co">#&gt; -3.2 1.022861 1.023221 1.023659 1.024154 1.024688 1.025242</span></span>
+<span><span class="co">#&gt; -3.1 1.022721 1.023073 1.023501 1.023986 1.024509 1.025051</span></span>
+<span><span class="co">#&gt; -3   1.022582 1.022925 1.023344 1.023818 1.024329 1.024860</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; , , sd</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;          lag0     lag1     lag2     lag3     lag4     lag5     lag6     lag7</span></span>
+<span><span class="co">#&gt; -3.4 1.023869 1.011449 1.013375 1.006872 1.006088 1.006823 1.006248 1.004875</span></span>
+<span><span class="co">#&gt; -3.3 1.023576 1.011306 1.013211 1.006790 1.006015 1.006740 1.006172 1.004815</span></span>
+<span><span class="co">#&gt; -3.2 1.023284 1.011164 1.013047 1.006709 1.005943 1.006658 1.006096 1.004755</span></span>
+<span><span class="co">#&gt; -3.1 1.022994 1.011023 1.012885 1.006628 1.005872 1.006576 1.006021 1.004696</span></span>
+<span><span class="co">#&gt; -3   1.022706 1.010883 1.012723 1.006548 1.005801 1.006495 1.005946 1.004638</span></span>
+<span><span class="co">#&gt;          lag8     lag9    lag10    lag11    lag12    lag13    lag14    lag15</span></span>
+<span><span class="co">#&gt; -3.4 1.003831 1.003630 1.003866 1.004134 1.004256 1.004198 1.003998 1.003757</span></span>
+<span><span class="co">#&gt; -3.3 1.003783 1.003584 1.003817 1.004081 1.004202 1.004145 1.003948 1.003710</span></span>
+<span><span class="co">#&gt; -3.2 1.003736 1.003538 1.003768 1.004029 1.004149 1.004092 1.003898 1.003663</span></span>
+<span><span class="co">#&gt; -3.1 1.003688 1.003493 1.003719 1.003977 1.004095 1.004040 1.003848 1.003617</span></span>
+<span><span class="co">#&gt; -3   1.003642 1.003448 1.003671 1.003925 1.004042 1.003988 1.003799 1.003571</span></span>
+<span><span class="co">#&gt;         lag16    lag17    lag18    lag19    lag20    lag21</span></span>
+<span><span class="co">#&gt; -3.4 1.003633 1.003811 1.004392 1.005336 1.006539 1.007899</span></span>
+<span><span class="co">#&gt; -3.3 1.003588 1.003764 1.004337 1.005270 1.006457 1.007800</span></span>
+<span><span class="co">#&gt; -3.2 1.003543 1.003716 1.004283 1.005203 1.006376 1.007701</span></span>
+<span><span class="co">#&gt; -3.1 1.003498 1.003670 1.004228 1.005138 1.006295 1.007603</span></span>
+<span><span class="co">#&gt; -3   1.003454 1.003623 1.004175 1.005072 1.006214 1.007506</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; , , 0.025quant</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;           lag0     lag1     lag2     lag3     lag4     lag5     lag6     lag7</span></span>
+<span><span class="co">#&gt; -3.4 0.8125569 1.048275 1.106863 1.079979 1.048024 1.026518 1.016999 1.016606</span></span>
+<span><span class="co">#&gt; -3.3 0.8138185 1.048004 1.106306 1.079455 1.047745 1.026469 1.017054 1.016582</span></span>
+<span><span class="co">#&gt; -3.2 0.8150840 1.047739 1.105655 1.078806 1.047467 1.026421 1.017110 1.016534</span></span>
+<span><span class="co">#&gt; -3.1 0.8163510 1.047474 1.104988 1.078233 1.047189 1.026372 1.017167 1.016471</span></span>
+<span><span class="co">#&gt; -3   0.8176194 1.047209 1.104454 1.077842 1.046901 1.026282 1.017223 1.016409</span></span>
+<span><span class="co">#&gt;          lag8     lag9    lag10    lag11    lag12    lag13    lag14    lag15</span></span>
+<span><span class="co">#&gt; -3.4 1.017900 1.017343 1.016267 1.015137 1.014707 1.014746 1.015089 1.015411</span></span>
+<span><span class="co">#&gt; -3.3 1.017816 1.017305 1.016202 1.015096 1.014664 1.014745 1.015087 1.015347</span></span>
+<span><span class="co">#&gt; -3.2 1.017733 1.017266 1.016239 1.015082 1.014614 1.014744 1.015080 1.015267</span></span>
+<span><span class="co">#&gt; -3.1 1.017688 1.017196 1.016282 1.015073 1.014585 1.014693 1.015048 1.015187</span></span>
+<span><span class="co">#&gt; -3   1.017630 1.017126 1.016201 1.015065 1.014602 1.014657 1.015019 1.015156</span></span>
+<span><span class="co">#&gt;         lag16    lag17    lag18    lag19    lag20    lag21</span></span>
+<span><span class="co">#&gt; -3.4 1.015816 1.015894 1.015614 1.013912 1.012342 1.010621</span></span>
+<span><span class="co">#&gt; -3.3 1.015765 1.015859 1.015522 1.013860 1.012291 1.010651</span></span>
+<span><span class="co">#&gt; -3.2 1.015710 1.015819 1.015474 1.013818 1.012259 1.010707</span></span>
+<span><span class="co">#&gt; -3.1 1.015657 1.015788 1.015425 1.013816 1.012217 1.010763</span></span>
+<span><span class="co">#&gt; -3   1.015602 1.015745 1.015401 1.013813 1.012123 1.010819</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; , , 0.5quant</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;           lag0     lag1     lag2     lag3     lag4     lag5     lag6     lag7</span></span>
+<span><span class="co">#&gt; -3.4 0.8526943 1.070839 1.134673 1.094315 1.060496 1.040538 1.030622 1.026605</span></span>
+<span><span class="co">#&gt; -3.3 0.8533806 1.070176 1.133677 1.093683 1.060051 1.040269 1.030416 1.026431</span></span>
+<span><span class="co">#&gt; -3.2 0.8540791 1.069575 1.132726 1.093028 1.059595 1.039999 1.030211 1.026253</span></span>
+<span><span class="co">#&gt; -3.1 0.8547302 1.068958 1.131754 1.092297 1.059188 1.039711 1.030013 1.026083</span></span>
+<span><span class="co">#&gt; -3   0.8553931 1.068470 1.130761 1.091622 1.058799 1.039463 1.029827 1.025915</span></span>
+<span><span class="co">#&gt;          lag8     lag9    lag10    lag11    lag12    lag13    lag14    lag15</span></span>
+<span><span class="co">#&gt; -3.4 1.025283 1.024389 1.023543 1.022921 1.022569 1.022505 1.022549 1.022799</span></span>
+<span><span class="co">#&gt; -3.3 1.025122 1.024265 1.023405 1.022813 1.022456 1.022387 1.022433 1.022671</span></span>
+<span><span class="co">#&gt; -3.2 1.024960 1.024141 1.023247 1.022702 1.022349 1.022295 1.022310 1.022522</span></span>
+<span><span class="co">#&gt; -3.1 1.024810 1.024009 1.023136 1.022597 1.022226 1.022135 1.022178 1.022414</span></span>
+<span><span class="co">#&gt; -3   1.024694 1.023867 1.023021 1.022470 1.022101 1.022013 1.022050 1.022282</span></span>
+<span><span class="co">#&gt;         lag16    lag17    lag18    lag19    lag20    lag21</span></span>
+<span><span class="co">#&gt; -3.4 1.023184 1.023538 1.023998 1.024482 1.024965 1.025443</span></span>
+<span><span class="co">#&gt; -3.3 1.023043 1.023388 1.023820 1.024348 1.024802 1.025226</span></span>
+<span><span class="co">#&gt; -3.2 1.022902 1.023220 1.023660 1.024207 1.024604 1.025030</span></span>
+<span><span class="co">#&gt; -3.1 1.022757 1.023076 1.023484 1.024038 1.024436 1.024850</span></span>
+<span><span class="co">#&gt; -3   1.022602 1.022911 1.023315 1.023871 1.024326 1.024682</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; , , 0.975quant</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;           lag0     lag1     lag2     lag3     lag4     lag5     lag6     lag7</span></span>
+<span><span class="co">#&gt; -3.4 0.8921210 1.095807 1.162632 1.109167 1.072757 1.054492 1.043252 1.036300</span></span>
+<span><span class="co">#&gt; -3.3 0.8923222 1.094841 1.161429 1.108287 1.072255 1.054026 1.042931 1.036002</span></span>
+<span><span class="co">#&gt; -3.2 0.8925132 1.093928 1.160279 1.107384 1.071718 1.053556 1.042544 1.035705</span></span>
+<span><span class="co">#&gt; -3.1 0.8926927 1.093005 1.159125 1.106481 1.071134 1.053077 1.042177 1.035408</span></span>
+<span><span class="co">#&gt; -3   0.8929112 1.092090 1.157978 1.105579 1.070632 1.052596 1.041801 1.035148</span></span>
+<span><span class="co">#&gt;          lag8     lag9    lag10    lag11    lag12    lag13    lag14    lag15</span></span>
+<span><span class="co">#&gt; -3.4 1.032881 1.031477 1.031707 1.031781 1.031979 1.031572 1.031042 1.030689</span></span>
+<span><span class="co">#&gt; -3.3 1.032594 1.031257 1.031482 1.031509 1.031651 1.031349 1.030788 1.030453</span></span>
+<span><span class="co">#&gt; -3.2 1.032352 1.031036 1.031263 1.031275 1.031412 1.031126 1.030561 1.030202</span></span>
+<span><span class="co">#&gt; -3.1 1.032099 1.030815 1.031044 1.031041 1.031173 1.030903 1.030388 1.029949</span></span>
+<span><span class="co">#&gt; -3   1.031797 1.030595 1.030826 1.030869 1.030934 1.030673 1.030094 1.029707</span></span>
+<span><span class="co">#&gt;         lag16    lag17    lag18    lag19    lag20    lag21</span></span>
+<span><span class="co">#&gt; -3.4 1.030608 1.031391 1.033244 1.035166 1.038253 1.041319</span></span>
+<span><span class="co">#&gt; -3.3 1.030400 1.031183 1.032956 1.034849 1.037845 1.040882</span></span>
+<span><span class="co">#&gt; -3.2 1.030170 1.030935 1.032668 1.034532 1.037438 1.040535</span></span>
+<span><span class="co">#&gt; -3.1 1.029878 1.030678 1.032380 1.034216 1.037200 1.040171</span></span>
+<span><span class="co">#&gt; -3   1.029591 1.030421 1.032092 1.033909 1.036806 1.039773</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; , , mode</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;           lag0     lag1     lag2     lag3     lag4     lag5     lag6     lag7</span></span>
+<span><span class="co">#&gt; -3.4 0.8564739 1.069470 1.137046 1.094306 1.060852 1.038516 1.028928 1.026278</span></span>
+<span><span class="co">#&gt; -3.3 0.8568107 1.068749 1.136055 1.093560 1.060539 1.038327 1.028809 1.026113</span></span>
+<span><span class="co">#&gt; -3.2 0.8571546 1.068035 1.134850 1.092818 1.060162 1.038140 1.028691 1.025950</span></span>
+<span><span class="co">#&gt; -3.1 0.8575055 1.067324 1.133865 1.092079 1.059692 1.037954 1.028574 1.025770</span></span>
+<span><span class="co">#&gt; -3   0.8580752 1.066618 1.132671 1.091321 1.059317 1.037767 1.028552 1.025622</span></span>
+<span><span class="co">#&gt;          lag8     lag9    lag10    lag11    lag12    lag13    lag14    lag15</span></span>
+<span><span class="co">#&gt; -3.4 1.025338 1.024247 1.022982 1.021905 1.021693 1.022412 1.022519 1.022659</span></span>
+<span><span class="co">#&gt; -3.3 1.025180 1.024113 1.022866 1.021801 1.021518 1.022223 1.022327 1.022549</span></span>
+<span><span class="co">#&gt; -3.2 1.025019 1.023978 1.022687 1.021695 1.021413 1.022034 1.022197 1.022438</span></span>
+<span><span class="co">#&gt; -3.1 1.024814 1.023842 1.022571 1.021588 1.021236 1.021845 1.022022 1.022270</span></span>
+<span><span class="co">#&gt; -3   1.024630 1.023759 1.022393 1.021479 1.021127 1.021656 1.021855 1.022157</span></span>
+<span><span class="co">#&gt;         lag16    lag17    lag18    lag19    lag20    lag21</span></span>
+<span><span class="co">#&gt; -3.4 1.023519 1.023611 1.023974 1.024678 1.024571 1.024702</span></span>
+<span><span class="co">#&gt; -3.3 1.023449 1.023408 1.023821 1.024503 1.024384 1.024500</span></span>
+<span><span class="co">#&gt; -3.2 1.023324 1.023205 1.023586 1.024426 1.024197 1.024297</span></span>
+<span><span class="co">#&gt; -3.1 1.023200 1.023070 1.023434 1.024250 1.024010 1.024094</span></span>
+<span><span class="co">#&gt; -3   1.023075 1.022870 1.023282 1.024169 1.023936 1.023892</span></span>
+<span></span>
+<span><span class="va">cpred</span><span class="op">$</span><span class="va">allRRfit.summary</span> <span class="op">|&gt;</span> </span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span></span>
+<span><span class="co">#&gt;          mean       sd 0.025quant 0.5quant 0.975quant     mode</span></span>
+<span><span class="co">#&gt; -3.4 1.840299 1.064665   1.638181 1.835435   2.085973 1.830668</span></span>
+<span><span class="co">#&gt; -3.3 1.832510 1.063836   1.632333 1.827065   2.073262 1.824926</span></span>
+<span><span class="co">#&gt; -3.2 1.824755 1.063012   1.626506 1.819506   2.060832 1.817343</span></span>
+<span><span class="co">#&gt; -3.1 1.817034 1.062195   1.620723 1.811353   2.048443 1.811584</span></span>
+<span><span class="co">#&gt; -3   1.809349 1.061385   1.615515 1.803692   2.035540 1.804041</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="plot">Plot<a class="anchor" aria-label="anchor" href="#plot"></a>
+</h2>
+<p>Several visualizations can be produced from these predictions using
+the <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> method.</p>
+<p>For example, we can plot the overall cumulative effect for each
+temperature value (suming across all lags):</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">cpred</span>, <span class="st">"overall"</span>, xlab <span class="op">=</span> <span class="st">"Temperature (ºC)"</span>, ylab <span class="op">=</span> <span class="st">"Relative Risk"</span>, col <span class="op">=</span> <span class="fl">4</span>, main<span class="op">=</span><span class="st">"Overall"</span>, log <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="bdlnm_files/figure-html/unnamed-chunk-17-1.png" class="r-plt" alt="" width="672"></p>
+<p>Alternatively, we can display the posterior sampling variability by
+plotting the curves from all posterior samples instead of the credible
+interval:</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">cpred</span>, <span class="st">"overall"</span>, xlab <span class="op">=</span> <span class="st">"Temperature (ºC)"</span>, ylab <span class="op">=</span> <span class="st">"Relative Risk"</span>, col <span class="op">=</span> <span class="fl">4</span>, main<span class="op">=</span><span class="st">"Overall"</span>, log <span class="op">=</span> <span class="st">"y"</span>, ci <span class="op">=</span> <span class="st">"sampling"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="bdlnm_files/figure-html/unnamed-chunk-18-1.png" class="r-plt" alt="" width="672"></p>
+<p>We can also visualize the full exposure–lag–response association
+using a 3-D surface:</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">cpred</span>, <span class="st">"3d"</span>, zlab <span class="op">=</span> <span class="st">"Relative risk"</span>, col <span class="op">=</span> <span class="fl">4</span>, lphi <span class="op">=</span> <span class="fl">60</span>, cex.axis <span class="op">=</span> <span class="fl">0.6</span>, xlab <span class="op">=</span> <span class="st">"Temperature (ºC)"</span>, main <span class="op">=</span> <span class="st">"3D graph of temperature effect"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="bdlnm_files/figure-html/unnamed-chunk-19-1.png" class="r-plt" alt="" width="672"></p>
+<p>A contour plot provides a 2-D projection of the same
+relationship:</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">cpred</span>, <span class="st">"contour"</span>, xlab <span class="op">=</span> <span class="st">"Temperature (ºC)"</span>, ylab <span class="op">=</span> <span class="st">"Lag"</span>, main <span class="op">=</span> <span class="st">"Contour plot"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="bdlnm_files/figure-html/unnamed-chunk-20-1.png" class="r-plt" alt="" width="672"></p>
+<p>We can also examine the lag–response association for a high
+temperature (e.g., the 99th percentile):</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">htemp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span>, <span class="fl">0.99</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">cpred</span> , <span class="st">"slices"</span>, ci <span class="op">=</span> <span class="st">"bars"</span>, type <span class="op">=</span> <span class="st">"p"</span>, pch <span class="op">=</span> <span class="fl">19</span>, exp_at <span class="op">=</span> <span class="va">htemp</span>, ylab<span class="op">=</span><span class="st">"RR"</span>, main<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"Association for a high temperature ("</span>, <span class="va">htemp</span>, <span class="st">"ºC)"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="bdlnm_files/figure-html/unnamed-chunk-21-1.png" class="r-plt" alt="" width="672"></p>
+<p>Or the exposure–response association at lag 0:</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">cpred</span> , <span class="st">"slices"</span>, lag_at <span class="op">=</span> <span class="fl">0</span>, col<span class="op">=</span><span class="fl">4</span>, ylab<span class="op">=</span><span class="st">"RR"</span>, main<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"Association at lag 0"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="bdlnm_files/figure-html/unnamed-chunk-22-1.png" class="r-plt" alt="" width="672"></p>
+</div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by First Last.</p>
+  <p>Developed by Pau Satorra, Marcos Quijal-Zamorano, Joan Ballester, Miguel A. Martínez-Beneito, Marc Marí-Dell’Olmo.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer>
