@@ -67,7 +67,7 @@ cen
 
 The MMT used to center the relative risks is `r cen`ºC. 
 
-With all set, we can calculate attributable numbers and fractions. we can compute attributable numbers and attributable fractions. Gasparrini and Leone (2014) describe the methodology in detail: [Attributable risk from distributed lag models](https://doi.org/10.1186/1471-2288-14-55).
+With all set, we can calculate attributable numbers and fractions. Gasparrini and Leone (2014) describe the methodology in detail: [Attributable risk from distributed lag models](https://doi.org/10.1186/1471-2288-14-55).
 
 We can compute attributable fractions and attributable numbers using the backward algorithm, which quantifies the current burden attributable to the set of exposure events experienced in the past:
 

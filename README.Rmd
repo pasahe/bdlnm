@@ -22,7 +22,17 @@ knitr::opts_chunk$set(
 [![Codecov test coverage](https://codecov.io/gh/pasahe/bdlnm/graph/badge.svg)](https://app.codecov.io/gh/pasahe/bdlnm)
 <!-- badges: end -->
 
-The goal of bdlnm is to provide a collection of functions for distributed lag linear (DLMs) and non-linear (DLNMs) bayesian models.
+The goal of `bdlnm` is to provide tools for fitting **Bayesian distributed lagged non-linear models (B-DLNM)** using the **INLA** framework. The package allows users to estimate exposure-lag-response associations, generate posterior predictions, compute attributable risk measures, and estimate optimal exposure values within a fully Bayesian framework.
+
+## Key features
+
+The package provides functions to:
+
+- Fit Bayesian distributed lag linear and non-linear models using `INLA`
+- Estimate posterior predictions of exposure-lag-response associations
+- Estimate posterior predictions of attributable fractions and attributable numbers
+- Estimate posteroir predictions of optimal exposure values (e.g., minimum risk exposure)
+- Visualize exposure-lag-response associations
 
 ## Installation
 
@@ -32,8 +42,20 @@ You can install the development version of bdlnm like so:
 devtools::install_github("pasahe/bdlnm")
 ```
 
->  At least the stable version of INLA 23.4.24 (or newest) must be installed previously. You can install the newest stable INLA version by:
+>  At least the stable version of INLA 23.4.24 (or newest) must be installed beforehand. You can install the newest stable INLA version by:
 
 ``` r
 install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
 ```
+
+## Citation
+
+If you use `bdlnm` in your research, please cite:
+
+``` r
+citation("bdlnm")
+```
+
+## Acknowledgements
+
+This package extends the distributed lag modelling framework implemented in the `dlnm` package developed by [Gasparrini (2011)](https://doi.org/10.18637/jss.v043.i08) to a Bayesian setting.
