@@ -89,6 +89,7 @@
 #'
 #' # Model
 #'
+#' if (bdlnm:::check_inla()) {
 #' mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
 #'              data = london,
 #'              family = "poisson",
@@ -104,7 +105,7 @@
 #' # Attributable numbers and fractions (using the backwards algorithm):
 #' attr <- attributable(mod, london, name_date = "date",
 #' name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
-#'
+#' }
 #'
 #'
 attributable <- function(
@@ -124,7 +125,7 @@ attributable <- function(
   ## Basic checks
   ## -----------------------
 
-  # object
+  # check object
   check_bdlnm(object)
 
   # basis

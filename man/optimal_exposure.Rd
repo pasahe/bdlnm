@@ -79,12 +79,13 @@ This function cannot be used when the specified basis function is one of \code{t
  # Prediction values (equidistant points)
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
+if (bdlnm:::check_inla()) {
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
 
  # Find minimum risk exposure value
  mmt <- optimal_exposure(mod, "cb", exp_at = temp)
-
+}
 
 }
 \references{

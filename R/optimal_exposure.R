@@ -72,12 +72,13 @@
 #'  # Prediction values (equidistant points)
 #'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
+#' if (bdlnm:::check_inla()) {
 #'  # Fit the model
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
 #'
 #'  # Find minimum risk exposure value
 #'  mmt <- optimal_exposure(mod, "cb", exp_at = temp)
-#'
+#' }
 #'
 optimal_exposure <- function(
   object,

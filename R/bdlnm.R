@@ -97,8 +97,10 @@
 #'  # Prediction values (equidistant points)
 #'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
+#' if (bdlnm:::check_inla()) {
 #'  # Fit the model
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
+#' }
 #'
 #'
 #'
@@ -187,14 +189,7 @@ bdlnm <- function(
   # ----------------------------
   # Check for INLA availability
   # ----------------------------
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    cli::cli_abort(
-      c(
-        "Package {.pkg INLA} is required to fit the model but is not installed.",
-        "i" = "Install from the R-INLA repository (https://www.r-inla.org/) and restart R."
-      )
-    )
-  }
+  check_inla(error = TRUE)
 
   # ----------------------------
   # Fit INLA model

@@ -96,11 +96,13 @@ This function is inspired by \code{\link[dlnm:crosspred]{dlnm::crosspred()}} (Ga
  # Prediction values (equidistant points)
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
+if (bdlnm:::check_inla()) {
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
 
  # Prediction
  cpred <- bcrosspred(mod, exp_at = temp)
+}
 
 }
 \references{

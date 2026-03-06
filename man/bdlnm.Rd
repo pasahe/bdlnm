@@ -21,7 +21,7 @@ bdlnm(
 
 \item{family}{Character. Family name passed to \code{\link[INLA:inla]{INLA::inla()}} (default \code{"gaussian"}).}
 
-\item{sample.arg}{List of arguments passed to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. Defaults to \code{list(n = 1000, seed = 0L)} (draws \code{1000} posterior samples; seed at random). For reproducible sampling set a non-zero numeric \code{seed}.}
+\item{sample.arg}{List of arguments passed to \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}}. Defaults to \code{list(n = 1000, seed = 0L)} (draws \code{1000} posterior samples; seed at random). For reproducible sampling set a non-zero numeric \code{seed}.}
 
 \item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}). Credible interval quantiles are computed to summarize coefficients from the posterior samples.}
 
@@ -34,12 +34,12 @@ An S3 object of class \code{"bdlnm"} with the following components:
 \itemize{
 \item \code{model}: the fitted \code{INLA} model returned by \code{\link[INLA:inla]{INLA::inla()}}.
 \item \code{basis}: a named list containing all basis of class \code{crossbasis} or \code{onebasis} included in the model \code{formula}.
-\item \code{coefficients}: a matrix whose columns are posterior sample draws returned by \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}} (named \code{sample1}, \code{sample2}, ...) and whose rows are all model coefficients.
+\item \code{coefficients}: a matrix whose columns are posterior sample draws returned by \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}} (named \code{sample1}, \code{sample2}, ...) and whose rows are all model coefficients.
 \item \code{coefficients.summary}: a matrix of summary statistics for all the posterior samples stored in \code{coefficients} (mean, sd, quantiles, mode).
 }
 }
 \description{
-Fit a distributed lag non-linear model (DLNM) using a Bayesian framework. The function calls \code{\link[INLA:inla]{INLA::inla()}} to fit the model and then draws posterior samples of the model fixed effects with \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. See the package vignette for worked examples and recommended workflows.
+Fit a distributed lag non-linear model (DLNM) using a Bayesian framework. The function calls \code{\link[INLA:inla]{INLA::inla()}} to fit the model and then draws posterior samples of the model fixed effects with \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}}. See the package vignette for worked examples and recommended workflows.
 }
 \section{Distributed lag non-linear model}{
 
@@ -50,7 +50,7 @@ The fitted model must be a distributed lag linear or non-linear model (DLNM). DL
 
 Models are fit using Integrated Nested Laplace approximation (INLA) via \code{\link[INLA:inla]{INLA::inla()}}. INLA is a method for approximate Bayesian inference. In the last years it has established itself as an alternative to other methods such as Markov chain Monte Carlo because of its speed and ease of use via the R-INLA package (\href{https://www.r-inla.org/what-is-inla}{What is INLA?}).
 
-Additional arguments supplied via \code{...} are forwarded to \code{\link[INLA:inla]{INLA::inla()}} (see documentation for all available arguments). Internally, the function ensures that \code{control.compute = list(config = TRUE)} in order to enable posterior sample drawing with \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}.
+Additional arguments supplied via \code{...} are forwarded to \code{\link[INLA:inla]{INLA::inla()}} (see documentation for all available arguments). Internally, the function ensures that \code{control.compute = list(config = TRUE)} in order to enable posterior sample drawing with \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}}.
 
 In the presence of missing values in variables referenced in formula, the \code{na.action} argument controls how the model frame is constructed. If \code{na.action} is set to \link{na.omit} (the default set by \link{options}), a complete-case analysis is performed and any row with a missing value in a variable appearing in formula is removed. If \code{na.action} is set to \link{na.pass} instead, missing values are retained in the model frame and passed to INLA.
 
@@ -70,9 +70,9 @@ See the INLA FAQ for further details: \url{https://www.r-inla.org/faq#h.dbamew4f
 \section{Posterior samples}{
 
 
-After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a \code{"crossbasis"} built from an exposure basis with C parameters and a lag basis with L parameters, there will be C × L cross-basis associated coefficients (named e.g. v1.l1, ..., vC.lL). For a \code{"onebasis"} object the coefficients follow the simpler form b1, ... bC.
+After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}}. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a \code{"crossbasis"} built from an exposure basis with C parameters and a lag basis with L parameters, there will be C × L cross-basis associated coefficients (named e.g. v1.l1, ..., vC.lL). For a \code{"onebasis"} object the coefficients follow the simpler form b1, ... bC.
 
-Additional arguments supplied via \code{sample.arg} are forwarded to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}} (see documentation for all available arguments). By default, the number of samples is \code{1000}. Be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric \code{seed} in \code{sample.arg}.
+Additional arguments supplied via \code{sample.arg} are forwarded to \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}} (see documentation for all available arguments). By default, the number of samples is \code{1000}. Be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric \code{seed} in \code{sample.arg}.
 
 Posterior sample estimations are then summarized across samples using mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to \code{ci.level}) and an approximate mode obtained from a kernel density estimate.
 }
@@ -112,8 +112,10 @@ The INLA package must be installed from the R-INLA repository (\href{https://www
  # Prediction values (equidistant points)
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
+if (bdlnm:::check_inla()) {
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
+}
 
 
 

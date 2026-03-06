@@ -1,4 +1,7 @@
 test_that("optimal_exposure returns object of class optimal_exposure with expected components (crossbasis)", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   # Basic structure
   expect_s3_class(mmt, "optimal_exposure")
   expect_true(is.list(mmt))
@@ -27,6 +30,9 @@ test_that("optimal_exposure returns object of class optimal_exposure with expect
 })
 
 test_that("optimal_exposure returns object of class optimal_exposure with expected components (onebasis)", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   ob <- dlnm::onebasis(
     slondon$tmean,
     fun = dlnm_var$var_fun,
@@ -71,6 +77,9 @@ test_that("optimal_exposure returns object of class optimal_exposure with expect
 })
 
 test_that("optimal_exposure works with default at (reconstructs grid from basis)", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   # Should not error when 'at' is not provided
   expect_silent(mmt2 <- optimal_exposure(mod))
 
@@ -81,6 +90,9 @@ test_that("optimal_exposure works with default at (reconstructs grid from basis)
 })
 
 test_that("optimal_exposure errors when object is not a bdlnm output or basis wrong", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   # NULL x should error
   expect_snapshot_error(optimal_exposure(exp_at = temp))
 

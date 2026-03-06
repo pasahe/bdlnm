@@ -39,16 +39,18 @@ temp <- round(seq(min(slondon$tmean), max(slondon$tmean), by = 0.1), 1)
 # Fit bdlnm with a small number of posterior samples to keep tests fast
 n_sim <- 10
 
-mod <- bdlnm(
-  mort_75plus ~ cb + factor(dow) + seas,
-  data = slondon,
-  family = "poisson",
-  sample.arg = list(n = n_sim, seed = 1L)
-)
+if (check_inla()) {
+  mod <- bdlnm(
+    mort_75plus ~ cb + factor(dow) + seas,
+    data = slondon,
+    family = "poisson",
+    sample.arg = list(n = n_sim, seed = 1L)
+  )
 
-# Predict
-cpred <- bcrosspred(mod, exp_at = temp)
+  # Predict
+  cpred <- bcrosspred(mod, exp_at = temp)
 
-# # compute centering (MMT) using optimal_exposure
-mmt <- optimal_exposure(mod, exp_at = temp)
-cen <- mmt$summary[["0.5quant"]]
+  # # compute centering (MMT) using optimal_exposure
+  mmt <- optimal_exposure(mod, exp_at = temp)
+  cen <- mmt$summary[["0.5quant"]]
+}

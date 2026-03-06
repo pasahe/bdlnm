@@ -1,4 +1,7 @@
 test_that("bcrosspred basic structure (crossbasis)", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   #cpred build in helper.R
 
   expect_s3_class(cpred, "bcrosspred")
@@ -45,6 +48,9 @@ test_that("bcrosspred basic structure (crossbasis)", {
 })
 
 test_that("bcrosspred basic structure (onebasis)", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
   mod_2 <- bdlnm(
     mort_75plus ~ ob + factor(dow) + seas,
@@ -93,6 +99,9 @@ test_that("bcrosspred basic structure (onebasis)", {
 })
 
 test_that("works with two different basis", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
   mod_2 <- bdlnm(
     mort_75plus ~ cb + ob + factor(dow) + seas,
@@ -143,6 +152,9 @@ test_that("works with two different basis", {
 })
 
 test_that("bcrosspred errors when some argument is missing or invalid", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   expect_snapshot_error(bcrosspred(NULL, exp_at = temp))
 
   expect_snapshot_error(bcrosspred(list(a = 1), "cb", exp_at = temp))

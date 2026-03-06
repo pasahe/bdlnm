@@ -1,5 +1,35 @@
 ### Util functions for the R package bdlnm
 
+# Function to check if INLA is installed
+check_inla <- function(error = FALSE) {
+  if (!requireNamespace("INLA", quietly = TRUE)) {
+    if (error) {
+      cli::cli_abort(c(
+        "Package {.pkg INLA} is required but is not installed.",
+        "i" = "Install from the R-INLA repository (https://www.r-inla.org/) and restart R."
+      ))
+    }
+    return(FALSE)
+  }
+
+  version <- tryCatch(
+    utils::packageVersion("INLA"),
+    error = function(e) NA
+  )
+
+  if (is.na(version) || version < "23.4.24") {
+    if (error) {
+      cli::cli_abort(c(
+        "Installed {.pkg INLA} version ({version}) is too old. Version >= 23.4.24 is required.",
+        "i" = "Install a newest version from the R-INLA repository (https://www.r-inla.org/) and restart R."
+      ))
+    }
+    return(FALSE)
+  }
+
+  TRUE
+}
+
 # Function to select only the coefficients from the basis from all the posterior samples
 extract_coef <- function(object, basis, type = "coefficients") {
   # find if basis is present in object$basis

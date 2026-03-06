@@ -108,6 +108,7 @@ temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
 # Model
 
+if (bdlnm:::check_inla()) {
 mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
              data = london,
              family = "poisson",
@@ -123,7 +124,7 @@ cen <- mmt$summary[["0.5quant"]]
 # Attributable numbers and fractions (using the backwards algorithm):
 attr <- attributable(mod, london, name_date = "date",
 name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
-
+}
 
 
 }

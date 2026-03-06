@@ -18,13 +18,15 @@ library(stats)
 library(splines)
 library(utils)
 library(ggplot2)
+
+inla_available <- bdlnm:::check_inla()
 ```
 
 This article provides a short tutorial on how to calculate attributable measures using the `attributable()` function. The built-in london dataset is used as an example to estimate mortality attributable fractions and attributable numbers associated with temperature among the population aged 75 years or older in London during the period 2000–2012.
 
 First, we prepare the data, construct the DLNM cross-basis, fit the Bayesian DLNM model, and estimate the minimum mortality temperature (MMT) used to center the risks when computing attributable measures. More detailed information about these steps can be found in the main vignette.
 
-```{r warning=FALSE}
+```{r warning=FALSE, eval = inla_available}
 # Exposure-response and lag-response spline parameters
 dlnm_var <- list(
   var_prc = c(10, 75, 90),
@@ -71,19 +73,19 @@ With all set, we can calculate attributable numbers and fractions. Gasparrini an
 
 We can compute attributable fractions and attributable numbers using the backward algorithm, which quantifies the current burden attributable to the set of exposure events experienced in the past:
 
-```{r}
+```{r, eval = inla_available}
 attr_back <- attributable(mod, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 ```
 
 The output is a list containing posterior samples of attributable fractions and attributable numbers computed per day and for the full study period, together with summaries across posterior samples:
 
-```{r}
+```{r, eval = inla_available}
 str(attr_back)
 ```
 
 Using `ggplot2` we can visualize the time series of daily attributable fractions and attributable numbers:
 
-```{r fig.width = 10}
+```{r fig.width = 10, eval = inla_available}
 london |> 
   mutate(
     "Attributable Fractions" = attr_back$af.summary[,"0.5quant"],
@@ -101,7 +103,7 @@ london |>
 
 The total attributable fraction and attributable number over the full period are:
 
-```{r}
+```{r, eval = inla_available}
 options(scipen=999)
 
 rbind(
@@ -113,13 +115,13 @@ rbind(
 
 Alternatively, we can use the forward algorithm, which quantifies the future burden attributable to a given exposure event:
 
-```{r}
+```{r, eval = inla_available}
 attr_forw <- attributable(mod, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "forw")
 ```
 
 We can plot the time series of daily attributable fractions and attributable numbers based on the forward algorithm:
 
-```{r fig.width = 10}
+```{r fig.width = 10, eval = inla_available}
 london |> 
   mutate(
     "Attributable Fractions" = attr_forw$af.summary[,"0.5quant"],
@@ -137,7 +139,7 @@ london |>
 
 The total attributable fraction and attributable number over the full period (forward algorithm) are:
 
-```{r}
+```{r, eval = inla_available}
 rbind(
   "Attributable fraction" = attr_forw$aftotal.summary,
   "Attributable number" = attr_forw$antotal.summary
@@ -147,7 +149,7 @@ rbind(
 
 Finally, we can restrict the calculation to specific time periods using a filter variable. For example, we can compute attributable measures only for summer months:
 
-```{r}
+```{r, eval = inla_available}
 slondon <- london |> 
   mutate(
     summer = case_when(
@@ -161,7 +163,7 @@ attr_summer <- attributable(mod, slondon, name_date = "date", name_exposure = "t
 
 We can plot the time series of daily attributable fractions and attributable numbers for summers only:
 
-```{r fig.width = 10}
+```{r fig.width = 10, eval = inla_available}
 slondon |> 
   filter(summer == 1) |> 
   mutate(
@@ -180,7 +182,7 @@ slondon |>
 
 The total attributable fraction and number, only for summers, are:
 
-```{r}
+```{r, eval = inla_available}
 rbind(
   "Attributable fraction" = attr_summer$aftotal.summary,
   "Attributable number" = attr_summer$antotal.summary

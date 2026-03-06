@@ -1,5 +1,7 @@
-#review
 test_that("does an overall plot (crossbasis)", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   expect_no_error(plot(
     cpred,
     "overall",
@@ -33,6 +35,9 @@ test_that("does an overall plot (crossbasis)", {
 
 
 test_that("does a 3d plot", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   expect_no_error(plot(
     cpred,
     "3d",
@@ -46,6 +51,9 @@ test_that("does a 3d plot", {
 })
 
 test_that("does a contour plot", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   expect_no_error(plot(
     cpred,
     "contour",
@@ -56,6 +64,9 @@ test_that("does a contour plot", {
 })
 
 test_that("does a slice plot", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   htemp <- 23
   expect_no_error(plot(
     cpred,
@@ -77,6 +88,9 @@ test_that("does a slice plot", {
 })
 
 test_that("onebasis plots", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
   mod_2 <- bdlnm(
     mort_75plus ~ ob + factor(dow) + seas,

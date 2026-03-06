@@ -15,7 +15,7 @@ coverage](https://codecov.io/gh/pasahe/bdlnm/graph/badge.svg)](https://app.codec
 <!-- badges: end -->
 
 The goal of `bdlnm` is to provide tools for fitting **Bayesian
-distributed lagged non-linear models (B-DLNM)** using the **INLA**
+distributed lag non-linear models (B-DLNM)** using the **INLA**
 framework. The package allows users to estimate exposure-lag-response
 associations, generate posterior predictions, compute attributable risk
 measures, and estimate optimal exposure values within a fully Bayesian
@@ -26,12 +26,13 @@ framework.
 The package provides functions to:
 
 - Fit Bayesian distributed lag linear and non-linear models using `INLA`
-- Estimate posterior predictions of exposure-lag-response associations
-- Estimate posterior predictions of attributable fractions and
-  attributable numbers
-- Estimate posteroir predictions of optimal exposure values (e.g.,
-  minimum risk exposure)
-- Visualize exposure-lag-response associations
+- Generate predictions of exposure-lag-response associations
+- Estimate attributable fractions and attributable numbers
+- Estimate optimal exposure values (e.g., minimum risk exposure)
+- Visualize exposure–lag–response associations
+
+More detailed examples and tutorials are available in the package
+vignettes.
 
 ## Installation
 

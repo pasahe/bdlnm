@@ -51,6 +51,7 @@ The histogram uses the original prediction grid in \code{attr(object, "xvar")} a
  # Prediction values (equidistant points)
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
+if (bdlnm:::check_inla()) {
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london,
  family = "poisson")
@@ -62,6 +63,7 @@ The histogram uses the original prediction grid in \code{attr(object, "xvar")} a
  plot(mmt, xlab = "Temperature (ºC)",
  main = paste0("MMT (Median = ", round(mmt$summary[["0.5quant"]], 1), "ºC)"))
 
+}
 
 }
 \references{

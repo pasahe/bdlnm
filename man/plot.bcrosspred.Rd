@@ -90,6 +90,7 @@ This function is inspired by \code{\link[dlnm:plot.crosspred]{dlnm::plot.crosspr
  # Prediction values (equidistant points)
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
+if (bdlnm:::check_inla()) {
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
 
@@ -117,6 +118,7 @@ This function is inspired by \code{\link[dlnm:plot.crosspred]{dlnm::plot.crosspr
  #Slices (for lag 0)
  plot(cpred , "slices", lag_at = 0, col=4, ylab="RR", main=paste0("Association at Lag 0"))
 
+}
 
 }
 \references{

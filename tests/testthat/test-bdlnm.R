@@ -1,4 +1,7 @@
 test_that("ensure bdlnm returned expected structure (crossbasis example)", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   # mod build in helper.R
   expect_type(mod, "list")
   expect_equal(length(mod), 4L)
@@ -11,6 +14,9 @@ test_that("ensure bdlnm returned expected structure (crossbasis example)", {
 })
 
 test_that("ensure bdlnm returned expected structure (onebasis example)", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
   mod_2 <- bdlnm(
     mort_75plus ~ ob + factor(dow) + seas,
@@ -30,6 +36,9 @@ test_that("ensure bdlnm returned expected structure (onebasis example)", {
 
 
 test_that("works with two different basis", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
   mod_2 <- bdlnm(
     mort_75plus ~ cb + ob + factor(dow) + seas,
@@ -45,12 +54,18 @@ test_that("works with two different basis", {
 })
 
 test_that("bdlnm errors when required arguments are missing or inappropiate", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   expect_snapshot_error(
     bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = slondon, sample.arg = 5)
   )
 })
 
 test_that("bdlnm honors sample.arg", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   mod2 <- bdlnm(
     mort_75plus ~ cb + factor(dow) + seas,
     data = slondon,
@@ -63,6 +78,9 @@ test_that("bdlnm honors sample.arg", {
 })
 
 test_that("bdlnm throws informative error if control.compute config = FALSE is passed", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   expect_snapshot_error(
     bdlnm(
       mort_75plus ~ cb + factor(dow) + seas,
@@ -74,6 +92,9 @@ test_that("bdlnm throws informative error if control.compute config = FALSE is p
 })
 
 test_that("bdlnm returns sensible summaries (means, sd, quantiles, mode)", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   coefsum <- mod$coefficients.summary
 
   # check summary columns include mean, sd and at least one quantile and mode
@@ -82,6 +103,9 @@ test_that("bdlnm returns sensible summaries (means, sd, quantiles, mode)", {
 })
 
 test_that("na.action = na.omit drops NA rows and returns consistent dimensions, and gives same coefficients as complete data model", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   expect_equal(nrow(mod$model$model.matrix), nrow(na.omit(cb)))
 
   na_rows <- which(!complete.cases(cb))
@@ -106,6 +130,9 @@ test_that("na.action = na.omit drops NA rows and returns consistent dimensions, 
 })
 
 test_that("na.action = na.pass keeps NA rows and returns consistent dimensions", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   mod_na <- bdlnm(
     mort_75plus ~ cb + factor(dow) + seas,
     data = slondon,
@@ -118,6 +145,9 @@ test_that("na.action = na.pass keeps NA rows and returns consistent dimensions",
 })
 
 test_that("na.action = na.fail throws an error when NAs are present", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   expect_error(
     bdlnm(
       mort_75plus ~ cb + factor(dow) + seas,
@@ -130,6 +160,9 @@ test_that("na.action = na.fail throws an error when NAs are present", {
 })
 
 test_that("na.action is ignored when a random effect is included", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
   slondon$id <- seq_len(nrow(slondon))
   expect_message(
     mod_rt <- bdlnm(
