@@ -43,12 +43,12 @@ test_that("optimal_exposure returns object of class optimal_exposure with expect
     ),
     Bound = range(slondon$tmean, na.rm = TRUE)
   )
-  mod_2 <- bdlnm(
+  mod_2 <- supressWarnings(bdlnm(
     mort_75plus ~ ob + factor(dow) + seas,
     data = slondon,
     family = "poisson",
-    sample.arg = list(n = n_sim)
-  )
+    sample.arg = list(n = n_sim, seed = 1L)
+  ))
   expect_warning(cpred_2 <- bcrosspred(mod_2, exp_at = temp))
   mmt_2 <- optimal_exposure(mod_2, exp_at = temp)
 

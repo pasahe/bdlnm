@@ -18,11 +18,13 @@ test_that("ensure bdlnm returned expected structure (onebasis example)", {
   skip_if_not(check_inla(), "INLA not available")
 
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
-  mod_2 <- bdlnm(
-    mort_75plus ~ ob + factor(dow) + seas,
-    data = slondon,
-    family = "poisson",
-    sample.arg = list(n = n_sim)
+  mod_2 <- supressWarnings(
+    bdlnm(
+      mort_75plus ~ ob + factor(dow) + seas,
+      data = slondon,
+      family = "poisson",
+      sample.arg = list(n = n_sim, seed = 1L)
+    )
   )
   expect_type(mod_2, "list")
   expect_equal(length(mod_2), 4L)
@@ -40,11 +42,13 @@ test_that("works with two different basis", {
   skip_if_not(check_inla(), "INLA not available")
 
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
-  mod_2 <- bdlnm(
-    mort_75plus ~ cb + ob + factor(dow) + seas,
-    data = slondon,
-    family = "poisson",
-    sample.arg = list(n = n_sim)
+  mod_2 <- supressWarnings(
+    bdlnm(
+      mort_75plus ~ cb + ob + factor(dow) + seas,
+      data = slondon,
+      family = "poisson",
+      sample.arg = list(n = n_sim, seed = 1L)
+    )
   )
   expect_type(mod_2, "list")
   expect_length(mod_2$basis, 2)
@@ -66,11 +70,13 @@ test_that("bdlnm honors sample.arg", {
   skip_on_cran()
   skip_if_not(check_inla(), "INLA not available")
 
-  mod2 <- bdlnm(
-    mort_75plus ~ cb + factor(dow) + seas,
-    data = slondon,
-    family = "poisson",
-    sample.arg = list(n = 5L)
+  mod2 <- supressWarnings(
+    bdlnm(
+      mort_75plus ~ cb + factor(dow) + seas,
+      data = slondon,
+      family = "poisson",
+      sample.arg = list(n = 5L, seed = 1L)
+    )
   )
 
   expect_equal(attr(mod2, "n_sim"), 5L)
@@ -133,12 +139,14 @@ test_that("na.action = na.pass keeps NA rows and returns consistent dimensions",
   skip_on_cran()
   skip_if_not(check_inla(), "INLA not available")
 
-  mod_na <- bdlnm(
-    mort_75plus ~ cb + factor(dow) + seas,
-    data = slondon,
-    family = "poisson",
-    na.action = na.pass,
-    sample.arg = list(n = n_sim)
+  mod_na <- supressWarnings(
+    bdlnm(
+      mort_75plus ~ cb + factor(dow) + seas,
+      data = slondon,
+      family = "poisson",
+      na.action = na.pass,
+      sample.arg = list(n = n_sim, seed = 1L)
+    )
   )
 
   expect_equal(nrow(mod_na$model$model.matrix), nrow(slondon))
@@ -165,11 +173,13 @@ test_that("na.action is ignored when a random effect is included", {
 
   slondon$id <- seq_len(nrow(slondon))
   expect_message(
-    mod_rt <- bdlnm(
-      mort_75plus ~ cb + factor(dow) + seas + f(id),
-      data = slondon,
-      family = "poisson",
-      sample.arg = list(n = n_sim)
+    supressWarnings(
+      mod_rt <- bdlnm(
+        mort_75plus ~ cb + factor(dow) + seas + f(id),
+        data = slondon,
+        family = "poisson",
+        sample.arg = list(n = n_sim, seed = 1L)
+      )
     )
   )
   expect_equal(nrow(mod_rt$model$model.matrix), nrow(slondon))

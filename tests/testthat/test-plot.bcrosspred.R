@@ -92,12 +92,12 @@ test_that("onebasis plots", {
   skip_if_not(check_inla(), "INLA not available")
 
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
-  mod_2 <- bdlnm(
+  mod_2 <- supressWarnings(bdlnm(
     mort_75plus ~ ob + factor(dow) + seas,
     data = slondon,
     family = "poisson",
-    sample.arg = list(n = n_sim)
-  )
+    sample.arg = list(n = n_sim, seed = 1L)
+  ))
   cpred_2 <- bcrosspred(mod_2, "ob", exp_at = temp)
 
   # overall

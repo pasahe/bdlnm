@@ -52,13 +52,12 @@ test_that("bcrosspred basic structure (onebasis)", {
   skip_if_not(check_inla(), "INLA not available")
 
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
-  mod_2 <- bdlnm(
+  mod_2 <- supressWarnings(bdlnm(
     mort_75plus ~ ob + factor(dow) + seas,
     data = slondon,
     family = "poisson",
-    sample.arg = list(n = n_sim)
-  )
-
+    sample.arg = list(n = n_sim, seed = 1L)
+  ))
   cpred_2 <- bcrosspred(mod_2, exp_at = temp)
 
   expect_s3_class(cpred_2, "bcrosspred")
@@ -103,12 +102,12 @@ test_that("works with two different basis", {
   skip_if_not(check_inla(), "INLA not available")
 
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
-  mod_2 <- bdlnm(
+  mod_2 <- supressWarnings(bdlnm(
     mort_75plus ~ cb + ob + factor(dow) + seas,
     data = slondon,
     family = "poisson",
-    sample.arg = list(n = n_sim)
-  )
+    sample.arg = list(n = n_sim, seed = 1L)
+  ))
 
   expect_error(bcrosspred(mod_2, exp_at = temp))
 
