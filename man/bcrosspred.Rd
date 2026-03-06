@@ -98,7 +98,8 @@ This function is inspired by \code{\link[dlnm:crosspred]{dlnm::crosspred()}} (Ga
 
 if (bdlnm:::check_inla()) {
  # Fit the model
- mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson")
+ mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson",
+             sample.arg = list(seed = 432, seed = 1L))
 
  # Prediction
  cpred <- bcrosspred(mod, exp_at = temp)

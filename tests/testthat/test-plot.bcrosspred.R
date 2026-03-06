@@ -92,7 +92,7 @@ test_that("onebasis plots", {
   skip_if_not(check_inla(), "INLA not available")
 
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
-  mod_2 <- supressWarnings(bdlnm(
+  mod_2 <- suppressWarnings(bdlnm(
     mort_75plus ~ ob + factor(dow) + seas,
     data = slondon,
     family = "poisson",

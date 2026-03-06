@@ -23,7 +23,7 @@ test_that("does a plot of the optimal effect exposure value (onebasis)", {
     ),
     Bound = range(slondon$tmean, na.rm = TRUE)
   )
-  mod_2 <- supressWarnings(bdlnm(
+  mod_2 <- suppressWarnings(bdlnm(
     mort_75plus ~ ob + factor(dow) + seas,
     data = slondon,
     family = "poisson",

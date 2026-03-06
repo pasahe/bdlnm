@@ -18,7 +18,7 @@ test_that("ensure bdlnm returned expected structure (onebasis example)", {
   skip_if_not(check_inla(), "INLA not available")
 
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
-  mod_2 <- supressWarnings(
+  mod_2 <- suppressWarnings(
     bdlnm(
       mort_75plus ~ ob + factor(dow) + seas,
       data = slondon,
@@ -42,7 +42,7 @@ test_that("works with two different basis", {
   skip_if_not(check_inla(), "INLA not available")
 
   ob <- dlnm::onebasis(slondon$tmean, "strata", breaks = c(5, 10, 20))
-  mod_2 <- supressWarnings(
+  mod_2 <- suppressWarnings(
     bdlnm(
       mort_75plus ~ cb + ob + factor(dow) + seas,
       data = slondon,
@@ -70,7 +70,7 @@ test_that("bdlnm honors sample.arg", {
   skip_on_cran()
   skip_if_not(check_inla(), "INLA not available")
 
-  mod2 <- supressWarnings(
+  mod2 <- suppressWarnings(
     bdlnm(
       mort_75plus ~ cb + factor(dow) + seas,
       data = slondon,
@@ -139,7 +139,7 @@ test_that("na.action = na.pass keeps NA rows and returns consistent dimensions",
   skip_on_cran()
   skip_if_not(check_inla(), "INLA not available")
 
-  mod_na <- supressWarnings(
+  mod_na <- suppressWarnings(
     bdlnm(
       mort_75plus ~ cb + factor(dow) + seas,
       data = slondon,
@@ -173,7 +173,7 @@ test_that("na.action is ignored when a random effect is included", {
 
   slondon$id <- seq_len(nrow(slondon))
   expect_message(
-    supressWarnings(
+    suppressWarnings(
       mod_rt <- bdlnm(
         mort_75plus ~ cb + factor(dow) + seas + f(id),
         data = slondon,

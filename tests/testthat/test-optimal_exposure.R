@@ -43,7 +43,7 @@ test_that("optimal_exposure returns object of class optimal_exposure with expect
     ),
     Bound = range(slondon$tmean, na.rm = TRUE)
   )
-  mod_2 <- supressWarnings(bdlnm(
+  mod_2 <- suppressWarnings(bdlnm(
     mort_75plus ~ ob + factor(dow) + seas,
     data = slondon,
     family = "poisson",

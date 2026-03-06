@@ -54,7 +54,7 @@ The histogram uses the original prediction grid in \code{attr(object, "xvar")} a
 if (bdlnm:::check_inla()) {
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london,
- family = "poisson")
+ family = "poisson", sample.arg = list(seed = 432, seed = 1L))
 
  # Find minimum risk exposure value
  mmt <- optimal_exposure(mod, exp_at = temp)
