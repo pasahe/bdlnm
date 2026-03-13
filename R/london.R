@@ -19,9 +19,9 @@
 #'   \item{mort}{All mortality}
 #' }
 #'
-#' @source Data originally published at \url{https://github.com/gasparrini/2019_vicedo-cabrera_Epidem_Rcodedata}
+#' @source Data originally published by Vicedo-Cabrera (2019) <doi:10.1097/EDE.0000000000000982>.
 #'
 #' @references
-#' Vicedo-Cabrera AM, Sera F, Armstrong B, Gasparrini A. A hands-on tutorial on a modelling framework for projections of climate change impacts on health. Epidemiology. 2019;30(3):321-329. DOI: 10.1097/EDE.0000000000000982. PMID: 30829832.
+#' Vicedo-Cabrera A.M., Sera F., Gasparrini A. (2019). Hands-on tutorial on a modeling framework for projections of climate change impacts on health. _Epidemiology_, 30(3), 321-329. <doi:10.1097/EDE.0000000000000982>.
 #'
 "london"

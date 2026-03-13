@@ -65,7 +65,7 @@ Be aware of memory usage: exposure-lag-specific predictions are stored in 3D arr
 This function can also be used to compute predictions for models with simple uni-dimensional basis functions not including lags, if the specified basis is \code{"onebasis"} instead of \code{"crossbasis"}. In this case, only unlagged predicted associations are returned.
 }
 \note{
-This function is inspired by \code{\link[dlnm:crosspred]{dlnm::crosspred()}} (Gasparrini 2011). It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
+This function is inspired by \code{\link[dlnm:crosspred]{dlnm::crosspred()}} developed by Gasparrini (2011) \url{doi:10.18637/jss.v043.i08}. It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
 }
 \examples{
 # Set exposure-response and lag-response spline parameters
@@ -96,7 +96,7 @@ This function is inspired by \code{\link[dlnm:crosspred]{dlnm::crosspred()}} (Ga
  # Prediction values (equidistant points)
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
-if (bdlnm:::check_inla()) {
+if (check_inla()) {
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson",
              sample.arg = list(seed = 432, seed = 1L))
@@ -107,9 +107,9 @@ if (bdlnm:::check_inla()) {
 
 }
 \references{
-Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
+Gasparrini A. (2011). Distributed lag linear and non-linear models in R: the package dlnm. \emph{Journal of Statistical Software}, 43(8), 1-20. \url{doi:10.18637/jss.v043.i08}.
 
-Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
+Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo M. (2024). Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. \emph{International Journal of Epidemiology}, 53(3), dyae061. \url{doi:10.1093/ije/dyae061}.
 }
 \seealso{
 \code{\link[=plot.bcrosspred]{plot.bcrosspred()}}  to plot the predicted associations stored in a \code{"bcrosspred"} object,

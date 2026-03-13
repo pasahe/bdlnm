@@ -23,7 +23,7 @@
 #'  - Backward (`dir = "back"`): for each time point, contributions from past exposures (over the lag window) are combined to calculate the daily AF/AN.
 #'  - Forward (`dir = "forw"`): for each time point, the contribution of that time point exposure to future outcomes (over the lag window) is combined to calculate the daily AF/AN.
 #'
-#' Both algorithms are fully described by Gasparrini and Leone (2014), see references below.
+#' Both algorithms are fully described by Gasparrini and Leone (2014) <doi:10.1186/1471-2288-14-55>.
 #'
 #' Required columns to calculate `AF` and `AN` are `name_exposure` and `name_cases` columns. If `name_cases` is not supplied only AF per time can be computed and the output will only contain two elements: `$af` and `$af.summary`. If `name_date` is provided the function checks that dates are equispaced (checks seconds, minutes, hours, days, weeks, months or years). Time series have to be equispaced because the algorithms used to calculate attributable measures rely on consecutive time points over the lag window,. For example, if you only have seasonal observations (e.g., summers) expand the data to the full sequence and insert `NA` for missing exposures/cases and use `name_filter` to compute measures only for the seasonal subset.
 #'
@@ -42,13 +42,13 @@
 #'
 #' @author Pau Satorra, Marcos Quijal-Zamorano.
 #'
-#' @note This function is inspired by `attrdl()` (Gasparrini 2014), which is available \href{https://github.com/gasparrini/2014_gasparrini_BMCmrm_Rcodedata/blob/master/attrdl.Rd}{here}. It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
+#' @note This function is inspired by `attrdl()` developed by Gasparrini and Leone (2014) <doi:10.1186/1471-2288-14-55>. It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
 #'
 #' @references
 #'
-#' Gasparrini A, Leone M. Attributable risk from distributed lag models. BMC Med Res Methodol 2014;14:55.
-#'
-#' Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
+#' Gasparrini A., Leone M. (2014). Attributable risk from distributed lag models. _BMC Medical Research Methodology_, 14, 55. <doi:10.1186/1471-2288-14-55>.
+#' 
+#' Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo M. (2024). Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. _International Journal of Epidemiology_, 53(3), dyae061. <doi:10.1093/ije/dyae061>.
 #'
 #' @seealso [bcrosspred()] to predict exposure–lag–response associations for a `"bdlnm"` object,
 #' @seealso [bdlnm()] to fit a Bayesian distributed lag non-linear model (`"bdlnm"`),
@@ -89,7 +89,7 @@
 #'
 #' # Model
 #'
-#' if (bdlnm:::check_inla()) {
+#' if (check_inla()) {
 #' mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
 #'              data = london,
 #'              family = "poisson",

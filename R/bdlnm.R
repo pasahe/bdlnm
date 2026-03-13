@@ -53,13 +53,13 @@
 #'
 #' @references
 #'
-#' Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
+#' Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo M. (2024). Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. _International Journal of Epidemiology_, 53(3), dyae061. <doi:10.1093/ije/dyae061>.
 #'
-#' Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models with R-INLA. Int J Epidemiol. 2025;54(4):dyaf120.
+#' Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo M. (2025). Spatial Bayesian distributed lag non-linear models with R-INLA. _International Journal of Epidemiology_, 54(4), dyaf120. <doi:10.1093/ije/dyaf120>.
 #'
-#' Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
+#' Gasparrini A. (2011). Distributed lag linear and non-linear models in R: the package dlnm. _Journal of Statistical Software_, 43(8), 1-20. <doi:10.18637/jss.v043.i08>.
 #'
-#' Havard Rue, Sara Martino, and Nicholas Chopin (2009), Approximate Bayesian Inference for Latent Gaussian Models Using Integrated Nested Laplace Approximations (with discussion), Journal of the Royal Statistical Society B, 71, 319-392.
+#' Rue H., Martino S., Chopin N. (2009). Approximate Bayesian inference for latent Gaussian models by using integrated nested Laplace approximations. _Journal of the Royal Statistical Society: Series B_, 71(2), 319-392. <doi:10.1111/j.1467-9868.2008.00700.x>.
 #'
 #' @seealso [bcrosspred()] to predict exposure–lag–response associations for a `bdlnm` object,
 #' @seealso [attributable()] to calculate attributable fractions and numbers for a `bdlnm` object,
@@ -97,7 +97,7 @@
 #'  # Prediction values (equidistant points)
 #'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
-#' if (bdlnm:::check_inla()) {
+#' if (check_inla()) {
 #'  # Fit the model
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson",
 #'              sample.arg = list(seed = 432, seed = 1L))

@@ -1,6 +1,16 @@
 ### Util functions for the R package bdlnm
 
-# Function to check if INLA is installed
+#' Check if INLA is installed and meets the minimum version requirement
+#'
+#' Checks whether the \pkg{INLA} package is installed and whether the installed version is >= 23.4.24. This is an internal utility used by functions that
+#' depend on \pkg{INLA}.
+#'
+#' @param error Logical. If `TRUE`, throws an error when \pkg{INLA} is not installed or the version is too old. If `FALSE` (default), returns `FALSE` silently.
+#'
+#' @return `TRUE` if \pkg{INLA} is installed and meets the version requirement, `FALSE` otherwise (when `error = FALSE`).
+#'
+#' @keywords internal
+#' @export
 check_inla <- function(error = FALSE) {
   if (!requireNamespace("INLA", quietly = TRUE)) {
     if (error) {

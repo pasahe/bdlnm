@@ -10,16 +10,18 @@
 #' @details
 #'
 #' The histogram uses the original prediction grid in `attr(object, "xvar")` as the x-axis values, ensuring that the bars align with prediction exposure values. The function plots the posterior distribution of the optimal exposure values (stored in `x$est`) and highlights the posterior median across samples (stored in `x$summary[["0.5quant"]]`) with a vertical line if `show_median = TRUE`. Use `vline.arg` to change the appearance of that line passed to [graphics::abline()] and `...` to change the graphical parameters of the histogram passed to [graphics::hist()] (to control axis labels, title, colours, etc.). See the original functions for a complete list of the arguments. Some arguments, if not specified, are set to different default values than the original functions.
+#' 
+#' @return No return value, called for side effects.
 #'
 #' @author Pau Satorra, Marcos Quijal-Zamorano.
 #'
 #' @references
 #'
-#' Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
+#' Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo M. (2024). Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. _International Journal of Epidemiology_, 53(3), dyae061. <doi:10.1093/ije/dyae061>.
 #'
-#' Gasparrini A (2011). Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software, 43(8), 1–20.
+#' Gasparrini A. (2011). Distributed lag linear and non-linear models in R: the package dlnm. _Journal of Statistical Software_, 43(8), 1-20. <doi:10.18637/jss.v043.i08>.
 #'
-#' Armstrong B. Models for the relationship between ambient temperature and daily mortality. Epidemiology. 2006;17(6):624-31.
+#' Armstrong B. Models for the relationship between ambient temperature and daily mortality. Epidemiology. 2006;17(6):624-31. <doi:10.1097/01.ede.0000239732.50999.8f>.
 #'
 #' @seealso [optimal_exposure()] to estimate exposure values that optimize the predicted effect for a `"bdlnm"` object.
 #'
@@ -55,7 +57,7 @@
 #'  # Prediction values (equidistant points)
 #'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
-#' if (bdlnm:::check_inla()) {
+#' if (check_inla()) {
 #'  # Fit the model
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london,
 #'  family = "poisson", sample.arg = list(seed = 432, seed = 1L))

@@ -79,7 +79,7 @@ This function cannot be used when the specified basis function is one of \code{t
  # Prediction values (equidistant points)
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
-if (bdlnm:::check_inla()) {
+if (check_inla()) {
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson",
              sample.arg = list(seed = 432, seed = 1L))
@@ -90,11 +90,11 @@ if (bdlnm:::check_inla()) {
 
 }
 \references{
-Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
+Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo M. (2024). Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. \emph{International Journal of Epidemiology}, 53(3), dyae061. \url{doi:10.1093/ije/dyae061}.
 
-Gasparrini A (2011). Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software, 43(8), 1–20.
+Gasparrini A. (2011). Distributed lag linear and non-linear models in R: the package dlnm. \emph{Journal of Statistical Software}, 43(8), 1-20. \url{doi:10.18637/jss.v043.i08}.
 
-Armstrong B. Models for the relationship between ambient temperature and daily mortality. Epidemiology. 2006;17(6):624-31.
+Armstrong B. (2006). Models for the relationship between ambient temperature and daily mortality. \emph{Epidemiology}, 17(6), 624-631. \url{doi:10.1097/01.ede.0000239732.50999.8f}.
 }
 \seealso{
 \code{\link[=plot.optimal_exposure]{plot.optimal_exposure()}} to plot the optimal exposure values stored in a \code{"optimal_exposure"} object.

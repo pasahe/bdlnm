@@ -30,15 +30,17 @@
 #'
 #' In the presence of unlagged or single lag associations, only the `overall` plot can be produced. In this case, the `overall` plot represents the effect at each predictor value, rather than the overall cumulative effect across lags.
 #'
+#' @return No return value, called for side effects.
+#' 
 #' @author Pau Satorra, Marcos Quijal-Zamorano.
 #'
-#' @note This function is inspired by [dlnm::plot.crosspred()] (Gasparrini 2011). It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
+#' @note This function is inspired by [dlnm::plot.crosspred()] developed by Gasparrini (2011) <doi:10.18637/jss.v043.i08>. It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
 #'
 #' @references
 #'
-#' Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
+#' Gasparrini A. (2011). Distributed lag linear and non-linear models in R: the package dlnm. _Journal of Statistical Software_, 43(8), 1-20. <doi:10.18637/jss.v043.i08>.
 #'
-#' Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
+#' Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo M. (2024). Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. _International Journal of Epidemiology_, 53(3), dyae061. <doi:10.1093/ije/dyae061>.
 #'
 #' @seealso [bcrosspred()] to predict exposure–lag–response associations for a `"bdlnm"` object,
 #' @seealso [bdlnm()] to fit a Bayesian distributed lag non-linear model (`"bdlnm"`).
@@ -74,7 +76,7 @@
 #'  # Prediction values (equidistant points)
 #'  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 #'
-#' if (bdlnm:::check_inla()) {
+#' if (check_inla()) {
 #'  # Fit the model
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson",
 #'              sample.arg = list(seed = 432, seed = 1L))
@@ -243,13 +245,14 @@ plot.bcrosspred <- function(
     # graphical layout: one plot per requested exp_at/lag_at value
     npanels <- length(exp_at) + length(lag_at)
 
-    # set frame and grey scale
-    mar.old <- graphics::par()$mar
-    mfrow.old <- graphics::par()$mfrow
-    mgp.old <- graphics::par()$mgp
+    # set grey scale
     grey <- grey(0.9)
 
     if (npanels > 1) {
+      #restore user graphical parameters
+      oldpar <- graphics::par(no.readonly = TRUE)
+      on.exit(graphics::par(oldpar))
+      
       graphics::layout(matrix(
         1:npanels,
         ncol = sum(!is.null(exp_at), !is.null(lag_at))
@@ -395,9 +398,6 @@ plot.bcrosspred <- function(
           graphics::mtext(paste("Exposure =", i), cex = 0.8)
         }
       }
-    }
-    if (npanels > 1L) {
-      graphics::par(mar = mar.old, mfrow = mfrow.old, mgp = mgp.old)
     }
   }
 

@@ -66,14 +66,14 @@ Two different algorithms can be chosen to calculate attributable measures:
 \item Forward (\code{dir = "forw"}): for each time point, the contribution of that time point exposure to future outcomes (over the lag window) is combined to calculate the daily AF/AN.
 }
 
-Both algorithms are fully described by Gasparrini and Leone (2014), see references below.
+Both algorithms are fully described by Gasparrini and Leone (2014) \url{doi:10.1186/1471-2288-14-55}.
 
 Required columns to calculate \code{AF} and \code{AN} are \code{name_exposure} and \code{name_cases} columns. If \code{name_cases} is not supplied only AF per time can be computed and the output will only contain two elements: \verb{$af} and \verb{$af.summary}. If \code{name_date} is provided the function checks that dates are equispaced (checks seconds, minutes, hours, days, weeks, months or years). Time series have to be equispaced because the algorithms used to calculate attributable measures rely on consecutive time points over the lag window,. For example, if you only have seasonal observations (e.g., summers) expand the data to the full sequence and insert \code{NA} for missing exposures/cases and use \code{name_filter} to compute measures only for the seasonal subset.
 
 Only \code{"bdlnm"} objects fitted with a cross-basis are supported; models fitted with a one-basis (no lag) are not suitable for attributable calculations.
 }
 \note{
-This function is inspired by \code{attrdl()} (Gasparrini 2014), which is available \href{https://github.com/gasparrini/2014_gasparrini_BMCmrm_Rcodedata/blob/master/attrdl.Rd}{here}. It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
+This function is inspired by \code{attrdl()} developed by Gasparrini and Leone (2014) \url{doi:10.1186/1471-2288-14-55}. It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
 }
 \examples{
 
@@ -108,7 +108,7 @@ temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
 # Model
 
-if (bdlnm:::check_inla()) {
+if (check_inla()) {
 mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
              data = london,
              family = "poisson",
@@ -129,9 +129,9 @@ name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 
 }
 \references{
-Gasparrini A, Leone M. Attributable risk from distributed lag models. BMC Med Res Methodol 2014;14:55.
+Gasparrini A., Leone M. (2014). Attributable risk from distributed lag models. \emph{BMC Medical Research Methodology}, 14, 55. \url{doi:10.1186/1471-2288-14-55}.
 
-Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.
+Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo M. (2024). Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. \emph{International Journal of Epidemiology}, 53(3), dyae061. \url{doi:10.1093/ije/dyae061}.
 }
 \seealso{
 \code{\link[=bcrosspred]{bcrosspred()}} to predict exposure–lag–response associations for a \code{"bdlnm"} object,
