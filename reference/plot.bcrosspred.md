@@ -77,6 +77,10 @@ plot(
   Additional graphical arguments passed to base plotting functions (see
   `Details`).
 
+## Value
+
+No return value, called for side effects.
+
 ## Details
 
 The function supports different visualizations for posterior effects
@@ -152,18 +156,20 @@ cumulative effect across lags.
 
 This function is inspired by
 [`dlnm::plot.crosspred()`](https://rdrr.io/pkg/dlnm/man/plot.crosspred.html)
-(Gasparrini 2011). It has been adapted to work in a Bayesian framework
-within the bdlnm package.
+developed by Gasparrini (2011) <doi:10.18637/jss.v043.i08>. It has been
+adapted to work in a Bayesian framework within the bdlnm package.
 
 ## References
 
-Gasparrini A. Distributed lag linear and non-linear models in R: the
-package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.
+Gasparrini A. (2011). Distributed lag linear and non-linear models in R:
+the package dlnm. *Journal of Statistical Software*, 43(8), 1-20.
+<doi:10.18637/jss.v043.i08>.
 
-Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M.
-Spatial Bayesian distributed lag non-linear models (SB-DLNM) for
-small-area exposure-lag-response epidemiological modelling.
-International Journal of Epidemiology. 2024;53(3):dyae061.
+Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo
+M. (2024). Spatial Bayesian distributed lag non-linear models (SB-DLNM)
+for small-area exposure-lag-response epidemiological modelling.
+*International Journal of Epidemiology*, 53(3), dyae061.
+<doi:10.1093/ije/dyae061>.
 
 ## See also
 
@@ -208,7 +214,7 @@ Pau Satorra, Marcos Quijal-Zamorano.
  # Prediction values (equidistant points)
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
-if (bdlnm:::check_inla()) {
+if (check_inla()) {
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson",
              sample.arg = list(seed = 432, seed = 1L))

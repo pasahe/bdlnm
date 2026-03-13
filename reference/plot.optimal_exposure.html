@@ -69,14 +69,18 @@
 
 </dl></div>
     <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>No return value, called for side effects.</p>
+    </div>
+    <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The histogram uses the original prediction grid in <code>attr(object, "xvar")</code> as the x-axis values, ensuring that the bars align with prediction exposure values. The function plots the posterior distribution of the optimal exposure values (stored in <code>x$est</code>) and highlights the posterior median across samples (stored in <code>x$summary[["0.5quant"]]</code>) with a vertical line if <code>show_median = TRUE</code>. Use <code>vline.arg</code> to change the appearance of that line passed to <code><a href="https://rdrr.io/r/graphics/abline.html" class="external-link">graphics::abline()</a></code> and <code>...</code> to change the graphical parameters of the histogram passed to <code><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">graphics::hist()</a></code> (to control axis labels, title, colours, etc.). See the original functions for a complete list of the arguments. Some arguments, if not specified, are set to different default values than the original functions.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
-    <p>Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.</p>
-<p>Gasparrini A (2011). Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software, 43(8), 1–20.</p>
-<p>Armstrong B. Models for the relationship between ambient temperature and daily mortality. Epidemiology. 2006;17(6):624-31.</p>
+    <p>Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo M. (2024). Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. <em>International Journal of Epidemiology</em>, 53(3), dyae061. <a href="doi:10.1093/ije/dyae061">doi:10.1093/ije/dyae061</a>.</p>
+<p>Gasparrini A. (2011). Distributed lag linear and non-linear models in R: the package dlnm. <em>Journal of Statistical Software</em>, 43(8), 1-20. <a href="doi:10.18637/jss.v043.i08">doi:10.18637/jss.v043.i08</a>.</p>
+<p>Armstrong B. Models for the relationship between ambient temperature and daily mortality. Epidemiology. 2006;17(6):624-31. <a href="doi:10.1097/01.ede.0000239732.50999.8f">doi:10.1097/01.ede.0000239732.50999.8f</a>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -118,7 +122,7 @@
 <span class="r-in"><span> <span class="co"># Prediction values (equidistant points)</span></span></span>
 <span class="r-in"><span> <span class="va">temp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span>, by <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu">bdlnm</span><span class="fu">:::</span><span class="fu">check_inla</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="check_inla.html">check_inla</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span> <span class="co"># Fit the model</span></span></span>
 <span class="r-in"><span> <span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="bdlnm.html">bdlnm</a></span><span class="op">(</span><span class="va">mort_75plus</span> <span class="op">~</span> <span class="va">cb</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">dow</span><span class="op">)</span> <span class="op">+</span> <span class="va">seas</span>, data <span class="op">=</span> <span class="va">london</span>,</span></span>
 <span class="r-in"><span> family <span class="op">=</span> <span class="st">"poisson"</span>, sample.arg <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">432</span>, seed <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span><span class="op">)</span></span></span>

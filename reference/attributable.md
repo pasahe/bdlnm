@@ -150,8 +150,8 @@ measures:
   that time point exposure to future outcomes (over the lag window) is
   combined to calculate the daily AF/AN.
 
-Both algorithms are fully described by Gasparrini and Leone (2014), see
-references below.
+Both algorithms are fully described by Gasparrini and Leone (2014)
+<doi:10.1186/1471-2288-14-55>.
 
 Required columns to calculate `AF` and `AN` are `name_exposure` and
 `name_cases` columns. If `name_cases` is not supplied only AF per time
@@ -171,21 +171,21 @@ calculations.
 
 ## Note
 
-This function is inspired by `attrdl()` (Gasparrini 2014), which is
-available
-[here](https://github.com/gasparrini/2014_gasparrini_BMCmrm_Rcodedata/blob/master/attrdl.Rd).
-It has been adapted to work in a Bayesian framework within the bdlnm
-package.
+This function is inspired by `attrdl()` developed by Gasparrini and
+Leone (2014) <doi:10.1186/1471-2288-14-55>. It has been adapted to work
+in a Bayesian framework within the bdlnm package.
 
 ## References
 
-Gasparrini A, Leone M. Attributable risk from distributed lag models.
-BMC Med Res Methodol 2014;14:55.
+Gasparrini A., Leone M. (2014). Attributable risk from distributed lag
+models. *BMC Medical Research Methodology*, 14, 55.
+<doi:10.1186/1471-2288-14-55>.
 
-Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M.
-Spatial Bayesian distributed lag non-linear models (SB-DLNM) for
-small-area exposure-lag-response epidemiological modelling.
-International Journal of Epidemiology. 2024;53(3):dyae061.
+Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo
+M. (2024). Spatial Bayesian distributed lag non-linear models (SB-DLNM)
+for small-area exposure-lag-response epidemiological modelling.
+*International Journal of Epidemiology*, 53(3), dyae061.
+<doi:10.1093/ije/dyae061>.
 
 ## See also
 
@@ -237,7 +237,7 @@ temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 
 # Model
 
-if (bdlnm:::check_inla()) {
+if (check_inla()) {
 mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
              data = london,
              family = "poisson",

@@ -123,18 +123,18 @@
     <p>The function first obtains posterior predicted effects at the observed exposure values by calling <code><a href="bcrosspred.html">bcrosspred()</a></code> with <code>exp_at = data[[name_exposure]]</code>. Predictions must include relative-risk scale predictions so the previously fitted <code>"bdlnm"</code> model must have a <code>log</code> or <code>logit</code> link; otherwise the function aborts. These predictions require a defined centering value (<code>cen</code>), as attributable measures are always computed with respect to a reference exposure. This reference exposure is usually an optimal exposure computed with the <code><a href="optimal_exposure.html">optimal_exposure()</a></code> function, such as the Minimum Mortality Temperature (MMT).</p>
 <p>Two different algorithms can be chosen to calculate attributable measures:</p><ul><li><p>Backward (<code>dir = "back"</code>): for each time point, contributions from past exposures (over the lag window) are combined to calculate the daily AF/AN.</p></li>
 <li><p>Forward (<code>dir = "forw"</code>): for each time point, the contribution of that time point exposure to future outcomes (over the lag window) is combined to calculate the daily AF/AN.</p></li>
-</ul><p>Both algorithms are fully described by Gasparrini and Leone (2014), see references below.</p>
+</ul><p>Both algorithms are fully described by Gasparrini and Leone (2014) <a href="doi:10.1186/1471-2288-14-55">doi:10.1186/1471-2288-14-55</a>.</p>
 <p>Required columns to calculate <code>AF</code> and <code>AN</code> are <code>name_exposure</code> and <code>name_cases</code> columns. If <code>name_cases</code> is not supplied only AF per time can be computed and the output will only contain two elements: <code>$af</code> and <code>$af.summary</code>. If <code>name_date</code> is provided the function checks that dates are equispaced (checks seconds, minutes, hours, days, weeks, months or years). Time series have to be equispaced because the algorithms used to calculate attributable measures rely on consecutive time points over the lag window,. For example, if you only have seasonal observations (e.g., summers) expand the data to the full sequence and insert <code>NA</code> for missing exposures/cases and use <code>name_filter</code> to compute measures only for the seasonal subset.</p>
 <p>Only <code>"bdlnm"</code> objects fitted with a cross-basis are supported; models fitted with a one-basis (no lag) are not suitable for attributable calculations.</p>
     </div>
     <div class="section level2">
     <h2 id="note">Note<a class="anchor" aria-label="anchor" href="#note"></a></h2>
-    <p>This function is inspired by <code>attrdl()</code> (Gasparrini 2014), which is available <a href="https://github.com/gasparrini/2014_gasparrini_BMCmrm_Rcodedata/blob/master/attrdl.Rd" class="external-link">here</a>. It has been adapted to work in a Bayesian framework within the <span class="pkg">bdlnm</span> package.</p>
+    <p>This function is inspired by <code>attrdl()</code> developed by Gasparrini and Leone (2014) <a href="doi:10.1186/1471-2288-14-55">doi:10.1186/1471-2288-14-55</a>. It has been adapted to work in a Bayesian framework within the <span class="pkg">bdlnm</span> package.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
-    <p>Gasparrini A, Leone M. Attributable risk from distributed lag models. BMC Med Res Methodol 2014;14:55.</p>
-<p>Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.</p>
+    <p>Gasparrini A., Leone M. (2014). Attributable risk from distributed lag models. <em>BMC Medical Research Methodology</em>, 14, 55. <a href="doi:10.1186/1471-2288-14-55">doi:10.1186/1471-2288-14-55</a>.</p>
+<p>Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo M. (2024). Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. <em>International Journal of Epidemiology</em>, 53(3), dyae061. <a href="doi:10.1093/ije/dyae061">doi:10.1093/ije/dyae061</a>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -181,7 +181,7 @@
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Model</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu">bdlnm</span><span class="fu">:::</span><span class="fu">check_inla</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="check_inla.html">check_inla</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="bdlnm.html">bdlnm</a></span><span class="op">(</span><span class="va">mort_75plus</span> <span class="op">~</span> <span class="va">cb</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">dow</span><span class="op">)</span> <span class="op">+</span> <span class="va">seas</span>,</span></span>
 <span class="r-in"><span>             data <span class="op">=</span> <span class="va">london</span>,</span></span>
 <span class="r-in"><span>             family <span class="op">=</span> <span class="st">"poisson"</span>,</span></span>

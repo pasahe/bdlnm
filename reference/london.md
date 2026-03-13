@@ -51,12 +51,12 @@ A tibble with 8.279 rows and 7 columns:
 
 ## Source
 
-Data originally published at
-<https://github.com/gasparrini/2019_vicedo-cabrera_Epidem_Rcodedata>
+Data originally published by Vicedo-Cabrera (2019)
+<doi:10.1097/EDE.0000000000000982>.
 
 ## References
 
-Vicedo-Cabrera AM, Sera F, Armstrong B, Gasparrini A. A hands-on
-tutorial on a modelling framework for projections of climate change
-impacts on health. Epidemiology. 2019;30(3):321-329. DOI:
-10.1097/EDE.0000000000000982. PMID: 30829832.
+Vicedo-Cabrera A.M., Sera F., Gasparrini A. (2019). Hands-on tutorial on
+a modeling framework for projections of climate change impacts on
+health. *Epidemiology*, 30(3), 321-329.
+<doi:10.1097/EDE.0000000000000982>.

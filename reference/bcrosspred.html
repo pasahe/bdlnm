@@ -118,12 +118,12 @@
     </div>
     <div class="section level2">
     <h2 id="note">Note<a class="anchor" aria-label="anchor" href="#note"></a></h2>
-    <p>This function is inspired by <code><a href="https://rdrr.io/pkg/dlnm/man/crosspred.html" class="external-link">dlnm::crosspred()</a></code> (Gasparrini 2011). It has been adapted to work in a Bayesian framework within the <span class="pkg">bdlnm</span> package.</p>
+    <p>This function is inspired by <code><a href="https://rdrr.io/pkg/dlnm/man/crosspred.html" class="external-link">dlnm::crosspred()</a></code> developed by Gasparrini (2011) <a href="doi:10.18637/jss.v043.i08">doi:10.18637/jss.v043.i08</a>. It has been adapted to work in a Bayesian framework within the <span class="pkg">bdlnm</span> package.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
-    <p>Gasparrini A. Distributed lag linear and non-linear models in R: the package dlnm. Journal of Statistical Software. 2011; 43(8):1-20.</p>
-<p>Quijal-Zamorano M, Martinez-Beneito MA, Ballester J, Marí-Dell’Olmo M. Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. International Journal of Epidemiology. 2024;53(3):dyae061.</p>
+    <p>Gasparrini A. (2011). Distributed lag linear and non-linear models in R: the package dlnm. <em>Journal of Statistical Software</em>, 43(8), 1-20. <a href="doi:10.18637/jss.v043.i08">doi:10.18637/jss.v043.i08</a>.</p>
+<p>Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo M. (2024). Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. <em>International Journal of Epidemiology</em>, 53(3), dyae061. <a href="doi:10.1093/ije/dyae061">doi:10.1093/ije/dyae061</a>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -167,7 +167,7 @@
 <span class="r-in"><span> <span class="co"># Prediction values (equidistant points)</span></span></span>
 <span class="r-in"><span> <span class="va">temp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span>, by <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu">bdlnm</span><span class="fu">:::</span><span class="fu">check_inla</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="check_inla.html">check_inla</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span> <span class="co"># Fit the model</span></span></span>
 <span class="r-in"><span> <span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="bdlnm.html">bdlnm</a></span><span class="op">(</span><span class="va">mort_75plus</span> <span class="op">~</span> <span class="va">cb</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">dow</span><span class="op">)</span> <span class="op">+</span> <span class="va">seas</span>, data <span class="op">=</span> <span class="va">london</span>, family <span class="op">=</span> <span class="st">"poisson"</span>,</span></span>
 <span class="r-in"><span>             sample.arg <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">432</span>, seed <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span><span class="op">)</span></span></span>
