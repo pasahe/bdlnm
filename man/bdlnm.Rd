@@ -63,8 +63,6 @@ When missing values are present in the data supplied to \code{\link[INLA:inla]{I
 \item If \code{NA} values occur in a fixed-effect covariate that is a factor, this is not allowed unless \code{NA} is explicitly included as a level, or \code{control.fixed = list(expand.factor.strategy = "inla")} is specified. With this option, \code{NA} is interpreted similarly as in the fixed-effect case, producing no contribution from that covariate to the linear predictor.
 \item If \code{NA} values occur in a random effect, the random effect does not contribute to the linear predictor for the corresponding observation.
 }
-
-See the INLA FAQ for further details: \url{https://www.r-inla.org/faq#h.dbamew4fomc}.
 }
 
 \section{Posterior samples}{

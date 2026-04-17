@@ -29,8 +29,6 @@
 #' - If `NA` values occur in a fixed-effect covariate that is a factor, this is not allowed unless `NA` is explicitly included as a level, or `control.fixed = list(expand.factor.strategy = "inla")` is specified. With this option, `NA` is interpreted similarly as in the fixed-effect case, producing no contribution from that covariate to the linear predictor.
 #' - If `NA` values occur in a random effect, the random effect does not contribute to the linear predictor for the corresponding observation.
 #'
-#' See the INLA FAQ for further details: <https://www.r-inla.org/faq#h.dbamew4fomc>.
-#'
 #' @section Posterior samples:
 #'
 #' After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via [INLA::inla.posterior.sample()]. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a `"crossbasis"` built from an exposure basis with C parameters and a lag basis with L parameters, there will be C × L cross-basis associated coefficients (named e.g. v1.l1, ..., vC.lL). For a `"onebasis"` object the coefficients follow the simpler form b1, ... bC.
@@ -184,7 +182,7 @@ bdlnm <- function(
     cli::cli_inform(
       c(
         "A random term has been detected in {.arg formula}, so {.arg na.action} will be ignored.",
-        "i" = "Missing values will be treated as documented in {.url https://www.r-inla.org/faq#h.dbamew4fomc}."
+        "i" = "Missing values will be treated as documented in the help page."
       )
     )
   }
