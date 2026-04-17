@@ -20,6 +20,8 @@ knitr::opts_chunk$set(
 [![CRAN status](https://www.r-pkg.org/badges/version/bdlnm)](https://CRAN.R-project.org/package=bdlnm)
 [![R-CMD-check](https://github.com/pasahe/bdlnm/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pasahe/bdlnm/actions/workflows/R-CMD-check.yaml)
 [![Codecov test coverage](https://codecov.io/gh/pasahe/bdlnm/graph/badge.svg)](https://app.codecov.io/gh/pasahe/bdlnm)
+[![bdlnm downloads per month](https://cranlogs.r-pkg.org/badges/bdlnm)](https://cran.r-project.org/package=bdlnm)
+[![bdlnm total downloads](https://cranlogs.r-pkg.org/badges/grand-total/bdlnm)](https://cran.r-project.org/package=bdlnm)
 <!-- badges: end -->
 
 The goal of `bdlnm` is to provide tools for fitting **Bayesian distributed lag non-linear models (B-DLNM)** using the **INLA** framework. The package allows users to estimate exposure-lag-response associations, generate posterior predictions, compute attributable risk measures, and estimate optimal exposure values within a fully Bayesian framework.
