@@ -41,22 +41,25 @@ knots equally spaced on the log scale up to a maximum lag of 21 days:
 ``` r
 # Exposure-response and lag-response spline parameters
 dlnm_var <- list(
-    var_prc = c(10, 75, 90),
-    var_fun = "ns",
-    lag_fun = "ns",
-    max_lag = 21,
-    lagnk = 3
+  var_prc = c(10, 75, 90),
+  var_fun = "ns",
+  lag_fun = "ns",
+  max_lag = 21,
+  lagnk = 3
 )
 
 
 # Cross-basis parameters
-argvar <- list(fun = dlnm_var$var_fun, 
-               knots = quantile(london$tmean, 
-                                dlnm_var$var_prc/100, na.rm = TRUE),
-               Bound = range(london$tmean, na.rm = TRUE))
+argvar <- list(
+  fun = dlnm_var$var_fun,
+  knots = quantile(london$tmean, dlnm_var$var_prc / 100, na.rm = TRUE),
+  Bound = range(london$tmean, na.rm = TRUE)
+)
 
-arglag <- list(fun = dlnm_var$lag_fun, 
-               knots = logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
+arglag <- list(
+  fun = dlnm_var$lag_fun,
+  knots = logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk)
+)
 
 # Create crossbasis
 cb <- crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
@@ -78,6 +81,8 @@ will be generated. These correspond to an evenly spaced grid with a
 ``` r
 # Prediction values (equidistant points)
 temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
+# Ensure it falls inside the range of temperatures after rounding:
+temp <- temp[temp >= min(london$tmean) & temp <= max(london$tmean)]
 ```
 
 ## Fit the model and posterior samples
@@ -90,7 +95,12 @@ seasonal component, and an indicator for the day of the week. We draw
 reproducibility.
 
 ``` r
-mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson", sample.arg = list(n = 1000, seed = 5243))
+mod <- bdlnm(
+  mort_75plus ~ cb + factor(dow) + seas,
+  data = london,
+  family = "poisson",
+  sample.arg = list(n = 1000, seed = 5243)
+)
 #> Warning in inla.posterior.sample(n, rfake, intern = intern, use.improved.mean =
 #> use.improved.mean, : Since 'seed!=0', parallel model is disabled and serial
 #> model is selected, num.threads='1:1'
@@ -123,10 +133,9 @@ optimal value will later be used to center the estimated relative risks.
 
 ``` r
 mmt <- optimal_exposure(mod, exp_at = temp)
-#> Registered S3 methods overwritten by 'crs':
-#>   method         from
-#>   print.crs      sf  
-#>   predict.gsl.bs np
+#> Registered S3 method overwritten by 'crs':
+#>   method    from
+#>   print.crs sf
 
 str(mmt)
 #> List of 2
@@ -146,7 +155,11 @@ optimal exposure values exist and to verify that the median provides a
 reasonable centering value:
 
 ``` r
-plot(mmt, xlab = "Temperature (ºC)", main = paste0("MMT (Median = ", round(mmt$summary[["0.5quant"]], 1), "ºC)"))
+plot(
+  mmt,
+  xlab = "Temperature (ºC)",
+  main = paste0("MMT (Median = ", round(mmt$summary[["0.5quant"]], 1), "ºC)")
+)
 ```
 
 ![](bdlnm_files/figure-html/unnamed-chunk-9-1.png)
@@ -155,7 +168,7 @@ To make the predictions, we will center the risk at the median of these
 values:
 
 ``` r
-cen <- mmt$summary[["0.5quant"]] 
+cen <- mmt$summary[["0.5quant"]]
 cen
 #> [1] 18.9
 ```
@@ -233,12 +246,12 @@ str(cpred)
 For instance, the estimated `crossbasis` coefficients are stored as:
 
 ``` r
-cpred$coefficients |> 
+cpred$coefficients |>
   head(c(5, 5))
 #>             sample1      sample2      sample3      sample4     sample5
 #> cbv1.l1 -0.13808615 -0.132009676 -0.129815057 -0.119547680 -0.13601590
-#> cbv1.l2 -0.01517507 -0.009297762  0.008822308 -0.003421644 -0.00598265
-#> cbv1.l3 -0.04639142 -0.036821678 -0.058903768 -0.046856153 -0.04127753
+#> cbv1.l2 -0.01517507 -0.009297762  0.008822309 -0.003421643 -0.00598265
+#> cbv1.l3 -0.04639142 -0.036821678 -0.058903768 -0.046856154 -0.04127753
 #> cbv1.l4  0.06021475  0.046470398  0.035853137  0.038675889  0.04695226
 #> cbv1.l5 -0.05556018 -0.049523828 -0.030615227 -0.036304584 -0.04953768
 ```
@@ -248,7 +261,7 @@ stored in an array for each posterior sample. For example, for the first
 sample:
 
 ``` r
-cpred$matRRfit[, , "sample1"] |> 
+cpred$matRRfit[,, "sample1"] |>
   head()
 #>           lag0     lag1     lag2     lag3     lag4     lag5     lag6     lag7
 #> -3.4 0.8457344 1.076681 1.144447 1.101760 1.065751 1.044707 1.034080 1.029875
@@ -277,7 +290,7 @@ The overall cumulative effects for each temperature (summing across all
 lags) are stored in:
 
 ``` r
-cpred$allRRfit |> 
+cpred$allRRfit |>
   head(c(5, 5))
 #>       sample1  sample2  sample3  sample4  sample5
 #> -3.4 1.979549 1.756762 1.694665 1.770495 1.831634
@@ -290,7 +303,7 @@ cpred$allRRfit |>
 Summaries of these effects across posterior samples are also available:
 
 ``` r
-cpred$matRRfit.summary |> 
+cpred$matRRfit.summary |>
   head(5)
 #> , , mean
 #> 
@@ -418,7 +431,7 @@ cpred$matRRfit.summary |>
 #> -3.1 1.023200 1.023070 1.023434 1.024250 1.024010 1.024094
 #> -3   1.023075 1.022870 1.023282 1.024169 1.023936 1.023892
 
-cpred$allRRfit.summary |> 
+cpred$allRRfit.summary |>
   head(5)
 #>          mean       sd 0.025quant 0.5quant 0.975quant     mode
 #> -3.4 1.840299 1.064665   1.638181 1.835435   2.085973 1.830668
@@ -437,7 +450,15 @@ For example, we can plot the overall cumulative effect for each
 temperature value (suming across all lags):
 
 ``` r
-plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, main="Overall", log = "y")
+plot(
+  cpred,
+  "overall",
+  xlab = "Temperature (ºC)",
+  ylab = "Relative Risk",
+  col = 4,
+  main = "Overall",
+  log = "y"
+)
 ```
 
 ![](bdlnm_files/figure-html/unnamed-chunk-17-1.png)
@@ -447,7 +468,16 @@ plotting the curves from all posterior samples instead of the credible
 interval:
 
 ``` r
-plot(cpred, "overall", xlab = "Temperature (ºC)", ylab = "Relative Risk", col = 4, main="Overall", log = "y", ci = "sampling")
+plot(
+  cpred,
+  "overall",
+  xlab = "Temperature (ºC)",
+  ylab = "Relative Risk",
+  col = 4,
+  main = "Overall",
+  log = "y",
+  ci = "sampling"
+)
 ```
 
 ![](bdlnm_files/figure-html/unnamed-chunk-18-1.png)
@@ -456,7 +486,16 @@ We can also visualize the full exposure–lag–response association using a
 3-D surface:
 
 ``` r
-plot(cpred, "3d", zlab = "Relative risk", col = 4, lphi = 60, cex.axis = 0.6, xlab = "Temperature (ºC)", main = "3D graph of temperature effect")
+plot(
+  cpred,
+  "3d",
+  zlab = "Relative risk",
+  col = 4,
+  lphi = 60,
+  cex.axis = 0.6,
+  xlab = "Temperature (ºC)",
+  main = "3D graph of temperature effect"
+)
 ```
 
 ![](bdlnm_files/figure-html/unnamed-chunk-19-1.png)
@@ -464,7 +503,13 @@ plot(cpred, "3d", zlab = "Relative risk", col = 4, lphi = 60, cex.axis = 0.6, xl
 A contour plot provides a 2-D projection of the same relationship:
 
 ``` r
-plot(cpred, "contour", xlab = "Temperature (ºC)", ylab = "Lag", main = "Contour plot")
+plot(
+  cpred,
+  "contour",
+  xlab = "Temperature (ºC)",
+  ylab = "Lag",
+  main = "Contour plot"
+)
 ```
 
 ![](bdlnm_files/figure-html/unnamed-chunk-20-1.png)
@@ -474,7 +519,16 @@ We can also examine the lag–response association for a high temperature
 
 ``` r
 htemp <- round(quantile(london$tmean, 0.99), 1)
-plot(cpred , "slices", ci = "bars", type = "p", pch = 19, exp_at = htemp, ylab="RR", main=paste0("Association for a high temperature (", htemp, "ºC)"))
+plot(
+  cpred,
+  "slices",
+  ci = "bars",
+  type = "p",
+  pch = 19,
+  exp_at = htemp,
+  ylab = "RR",
+  main = paste0("Association for a high temperature (", htemp, "ºC)")
+)
 ```
 
 ![](bdlnm_files/figure-html/unnamed-chunk-21-1.png)
@@ -482,7 +536,14 @@ plot(cpred , "slices", ci = "bars", type = "p", pch = 19, exp_at = htemp, ylab="
 Or the exposure–response association at lag 0:
 
 ``` r
-plot(cpred , "slices", lag_at = 0, col=4, ylab="RR", main=paste0("Association at lag 0"))
+plot(
+  cpred,
+  "slices",
+  lag_at = 0,
+  col = 4,
+  ylab = "RR",
+  main = paste0("Association at lag 0")
+)
 ```
 
 ![](bdlnm_files/figure-html/unnamed-chunk-22-1.png)

@@ -232,8 +232,10 @@ cb <- dlnm::crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
 # Seasonality of mortality time series
 seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
 
-# Prediction values (equidistant points)
-temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
+ # Prediction values (equidistant points)
+ temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
+ # Ensure it falls inside the range of temperatures after rounding:
+ temp <- temp[temp >= min(london$tmean) & temp <= max(london$tmean)]
 
 # Model
 
@@ -256,9 +258,8 @@ name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
 }
 #> Warning: Since 'seed!=0', parallel model is disabled and serial model is selected, num.threads='1:1'
 #> Warning: Centering value unspecified (`cen`). Automatically set to: 12.85.
-#> Registered S3 methods overwritten by 'crs':
-#>   method         from
-#>   print.crs      sf  
-#>   predict.gsl.bs np  
+#> Registered S3 method overwritten by 'crs':
+#>   method    from
+#>   print.crs sf  
 
 ```

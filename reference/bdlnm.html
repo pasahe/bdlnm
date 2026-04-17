@@ -112,8 +112,7 @@
 <li><p>If <code>NA</code> values occur in fixed-effect covariates, <code><a href="https://rdrr.io/pkg/INLA/man/inla.html" class="external-link">INLA::inla()</a></code> replaces them internally with zero so that the covariate does not contribute to the linear predictor for that observation.</p></li>
 <li><p>If <code>NA</code> values occur in a fixed-effect covariate that is a factor, this is not allowed unless <code>NA</code> is explicitly included as a level, or <code>control.fixed = list(expand.factor.strategy = "inla")</code> is specified. With this option, <code>NA</code> is interpreted similarly as in the fixed-effect case, producing no contribution from that covariate to the linear predictor.</p></li>
 <li><p>If <code>NA</code> values occur in a random effect, the random effect does not contribute to the linear predictor for the corresponding observation.</p></li>
-</ul><p>See the INLA FAQ for further details: <a href="https://www.r-inla.org/faq#h.dbamew4fomc" class="external-link">https://www.r-inla.org/faq#h.dbamew4fomc</a>.</p>
-    </div>
+</ul></div>
     <div class="section level2">
     <h2 id="posterior-samples">Posterior samples<a class="anchor" aria-label="anchor" href="#posterior-samples"></a></h2>
 
@@ -177,6 +176,8 @@
 <span class="r-in"><span></span></span>
 <span class="r-in"><span> <span class="co"># Prediction values (equidistant points)</span></span></span>
 <span class="r-in"><span> <span class="va">temp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span>, by <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span> <span class="co"># Ensure it falls inside the range of temperatures after rounding:</span></span></span>
+<span class="r-in"><span> <span class="va">temp</span> <span class="op">&lt;-</span> <span class="va">temp</span><span class="op">[</span><span class="va">temp</span> <span class="op">&gt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">temp</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span><span class="op">]</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="check_inla.html">check_inla</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span> <span class="co"># Fit the model</span></span></span>

@@ -112,13 +112,16 @@ vignette.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Cross-basis parameters</span></span>
-<span><span class="va">argvar</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fun <span class="op">=</span> <span class="va">dlnm_var</span><span class="op">$</span><span class="va">var_fun</span>,</span>
-<span>               knots <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span>,</span>
-<span>                                <span class="va">dlnm_var</span><span class="op">$</span><span class="va">var_prc</span><span class="op">/</span><span class="fl">100</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
-<span>               Bound <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">argvar</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  fun <span class="op">=</span> <span class="va">dlnm_var</span><span class="op">$</span><span class="va">var_fun</span>,</span>
+<span>  knots <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span>, <span class="va">dlnm_var</span><span class="op">$</span><span class="va">var_prc</span> <span class="op">/</span> <span class="fl">100</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  Bound <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">arglag</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fun <span class="op">=</span> <span class="va">dlnm_var</span><span class="op">$</span><span class="va">lag_fun</span>,</span>
-<span>               knots <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/dlnm/man/logknots.html" class="external-link">logknots</a></span><span class="op">(</span><span class="va">dlnm_var</span><span class="op">$</span><span class="va">max_lag</span>, nk <span class="op">=</span> <span class="va">dlnm_var</span><span class="op">$</span><span class="va">lagnk</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">arglag</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  fun <span class="op">=</span> <span class="va">dlnm_var</span><span class="op">$</span><span class="va">lag_fun</span>,</span>
+<span>  knots <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/dlnm/man/logknots.html" class="external-link">logknots</a></span><span class="op">(</span><span class="va">dlnm_var</span><span class="op">$</span><span class="va">max_lag</span>, nk <span class="op">=</span> <span class="va">dlnm_var</span><span class="op">$</span><span class="va">lagnk</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Create crossbasis</span></span>
 <span><span class="va">cb</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/dlnm/man/crossbasis.html" class="external-link">crossbasis</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span>, lag <span class="op">=</span> <span class="va">dlnm_var</span><span class="op">$</span><span class="va">max_lag</span>, <span class="va">argvar</span>, <span class="va">arglag</span><span class="op">)</span></span>
@@ -128,20 +131,23 @@ vignette.</p>
 <span></span>
 <span><span class="co"># Prediction values (equidistant points)</span></span>
 <span><span class="va">temp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span>, by <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="co"># Ensure it falls inside the range of temperatures after rounding:</span></span>
+<span><span class="va">temp</span> <span class="op">&lt;-</span> <span class="va">temp</span><span class="op">[</span><span class="va">temp</span> <span class="op">&gt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">temp</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">london</span><span class="op">$</span><span class="va">tmean</span><span class="op">)</span><span class="op">]</span></span>
 <span></span>
 <span><span class="co"># Model</span></span>
 <span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bdlnm.html">bdlnm</a></span><span class="op">(</span><span class="va">mort_75plus</span> <span class="op">~</span> <span class="va">cb</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">dow</span><span class="op">)</span> <span class="op">+</span> <span class="va">seas</span>,</span>
-<span>           data <span class="op">=</span> <span class="va">london</span>,</span>
-<span>           family <span class="op">=</span> <span class="st">"poisson"</span>,</span>
-<span>           sample.arg <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">432</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bdlnm.html">bdlnm</a></span><span class="op">(</span></span>
+<span>  <span class="va">mort_75plus</span> <span class="op">~</span> <span class="va">cb</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">dow</span><span class="op">)</span> <span class="op">+</span> <span class="va">seas</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">london</span>,</span>
+<span>  family <span class="op">=</span> <span class="st">"poisson"</span>,</span>
+<span>  sample.arg <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">432</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># compute MMT centering value using optimal_exposure</span></span>
 <span><span class="va">mmt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimal_exposure.html">optimal_exposure</a></span><span class="op">(</span><span class="va">mod</span>, exp_at <span class="op">=</span> <span class="va">temp</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Registered S3 methods overwritten by 'crs':</span></span>
-<span><span class="co">#&gt;   method         from</span></span>
-<span><span class="co">#&gt;   print.crs      sf  </span></span>
-<span><span class="co">#&gt;   predict.gsl.bs np</span></span>
+<span><span class="co">#&gt; Registered S3 method overwritten by 'crs':</span></span>
+<span><span class="co">#&gt;   method    from</span></span>
+<span><span class="co">#&gt;   print.crs sf</span></span>
 <span><span class="va">cen</span> <span class="op">&lt;-</span> <span class="va">mmt</span><span class="op">$</span><span class="va">summary</span><span class="op">[[</span><span class="st">"0.5quant"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="va">cen</span></span>
 <span><span class="co">#&gt; [1] 18.9</span></span></code></pre></div>
@@ -153,7 +159,15 @@ distributed lag models</a>.</p>
 the backward algorithm, which quantifies the current burden attributable
 to the set of exposure events experienced in the past:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">attr_back</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/attributable.html">attributable</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">london</span>, name_date <span class="op">=</span> <span class="st">"date"</span>, name_exposure <span class="op">=</span> <span class="st">"tmean"</span>, name_cases <span class="op">=</span> <span class="st">"mort_75plus"</span>, cen <span class="op">=</span> <span class="va">cen</span>, dir <span class="op">=</span> <span class="st">"back"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">attr_back</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/attributable.html">attributable</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod</span>,</span>
+<span>  <span class="va">london</span>,</span>
+<span>  name_date <span class="op">=</span> <span class="st">"date"</span>,</span>
+<span>  name_exposure <span class="op">=</span> <span class="st">"tmean"</span>,</span>
+<span>  name_cases <span class="op">=</span> <span class="st">"mort_75plus"</span>,</span>
+<span>  cen <span class="op">=</span> <span class="va">cen</span>,</span>
+<span>  dir <span class="op">=</span> <span class="st">"back"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <p>The output is a list containing posterior samples of attributable
 fractions and attributable numbers computed per day and for the full
 study period, together with summaries across posterior samples:</p>
@@ -187,12 +201,16 @@ study period, together with summaries across posterior samples:</p>
 <p>Using <code>ggplot2</code> we can visualize the time series of daily
 attributable fractions and attributable numbers:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">london</span> <span class="op">|&gt;</span> </span>
+<code class="sourceCode R"><span><span class="va">london</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Attributable Fractions"</span> <span class="op">=</span> <span class="va">attr_back</span><span class="op">$</span><span class="va">af.summary</span><span class="op">[</span>,<span class="st">"0.5quant"</span><span class="op">]</span>,</span>
-<span>    <span class="st">"Attributable Numbers"</span> <span class="op">=</span> <span class="va">attr_back</span><span class="op">$</span><span class="va">an.summary</span><span class="op">[</span>,<span class="st">"0.5quant"</span><span class="op">]</span></span>
-<span>  <span class="op">)</span> <span class="op">|&gt;</span> </span>
-<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Attributable Fractions"</span>, <span class="st">"Attributable Numbers"</span><span class="op">)</span>, names_to <span class="op">=</span> <span class="st">"name"</span>, values_to <span class="op">=</span> <span class="st">"val"</span><span class="op">)</span> <span class="op">|&gt;</span> </span>
+<span>    <span class="st">"Attributable Fractions"</span> <span class="op">=</span> <span class="va">attr_back</span><span class="op">$</span><span class="va">af.summary</span><span class="op">[</span>, <span class="st">"0.5quant"</span><span class="op">]</span>,</span>
+<span>    <span class="st">"Attributable Numbers"</span> <span class="op">=</span> <span class="va">attr_back</span><span class="op">$</span><span class="va">an.summary</span><span class="op">[</span>, <span class="st">"0.5quant"</span><span class="op">]</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Attributable Fractions"</span>, <span class="st">"Attributable Numbers"</span><span class="op">)</span>,</span>
+<span>    names_to <span class="op">=</span> <span class="st">"name"</span>,</span>
+<span>    values_to <span class="op">=</span> <span class="st">"val"</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">date</span>, y <span class="op">=</span> <span class="va">val</span>, color <span class="op">=</span> <span class="va">name</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span><span class="va">name</span>, scales <span class="op">=</span> <span class="st">"free_y"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
@@ -206,12 +224,12 @@ attributable fractions and attributable numbers:</p>
 <p>The total attributable fraction and attributable number over the full
 period are:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>scipen<span class="op">=</span><span class="fl">999</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>scipen <span class="op">=</span> <span class="fl">999</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
 <span>  <span class="st">"Attributable fraction"</span> <span class="op">=</span> <span class="va">attr_back</span><span class="op">$</span><span class="va">aftotal.summary</span>,</span>
 <span>  <span class="st">"Attributable number"</span> <span class="op">=</span> <span class="va">attr_back</span><span class="op">$</span><span class="va">antotal.summary</span></span>
-<span><span class="op">)</span> <span class="op">|&gt;</span> </span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span>digits <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <colgroup>
@@ -256,16 +274,28 @@ period are:</p>
 <p>Alternatively, we can use the forward algorithm, which quantifies the
 future burden attributable to a given exposure event:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">attr_forw</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/attributable.html">attributable</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">london</span>, name_date <span class="op">=</span> <span class="st">"date"</span>, name_exposure <span class="op">=</span> <span class="st">"tmean"</span>, name_cases <span class="op">=</span> <span class="st">"mort_75plus"</span>, cen <span class="op">=</span> <span class="va">cen</span>, dir <span class="op">=</span> <span class="st">"forw"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">attr_forw</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/attributable.html">attributable</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod</span>,</span>
+<span>  <span class="va">london</span>,</span>
+<span>  name_date <span class="op">=</span> <span class="st">"date"</span>,</span>
+<span>  name_exposure <span class="op">=</span> <span class="st">"tmean"</span>,</span>
+<span>  name_cases <span class="op">=</span> <span class="st">"mort_75plus"</span>,</span>
+<span>  cen <span class="op">=</span> <span class="va">cen</span>,</span>
+<span>  dir <span class="op">=</span> <span class="st">"forw"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <p>We can plot the time series of daily attributable fractions and
 attributable numbers based on the forward algorithm:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">london</span> <span class="op">|&gt;</span> </span>
+<code class="sourceCode R"><span><span class="va">london</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Attributable Fractions"</span> <span class="op">=</span> <span class="va">attr_forw</span><span class="op">$</span><span class="va">af.summary</span><span class="op">[</span>,<span class="st">"0.5quant"</span><span class="op">]</span>,</span>
-<span>    <span class="st">"Attributable Numbers"</span> <span class="op">=</span> <span class="va">attr_forw</span><span class="op">$</span><span class="va">an.summary</span><span class="op">[</span>,<span class="st">"0.5quant"</span><span class="op">]</span></span>
-<span>  <span class="op">)</span> <span class="op">|&gt;</span> </span>
-<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Attributable Fractions"</span>, <span class="st">"Attributable Numbers"</span><span class="op">)</span>, names_to <span class="op">=</span> <span class="st">"name"</span>, values_to <span class="op">=</span> <span class="st">"val"</span><span class="op">)</span> <span class="op">|&gt;</span> </span>
+<span>    <span class="st">"Attributable Fractions"</span> <span class="op">=</span> <span class="va">attr_forw</span><span class="op">$</span><span class="va">af.summary</span><span class="op">[</span>, <span class="st">"0.5quant"</span><span class="op">]</span>,</span>
+<span>    <span class="st">"Attributable Numbers"</span> <span class="op">=</span> <span class="va">attr_forw</span><span class="op">$</span><span class="va">an.summary</span><span class="op">[</span>, <span class="st">"0.5quant"</span><span class="op">]</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Attributable Fractions"</span>, <span class="st">"Attributable Numbers"</span><span class="op">)</span>,</span>
+<span>    names_to <span class="op">=</span> <span class="st">"name"</span>,</span>
+<span>    values_to <span class="op">=</span> <span class="st">"val"</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">date</span>, y <span class="op">=</span> <span class="va">val</span>, color <span class="op">=</span> <span class="va">name</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span><span class="va">name</span>, scales <span class="op">=</span> <span class="st">"free_y"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
@@ -282,7 +312,7 @@ period (forward algorithm) are:</p>
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
 <span>  <span class="st">"Attributable fraction"</span> <span class="op">=</span> <span class="va">attr_forw</span><span class="op">$</span><span class="va">aftotal.summary</span>,</span>
 <span>  <span class="st">"Attributable number"</span> <span class="op">=</span> <span class="va">attr_forw</span><span class="op">$</span><span class="va">antotal.summary</span></span>
-<span><span class="op">)</span> <span class="op">|&gt;</span> </span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span>digits <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <colgroup>
@@ -328,7 +358,7 @@ period (forward algorithm) are:</p>
 using a filter variable. For example, we can compute attributable
 measures only for summer months:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">slondon</span> <span class="op">&lt;-</span> <span class="va">london</span> <span class="op">|&gt;</span> </span>
+<code class="sourceCode R"><span><span class="va">slondon</span> <span class="op">&lt;-</span> <span class="va">london</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
 <span>    summer <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/case-and-replace-when.html" class="external-link">case_when</a></span><span class="op">(</span></span>
 <span>      <span class="fu"><a href="https://lubridate.tidyverse.org/reference/month.html" class="external-link">month</a></span><span class="op">(</span><span class="va">date</span><span class="op">)</span> <span class="op">&gt;=</span> <span class="fl">6</span> <span class="op">&amp;</span> <span class="fu"><a href="https://lubridate.tidyverse.org/reference/month.html" class="external-link">month</a></span><span class="op">(</span><span class="va">date</span><span class="op">)</span> <span class="op">&lt;=</span> <span class="fl">8</span> <span class="op">~</span> <span class="fl">1</span>,</span>
@@ -336,19 +366,32 @@ measures only for summer months:</p>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
-<span><span class="va">attr_summer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/attributable.html">attributable</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">slondon</span>, name_date <span class="op">=</span> <span class="st">"date"</span>, name_exposure <span class="op">=</span> <span class="st">"tmean"</span>, name_cases <span class="op">=</span> <span class="st">"mort_75plus"</span>, name_filter <span class="op">=</span> <span class="st">"summer"</span>, cen <span class="op">=</span> <span class="va">cen</span>, dir <span class="op">=</span> <span class="st">"back"</span><span class="op">)</span></span>
+<span><span class="va">attr_summer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/attributable.html">attributable</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod</span>,</span>
+<span>  <span class="va">slondon</span>,</span>
+<span>  name_date <span class="op">=</span> <span class="st">"date"</span>,</span>
+<span>  name_exposure <span class="op">=</span> <span class="st">"tmean"</span>,</span>
+<span>  name_cases <span class="op">=</span> <span class="st">"mort_75plus"</span>,</span>
+<span>  name_filter <span class="op">=</span> <span class="st">"summer"</span>,</span>
+<span>  cen <span class="op">=</span> <span class="va">cen</span>,</span>
+<span>  dir <span class="op">=</span> <span class="st">"back"</span></span>
+<span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning: Attributable fractions and numbers will only be calculated for time points</span></span>
 <span><span class="co">#&gt; filtered by <span style="color: #0000BB;">"summer"</span></span></span></code></pre></div>
 <p>We can plot the time series of daily attributable fractions and
 attributable numbers for summers only:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">slondon</span> <span class="op">|&gt;</span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">summer</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span> <span class="op">|&gt;</span> </span>
+<code class="sourceCode R"><span><span class="va">slondon</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">summer</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Attributable Fractions"</span> <span class="op">=</span> <span class="va">attr_summer</span><span class="op">$</span><span class="va">af.summary</span><span class="op">[</span>,<span class="st">"0.5quant"</span><span class="op">]</span>,</span>
-<span>    <span class="st">"Attributable Numbers"</span> <span class="op">=</span> <span class="va">attr_summer</span><span class="op">$</span><span class="va">an.summary</span><span class="op">[</span>,<span class="st">"0.5quant"</span><span class="op">]</span></span>
-<span>  <span class="op">)</span> <span class="op">|&gt;</span> </span>
-<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Attributable Fractions"</span>, <span class="st">"Attributable Numbers"</span><span class="op">)</span>, names_to <span class="op">=</span> <span class="st">"name"</span>, values_to <span class="op">=</span> <span class="st">"val"</span><span class="op">)</span> <span class="op">|&gt;</span> </span>
+<span>    <span class="st">"Attributable Fractions"</span> <span class="op">=</span> <span class="va">attr_summer</span><span class="op">$</span><span class="va">af.summary</span><span class="op">[</span>, <span class="st">"0.5quant"</span><span class="op">]</span>,</span>
+<span>    <span class="st">"Attributable Numbers"</span> <span class="op">=</span> <span class="va">attr_summer</span><span class="op">$</span><span class="va">an.summary</span><span class="op">[</span>, <span class="st">"0.5quant"</span><span class="op">]</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Attributable Fractions"</span>, <span class="st">"Attributable Numbers"</span><span class="op">)</span>,</span>
+<span>    names_to <span class="op">=</span> <span class="st">"name"</span>,</span>
+<span>    values_to <span class="op">=</span> <span class="st">"val"</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">date</span>, y <span class="op">=</span> <span class="va">val</span>, color <span class="op">=</span> <span class="va">name</span>, group <span class="op">=</span> <span class="va">year</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span><span class="va">name</span>, scales <span class="op">=</span> <span class="st">"free_y"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
@@ -363,7 +406,7 @@ are:</p>
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
 <span>  <span class="st">"Attributable fraction"</span> <span class="op">=</span> <span class="va">attr_summer</span><span class="op">$</span><span class="va">aftotal.summary</span>,</span>
 <span>  <span class="st">"Attributable number"</span> <span class="op">=</span> <span class="va">attr_summer</span><span class="op">$</span><span class="va">antotal.summary</span></span>
-<span><span class="op">)</span> <span class="op">|&gt;</span> </span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span>digits <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <colgroup>

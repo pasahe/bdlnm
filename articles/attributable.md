@@ -51,13 +51,16 @@ dlnm_var <- list(
 )
 
 # Cross-basis parameters
-argvar <- list(fun = dlnm_var$var_fun,
-               knots = quantile(london$tmean,
-                                dlnm_var$var_prc/100, na.rm = TRUE),
-               Bound = range(london$tmean, na.rm = TRUE))
+argvar <- list(
+  fun = dlnm_var$var_fun,
+  knots = quantile(london$tmean, dlnm_var$var_prc / 100, na.rm = TRUE),
+  Bound = range(london$tmean, na.rm = TRUE)
+)
 
-arglag <- list(fun = dlnm_var$lag_fun,
-               knots = logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk))
+arglag <- list(
+  fun = dlnm_var$lag_fun,
+  knots = logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk)
+)
 
 # Create crossbasis
 cb <- crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
@@ -67,20 +70,23 @@ seas <- ns(london$date, df = round(8 * length(london$date) / 365.25))
 
 # Prediction values (equidistant points)
 temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
+# Ensure it falls inside the range of temperatures after rounding:
+temp <- temp[temp >= min(london$tmean) & temp <= max(london$tmean)]
 
 # Model
 
-mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
-           data = london,
-           family = "poisson",
-           sample.arg = list(seed = 432))
+mod <- bdlnm(
+  mort_75plus ~ cb + factor(dow) + seas,
+  data = london,
+  family = "poisson",
+  sample.arg = list(seed = 432)
+)
 
 # compute MMT centering value using optimal_exposure
 mmt <- optimal_exposure(mod, exp_at = temp)
-#> Registered S3 methods overwritten by 'crs':
-#>   method         from
-#>   print.crs      sf  
-#>   predict.gsl.bs np
+#> Registered S3 method overwritten by 'crs':
+#>   method    from
+#>   print.crs sf
 cen <- mmt$summary[["0.5quant"]]
 cen
 #> [1] 18.9
@@ -98,7 +104,15 @@ backward algorithm, which quantifies the current burden attributable to
 the set of exposure events experienced in the past:
 
 ``` r
-attr_back <- attributable(mod, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
+attr_back <- attributable(
+  mod,
+  london,
+  name_date = "date",
+  name_exposure = "tmean",
+  name_cases = "mort_75plus",
+  cen = cen,
+  dir = "back"
+)
 ```
 
 The output is a list containing posterior samples of attributable
@@ -138,12 +152,16 @@ Using `ggplot2` we can visualize the time series of daily attributable
 fractions and attributable numbers:
 
 ``` r
-london |> 
+london |>
   mutate(
-    "Attributable Fractions" = attr_back$af.summary[,"0.5quant"],
-    "Attributable Numbers" = attr_back$an.summary[,"0.5quant"]
-  ) |> 
-  pivot_longer(c("Attributable Fractions", "Attributable Numbers"), names_to = "name", values_to = "val") |> 
+    "Attributable Fractions" = attr_back$af.summary[, "0.5quant"],
+    "Attributable Numbers" = attr_back$an.summary[, "0.5quant"]
+  ) |>
+  pivot_longer(
+    c("Attributable Fractions", "Attributable Numbers"),
+    names_to = "name",
+    values_to = "val"
+  ) |>
   ggplot(aes(x = date, y = val, color = name)) +
   facet_wrap(~name, scales = "free_y") +
   geom_line() +
@@ -161,12 +179,12 @@ The total attributable fraction and attributable number over the full
 period are:
 
 ``` r
-options(scipen=999)
+options(scipen = 999)
 
 rbind(
   "Attributable fraction" = attr_back$aftotal.summary,
   "Attributable number" = attr_back$antotal.summary
-) |> 
+) |>
   knitr::kable(digits = 2)
 ```
 
@@ -179,19 +197,31 @@ Alternatively, we can use the forward algorithm, which quantifies the
 future burden attributable to a given exposure event:
 
 ``` r
-attr_forw <- attributable(mod, london, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "forw")
+attr_forw <- attributable(
+  mod,
+  london,
+  name_date = "date",
+  name_exposure = "tmean",
+  name_cases = "mort_75plus",
+  cen = cen,
+  dir = "forw"
+)
 ```
 
 We can plot the time series of daily attributable fractions and
 attributable numbers based on the forward algorithm:
 
 ``` r
-london |> 
+london |>
   mutate(
-    "Attributable Fractions" = attr_forw$af.summary[,"0.5quant"],
-    "Attributable Numbers" = attr_forw$an.summary[,"0.5quant"]
-  ) |> 
-  pivot_longer(c("Attributable Fractions", "Attributable Numbers"), names_to = "name", values_to = "val") |> 
+    "Attributable Fractions" = attr_forw$af.summary[, "0.5quant"],
+    "Attributable Numbers" = attr_forw$an.summary[, "0.5quant"]
+  ) |>
+  pivot_longer(
+    c("Attributable Fractions", "Attributable Numbers"),
+    names_to = "name",
+    values_to = "val"
+  ) |>
   ggplot(aes(x = date, y = val, color = name)) +
   facet_wrap(~name, scales = "free_y") +
   geom_line() +
@@ -212,7 +242,7 @@ period (forward algorithm) are:
 rbind(
   "Attributable fraction" = attr_forw$aftotal.summary,
   "Attributable number" = attr_forw$antotal.summary
-) |> 
+) |>
   knitr::kable(digits = 2)
 ```
 
@@ -226,7 +256,7 @@ a filter variable. For example, we can compute attributable measures
 only for summer months:
 
 ``` r
-slondon <- london |> 
+slondon <- london |>
   mutate(
     summer = case_when(
       month(date) >= 6 & month(date) <= 8 ~ 1,
@@ -234,7 +264,16 @@ slondon <- london |>
     )
   )
 
-attr_summer <- attributable(mod, slondon, name_date = "date", name_exposure = "tmean", name_cases = "mort_75plus", name_filter = "summer", cen = cen, dir = "back")
+attr_summer <- attributable(
+  mod,
+  slondon,
+  name_date = "date",
+  name_exposure = "tmean",
+  name_cases = "mort_75plus",
+  name_filter = "summer",
+  cen = cen,
+  dir = "back"
+)
 #> Warning: Attributable fractions and numbers will only be calculated for time points
 #> filtered by "summer"
 ```
@@ -243,13 +282,17 @@ We can plot the time series of daily attributable fractions and
 attributable numbers for summers only:
 
 ``` r
-slondon |> 
-  filter(summer == 1) |> 
+slondon |>
+  filter(summer == 1) |>
   mutate(
-    "Attributable Fractions" = attr_summer$af.summary[,"0.5quant"],
-    "Attributable Numbers" = attr_summer$an.summary[,"0.5quant"]
-  ) |> 
-  pivot_longer(c("Attributable Fractions", "Attributable Numbers"), names_to = "name", values_to = "val") |> 
+    "Attributable Fractions" = attr_summer$af.summary[, "0.5quant"],
+    "Attributable Numbers" = attr_summer$an.summary[, "0.5quant"]
+  ) |>
+  pivot_longer(
+    c("Attributable Fractions", "Attributable Numbers"),
+    names_to = "name",
+    values_to = "val"
+  ) |>
   ggplot(aes(x = date, y = val, color = name, group = year)) +
   facet_wrap(~name, scales = "free_y") +
   geom_line() +
@@ -267,7 +310,7 @@ The total attributable fraction and number, only for summers, are:
 rbind(
   "Attributable fraction" = attr_summer$aftotal.summary,
   "Attributable number" = attr_summer$antotal.summary
-) |> 
+) |>
   knitr::kable(digits = 2)
 ```
 

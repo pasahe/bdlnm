@@ -175,9 +175,6 @@ a random effect term is included or because `na.action = na.pass`),
 - If `NA` values occur in a random effect, the random effect does not
   contribute to the linear predictor for the corresponding observation.
 
-See the INLA FAQ for further details:
-<https://www.r-inla.org/faq#h.dbamew4fomc>.
-
 ## Posterior samples
 
 After fitting the model, the function draw samples from the approximate
@@ -277,6 +274,8 @@ Pau Satorra, Marcos Quijal-Zamorano.
 
  # Prediction values (equidistant points)
  temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
+ # Ensure it falls inside the range of temperatures after rounding:
+ temp <- temp[temp >= min(london$tmean) & temp <= max(london$tmean)]
 
 if (check_inla()) {
  # Fit the model
