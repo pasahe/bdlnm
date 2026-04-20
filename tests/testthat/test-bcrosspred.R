@@ -164,3 +164,62 @@ test_that("bcrosspred errors when some argument is missing or invalid", {
 
   expect_equal(length(cpred2$exp_at), 48)
 })
+
+test_that("bcrosspred works when a random effect is included", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
+  slondon$id <- seq_len(nrow(slondon))
+  expect_message(
+    suppressWarnings(
+      mod_rt <- bdlnm(
+        mort_75plus ~ cb + factor(dow) + seas + f(id, model = "iid"),
+        data = slondon,
+        family = "poisson",
+        sample.arg = list(n = n_sim, seed = 1L)
+      )
+    )
+  )
+  expect_warning(cpred_rt <- bcrosspred(mod_rt, exp_at = temp))
+  expect_s3_class(cpred_rt, "bcrosspred")
+  expect_equal(length(cpred_rt), 16)
+  expect_equal(
+    names(cpred_rt),
+    c(
+      "exp_at",
+      "lag_at",
+      "cen",
+      "coefficients",
+      "matfit",
+      "allfit",
+      "matRRfit",
+      "allRRfit",
+      "coefficients.summary",
+      "matfit.summary",
+      "allfit.summary",
+      "matRRfit.summary",
+      "allRRfit.summary",
+      "ci.level",
+      "model.class",
+      "model.link"
+    )
+  )
+  expect_equal(cpred_rt$exp_at, temp)
+  expect_equal(cpred_rt$cen, 12.85)
+  expect_equal(
+    cpred_rt$lag_at,
+    seq(attr(cb, "lag")[1], attr(cb, "lag")[2], by = 1)
+  )
+  expect_equal(dim(cpred_rt$coefficients), c(20, n_sim))
+  expect_equal(rownames(cpred_rt$coefficients), paste0("cb", colnames(cb)))
+  expect_equal(dim(cpred_rt$matfit), c(length(temp), 22, n_sim))
+  expect_equal(rownames(cpred_rt$matfit), as.character(temp))
+  expect_equal(dim(cpred_rt$allfit), c(length(temp), n_sim))
+  expect_equal(rownames(cpred_rt$allfit), as.character(temp))
+  expect_true(all(cpred_rt$allRRfit > 0))
+  expect_equal(dim(cpred_rt$matfit.summary), c(length(temp), 22, 6))
+  expect_equal(cpred_rt$ci.level, 0.95)
+  expect_equal(cpred_rt$model.class, "inla")
+  expect_equal(cpred_rt$model.link, "log")
+
+})

@@ -175,7 +175,7 @@ test_that("na.action is ignored when a random effect is included", {
   expect_message(
     suppressWarnings(
       mod_rt <- bdlnm(
-        mort_75plus ~ cb + factor(dow) + seas + f(id),
+        mort_75plus ~ cb + factor(dow) + seas + f(id, model = "iid"),
         data = slondon,
         family = "poisson",
         sample.arg = list(n = n_sim, seed = 1L)

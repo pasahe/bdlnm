@@ -185,6 +185,15 @@ bdlnm <- function(
         "i" = "Missing values will be treated as documented in the help page."
       )
     )
+    # add the name of the basis to its coefficient names, recreating model frame
+    # new environment in which the formula will be evaluated to reassign the renamed basis
+    eval_env <- new.env(parent = envir)
+    for (t in names(basis)) {
+      base <- basis[[t]]
+      colnames(base) <- paste0(t, colnames(base))
+      assign(t, base, envir = eval_env)
+    }
+    environment(formula) <- eval_env
   }
 
   # ----------------------------
