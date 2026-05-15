@@ -1,6 +1,7 @@
 # Attributable measures
 
 ``` r
+
 library(bdlnm)
 library(dlnm)
 #> This is dlnm 2.4.10. For details: help(dlnm) and vignette('dlnmOverview').
@@ -41,6 +42,7 @@ More detailed information about these steps can be found in the main
 vignette.
 
 ``` r
+
 # Exposure-response and lag-response spline parameters
 dlnm_var <- list(
   var_prc = c(10, 75, 90),
@@ -104,6 +106,7 @@ backward algorithm, which quantifies the current burden attributable to
 the set of exposure events experienced in the past:
 
 ``` r
+
 attr_back <- attributable(
   mod,
   london,
@@ -120,6 +123,7 @@ fractions and attributable numbers computed per day and for the full
 study period, together with summaries across posterior samples:
 
 ``` r
+
 str(attr_back)
 #> List of 8
 #>  $ af             : num [1:4383, 1:1000] NA NA NA NA NA NA NA NA NA NA ...
@@ -152,6 +156,7 @@ Using `ggplot2` we can visualize the time series of daily attributable
 fractions and attributable numbers:
 
 ``` r
+
 london |>
   mutate(
     "Attributable Fractions" = attr_back$af.summary[, "0.5quant"],
@@ -179,6 +184,7 @@ The total attributable fraction and attributable number over the full
 period are:
 
 ``` r
+
 options(scipen = 999)
 
 rbind(
@@ -197,6 +203,7 @@ Alternatively, we can use the forward algorithm, which quantifies the
 future burden attributable to a given exposure event:
 
 ``` r
+
 attr_forw <- attributable(
   mod,
   london,
@@ -212,6 +219,7 @@ We can plot the time series of daily attributable fractions and
 attributable numbers based on the forward algorithm:
 
 ``` r
+
 london |>
   mutate(
     "Attributable Fractions" = attr_forw$af.summary[, "0.5quant"],
@@ -239,6 +247,7 @@ The total attributable fraction and attributable number over the full
 period (forward algorithm) are:
 
 ``` r
+
 rbind(
   "Attributable fraction" = attr_forw$aftotal.summary,
   "Attributable number" = attr_forw$antotal.summary
@@ -256,6 +265,7 @@ a filter variable. For example, we can compute attributable measures
 only for summer months:
 
 ``` r
+
 slondon <- london |>
   mutate(
     summer = case_when(
@@ -282,6 +292,7 @@ We can plot the time series of daily attributable fractions and
 attributable numbers for summers only:
 
 ``` r
+
 slondon |>
   filter(summer == 1) |>
   mutate(
@@ -307,6 +318,7 @@ slondon |>
 The total attributable fraction and number, only for summers, are:
 
 ``` r
+
 rbind(
   "Attributable fraction" = attr_summer$aftotal.summary,
   "Attributable number" = attr_summer$antotal.summary

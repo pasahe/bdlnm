@@ -1,6 +1,7 @@
 # bdlnm
 
 ``` r
+
 library(bdlnm)
 library(dlnm)
 library(splines)
@@ -14,6 +15,7 @@ As an example for this vignette, we will use the built-in dataset
 to 2012.
 
 ``` r
+
 head(london)
 #>         date year dow    tmean mort_00_74 mort_75plus mort
 #> 1 2000-01-01 2000 Sat 7.642016        101         226  327
@@ -39,6 +41,7 @@ temperature, and a natural spline for the lag–response function, with
 knots equally spaced on the log scale up to a maximum lag of 21 days:
 
 ``` r
+
 # Exposure-response and lag-response spline parameters
 dlnm_var <- list(
   var_prc = c(10, 75, 90),
@@ -70,6 +73,7 @@ natural spline with 8 degrees of freedom per year, which flexibly
 controls for long-term and seasonal trends in mortality:
 
 ``` r
+
 # Seasonality of mortality time series
 seas <- ns(london$date, df = round(8 * length(london$date) / 365.25))
 ```
@@ -79,6 +83,7 @@ will be generated. These correspond to an evenly spaced grid with a
 0.1ºC step covering the full range of observed temperatures in the data:
 
 ``` r
+
 # Prediction values (equidistant points)
 temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 # Ensure it falls inside the range of temperatures after rounding:
@@ -95,6 +100,7 @@ seasonal component, and an indicator for the day of the week. We draw
 reproducibility.
 
 ``` r
+
 mod <- bdlnm(
   mort_75plus ~ cb + factor(dow) + seas,
   data = london,
@@ -112,6 +118,7 @@ samples of the estimated coefficients together with their summaries
 (mean, standard deviation, and quantiles).
 
 ``` r
+
 str(mod, max.level = 1)
 #> List of 4
 #>  $ model               :List of 49
@@ -132,6 +139,7 @@ temperature at which the overall mortality risk is minimized. This
 optimal value will later be used to center the estimated relative risks.
 
 ``` r
+
 mmt <- optimal_exposure(mod, exp_at = temp)
 #> Registered S3 method overwritten by 'crs':
 #>   method    from
@@ -155,6 +163,7 @@ optimal exposure values exist and to verify that the median provides a
 reasonable centering value:
 
 ``` r
+
 plot(
   mmt,
   xlab = "Temperature (ºC)",
@@ -168,6 +177,7 @@ To make the predictions, we will center the risk at the median of these
 values:
 
 ``` r
+
 cen <- mmt$summary[["0.5quant"]]
 cen
 #> [1] 18.9
@@ -180,6 +190,7 @@ mortality from the fitted model at the supplied temperature grid,
 centering the predictions at the MMT value:
 
 ``` r
+
 cpred <- bcrosspred(mod, exp_at = temp, cen = cen)
 ```
 
@@ -188,6 +199,7 @@ estimated exposure–lag–response association for the supplied temperature
 values and lags, together with their summaries.
 
 ``` r
+
 str(cpred)
 #> List of 16
 #>  $ exp_at              : num [1:326] -3.4 -3.3 -3.2 -3.1 -3 -2.9 -2.8 -2.7 -2.6 -2.5 ...
@@ -246,11 +258,12 @@ str(cpred)
 For instance, the estimated `crossbasis` coefficients are stored as:
 
 ``` r
+
 cpred$coefficients |>
   head(c(5, 5))
 #>             sample1      sample2      sample3      sample4     sample5
 #> cbv1.l1 -0.13808615 -0.132009676 -0.129815057 -0.119547680 -0.13601590
-#> cbv1.l2 -0.01517507 -0.009297762  0.008822308 -0.003421644 -0.00598265
+#> cbv1.l2 -0.01517507 -0.009297762  0.008822309 -0.003421643 -0.00598265
 #> cbv1.l3 -0.04639142 -0.036821678 -0.058903768 -0.046856154 -0.04127753
 #> cbv1.l4  0.06021475  0.046470398  0.035853137  0.038675889  0.04695226
 #> cbv1.l5 -0.05556018 -0.049523828 -0.030615227 -0.036304584 -0.04953768
@@ -261,6 +274,7 @@ stored in an array for each posterior sample. For example, for the first
 sample:
 
 ``` r
+
 cpred$matRRfit[,, "sample1"] |>
   head()
 #>           lag0     lag1     lag2     lag3     lag4     lag5     lag6     lag7
@@ -290,6 +304,7 @@ The overall cumulative effects for each temperature (summing across all
 lags) are stored in:
 
 ``` r
+
 cpred$allRRfit |>
   head(c(5, 5))
 #>       sample1  sample2  sample3  sample4  sample5
@@ -303,6 +318,7 @@ cpred$allRRfit |>
 Summaries of these effects across posterior samples are also available:
 
 ``` r
+
 cpred$matRRfit.summary |>
   head(5)
 #> , , mean
@@ -450,6 +466,7 @@ For example, we can plot the overall cumulative effect for each
 temperature value (suming across all lags):
 
 ``` r
+
 plot(
   cpred,
   "overall",
@@ -468,6 +485,7 @@ plotting the curves from all posterior samples instead of the credible
 interval:
 
 ``` r
+
 plot(
   cpred,
   "overall",
@@ -486,6 +504,7 @@ We can also visualize the full exposure–lag–response association using a
 3-D surface:
 
 ``` r
+
 plot(
   cpred,
   "3d",
@@ -503,6 +522,7 @@ plot(
 A contour plot provides a 2-D projection of the same relationship:
 
 ``` r
+
 plot(
   cpred,
   "contour",
@@ -518,6 +538,7 @@ We can also examine the lag–response association for a high temperature
 (e.g., the 99th percentile):
 
 ``` r
+
 htemp <- round(quantile(london$tmean, 0.99), 1)
 plot(
   cpred,
@@ -536,6 +557,7 @@ plot(
 Or the exposure–response association at lag 0:
 
 ``` r
+
 plot(
   cpred,
   "slices",

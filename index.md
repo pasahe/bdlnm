@@ -25,6 +25,7 @@ vignettes.
 You can install the development version of bdlnm like so:
 
 ``` r
+
 devtools::install_github("pasahe/bdlnm")
 ```
 
@@ -33,6 +34,7 @@ devtools::install_github("pasahe/bdlnm")
 > by:
 
 ``` r
+
 install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
 ```
 
@@ -41,6 +43,7 @@ install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-d
 If you use `bdlnm` in your research, please cite:
 
 ``` r
+
 citation("bdlnm")
 ```
 

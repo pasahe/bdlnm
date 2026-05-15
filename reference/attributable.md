@@ -206,6 +206,7 @@ Pau Satorra, Marcos Quijal-Zamorano.
 ## Examples
 
 ``` r
+
 # Filter the dataset to reduce computational time:
 
 # Exposure-response and lag-response spline parameters

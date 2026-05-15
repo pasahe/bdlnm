@@ -84,6 +84,7 @@ Pau Satorra, Marcos Quijal-Zamorano.
 ## Examples
 
 ``` r
+
 # Set exposure-response and lag-response spline parameters
  dlnm_var <- list(
    var_prc = c(10, 75, 90),
