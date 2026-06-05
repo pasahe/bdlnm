@@ -1,0 +1,159 @@
+---
+title: "bdlnm"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{bdlnm}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+inla_available <- bdlnm::check_inla()
+```
+
+```{r setup, message=FALSE}
+library(bdlnm)
+library(dlnm)
+library(splines)
+library(utils)
+```
+
+In this example, we will estimate the temperature-mortality effect for each age group, in the city of London. 
+
+First, we have to convert the data from wide to long:
+
+```{r}
+london_age <- london |>
+  tidyr::pivot_longer(
+    cols = c(mort_00_74, mort_75plus),
+    names_to = "age",
+    values_to = "mortality"
+  ) |> 
+  dplyr::mutate(
+    age = gsub("mort_", "", age_group)
+  )
+```
+
+# Set DLNM parameters
+
+We will start by building the crossbasis with the `dlnm` package.
+
+We will use a natural spline with three knots for the exposure–response function, placed at the 10th, 75th, and 90th percentiles of daily mean temperature, and a natural spline for the lag–response function, with knots equally spaced on the log scale up to a maximum lag of 21 days:
+
+```{r}
+# Exposure-response and lag-response spline parameters
+dlnm_var <- list(
+  var_prc = c(10, 75, 90),
+  var_fun = "ns",
+  lag_fun = "ns",
+  max_lag = 21,
+  lagnk = 3
+)
+
+
+# Cross-basis parameters
+argvar <- list(
+  fun = dlnm_var$var_fun,
+  knots = quantile(london$tmean, dlnm_var$var_prc / 100, na.rm = TRUE),
+  Bound = range(london$tmean, na.rm = TRUE)
+)
+
+arglag <- list(
+  fun = dlnm_var$lag_fun,
+  knots = logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk)
+)
+
+# Create crossbasis
+cb <- crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
+```
+
+Let’s define the seasonality of the mortality time series using a natural spline with 8 degrees of freedom per year, which flexibly controls for long-term and seasonal trends in mortality:
+
+```{r}
+# Seasonality of mortality time series
+seas <- ns(london$date, df = round(8 * length(london$date) / 365.25))
+```
+
+Finally, we also define the temperature values for which predictions will be generated. These correspond to an evenly spaced grid with a 0.1ºC step covering the full range of observed temperatures in the data:
+
+```{r}
+# Prediction values (equidistant points)
+temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
+# Ensure it falls inside the range of temperatures after rounding:
+temp <- temp[temp >= min(london$tmean) & temp <= max(london$tmean)]
+```
+
+# Fit the model and posterior samples
+
+We will fit a B-DLNM model with the effect of the crossbasis interacting with an iid model for each year:
+
+```{r, eval = inla_available}
+london$id_year <- as.numeric(as.factor(london$year))
+
+mod <- bdlnm(
+  mort_75plus ~ cb + cb*age + factor(dow) + seas,
+  data = london,
+  family = "poisson",
+  sample.arg = list(n = 1000, seed = 1L)
+)
+```
+
+The `bdlnm()` function detects that there is a RE interacting term with the crossbasis and automatically expands this effect across all crossbasis coefficients. The matrix stored in `$coefficients` now contains the baseline estimated crossbasis coefficients (`cbv1.l1`, `cbv1.l2`, ...) and a coefficient for each unit in `id_year` (`id_year_cbv1.l1:1`, `id_year_cbv1.l1:2`, ...):
+
+```{r}
+DT::datatable(mod$coefficients[grep("cb", rownames(mod$coefficients), value = TRUE), paste0("sample", 1:5)])
+```
+
+# Predict exposure-lag-response effects
+
+We can predict the exposure–lag–response association between temperature and mortality from the fitted model in each different `id_year` unit, specifying it with `terms`:
+
+```{r, eval = inla_available}
+tictoc::tic()
+cpred <- bcrosspred(mod, terms = "id_year", exp_at = temp)
+tictoc::toc()
+```
+
+A `bcrosspred` object is returned containing posterior samples of the estimated exposure–lag–response association for each different unit in `id_year`, and for the global:
+
+```{r, eval = inla_available}
+str(cpred)
+```
+
+# Plot
+
+## Global
+
+We can visualize a 3d plot for all units:
+
+```{r}
+plot(cpred, terms = "global", ptype = "3d", main = "Global effect")
+```
+
+## By unit
+
+We can visualize 3D plots for the desired units. We will only keep 5 to 5 years:
+
+```{r}
+years <- seq(2000, 2010, by = 2)
+cpred_5 <- cpred[names(pred_list) %in% as.character(years)]
+```
+
+```{r}
+# combined plot for selected years
+years <- seq(2000, 2010, by = 2)
+term_names <- paste0("id_year[", seq(1, max(london$id_year), by = 2), "]")
+
+par(mfrow = c(2, 3))
+for (i in seq_along(years)) {
+  plot(cpred, terms = term_names[i], ptype = "3d", main = years[i])
+}
+par(mfrow = c(1, 1))
+```
+

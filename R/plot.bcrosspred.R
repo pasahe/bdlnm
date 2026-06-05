@@ -112,6 +112,7 @@
 plot.bcrosspred <- function(
   x,
   ptype,
+  terms = NULL,
   exp_at = NULL,
   lag_at = NULL,
   ci = "area",
@@ -204,6 +205,28 @@ plot.bcrosspred <- function(
   if (!is.null(exponentiate) && !is.logical(exponentiate)) {
     cli::cli_abort("{.arg exponentiate} must be logical")
   }
+
+  if (!is.null(terms)) {
+
+    if (!"global" %in% names(cpred)) {
+      cli::cli_abort(c(
+        "The {.arg terms} argument requires a {.arg terms} crosspred object.",
+        "i" = "Re-run {.fn bcrosspred} with the {.arg terms} argument specified."
+      ))
+    }
+
+    if (!terms %in% names(cpred)) {
+      cli::cli_abort(c(
+        "Term {.val {terms}} not found in the crosspred object.",
+        "i" = "Available terms: {.and {setdiff(names(cpred), c('ci.level', 'model.class', 'model.link'))}}."
+      ))
+    }
+    x <- cpred[[terms]]
+    x$ci.level    <- cpred$ci.level
+    x$model.class <- cpred$model.class
+    x$model.link  <- cpred$model.link
+    class(x)      <- "bcrosspred"
+}
 
   ## ---------------------------
   ## Prepare data

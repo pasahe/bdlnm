@@ -178,6 +178,7 @@ bdlnm <- function(
     .bdlnm_mmatrix <- stats::model.matrix(formula, data = .bdlnm_mframe)
     .bdlnm_mresponse <- stats::model.response(.bdlnm_mframe)
   } else {
+
     has_random_terms <- TRUE
     cli::cli_inform(
       c(
@@ -185,15 +186,73 @@ bdlnm <- function(
         "i" = "Missing values will be treated as documented in the help page."
       )
     )
-    # add the name of the basis to its coefficient names, recreating model frame
-    # new environment in which the formula will be evaluated to reassign the renamed basis
-    eval_env <- new.env(parent = envir)
+
     for (t in names(basis)) {
       base <- basis[[t]]
       colnames(base) <- paste0(t, colnames(base))
-      assign(t, base, envir = eval_env)
+      for (cn in colnames(base)) {
+        data[[cn]] <- base[, cn]
+      }
+
+      # Replace bare basis terms in formula with basis columns
+      cb_expansion <- paste(colnames(base), collapse = " + ")
+      formula_str <- deparse(formula, width.cutoff = 500)
+      formula <- as.formula(gsub(
+        paste0("(?<![,(])\\b", t, "\\b(?![^(]*\\))"),
+        cb_expansion,
+        formula_str,
+        perl = TRUE
+      ))
     }
-    environment(formula) <- eval_env
+
+    vars  <- attr(fterms, "variables")
+    f_idx <- attr(fterms, "specials")$f
+    for (i in f_idx) {
+      f_call         <- vars[[i + 1]]
+      id_var_name    <- deparse(f_call[[2]])   # id is first
+      basis_arg_name <- deparse(f_call[[3]])   # cb is second
+
+      if (!id_var_name %in% names(data)) {
+        cli::cli_abort(c(
+          "Column {.var {id_var_name}} not found in {.arg data}.",
+          "i" = "Found in formula term {.code {deparse(f_call, width.cutoff = 500)}}.",
+          "i" = "Available columns: {.and {names(data)}}."
+        ))
+      }
+
+      if (!basis_arg_name %in% names(basis)) next
+
+      cb_cols       <- paste0(basis_arg_name, colnames(basis[[basis_arg_name]]))
+      new_col_names <- paste0(id_var_name, "_", cb_cols)
+
+      for (nc in new_col_names) {
+        final_nc <- nc
+        suffix   <- 1L
+        while (final_nc %in% names(data)) {
+          final_nc <- paste0(nc, ".", suffix)
+          suffix   <- suffix + 1L
+        }
+        data[[final_nc]] <- data[[id_var_name]]
+      }
+
+      extra_args_str <- ""
+      if (length(f_call) > 3) {
+        nms         <- names(f_call)
+        extra_parts <- vapply(seq(4, length(f_call)), function(j) {
+          nm <- if (!is.null(nms) && nzchar(nms[j])) paste0(nms[j], " = ") else ""
+          paste0(nm, deparse(f_call[[j]]))
+        }, character(1))
+        extra_args_str <- paste0(", ", paste(extra_parts, collapse = ", "))
+      }
+
+      new_f_terms <- paste0("f(", new_col_names, ", ", cb_cols, extra_args_str, ")", collapse = " + ")
+      orig_f_str  <- gsub('\\"', '"', deparse(f_call, width.cutoff = 500), fixed = TRUE)
+      formula_str <- deparse(formula, width.cutoff = 500)
+      formula     <- as.formula(paste(
+        gsub(paste0("\\s*\\+\\s*", gsub("([().\"\\\\])", "\\\\\\1", orig_f_str)), "", formula_str),
+        "+", new_f_terms
+      ))
+    }
   }
 
   # ----------------------------
@@ -263,25 +322,6 @@ bdlnm <- function(
   # Draw posterior samples
   # ----------------------------
 
-  # Validate presence of fixed-effect summaries
-  if (is.null(model$summary.fixed) || nrow(model$summary.fixed) == 0L) {
-    cli::cli_abort(
-      "Fitted {.pkg INLA} model contains no fixed-effect summaries in {.code model$summary.fixed}."
-    )
-  }
-
-  names_sel <- rownames(model$summary.fixed)
-
-  if (is.null(names_sel)) {
-    cli::cli_abort(
-      "Could not determine fixed-effect names from the fitted {.pkg INLA} model: {.code rownames(model$summary.fixed)} is {.val NULL}."
-    )
-  }
-
-  # Create selection list for posterior sampling
-  list_sel <- as.list(rep(1L, length(names_sel)))
-  names(list_sel) <- names_sel
-
   # set defaults of sampling arguments
   sample.arg.def <- list(
     n = 1000,
@@ -291,7 +331,7 @@ bdlnm <- function(
   # merge with user arguments
   sample.arg <- utils::modifyList(sample.arg.def, sample.arg)
 
-  sample.arg <- c(list(result = model, selection = list_sel), sample.arg)
+  sample.arg <- c(list(result = model), sample.arg)
 
   posterior <- tryCatch(
     {
@@ -314,9 +354,18 @@ bdlnm <- function(
     # If only one sample, ensure matrix form
     coef <- matrix(coef, ncol = 1L)
   }
-  rownames(coef) <- gsub("\\:1$", "", rownames(coef))
-  colnames(coef) <- paste0("sample", seq_len(ncol(coef)))
 
+  # remove coefficients from predictors
+  coef <- coef[!grepl("^Predictor\\:", rownames(coef)),]
+
+  # remove :1 from fixed effects
+  coef_names    <- gsub(":\\d+$", "", rownames(coef))
+  has_multiple  <- coef_names %in% coef_names[duplicated(coef_names)]
+  rownames(coef) <- ifelse(has_multiple, rownames(coef), gsub(":1$", "", rownames(coef)))
+  colnames(coef) <- paste0("sample", seq_len(ncol(coef)))
+  # fixed effects first
+  coef <- rbind(coef[!has_multiple, , drop = FALSE], coef[has_multiple, , drop = FALSE])
+  
   ## -----------------------
   ## summaries
   ## -----------------------

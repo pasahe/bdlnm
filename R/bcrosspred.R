@@ -100,6 +100,7 @@
 bcrosspred <- function(
   object,
   basis = NULL,
+  combine_effects = NULL,
   exp_at = NULL,
   lag_at = NULL,
   cen = NULL,
@@ -107,6 +108,7 @@ bcrosspred <- function(
   ci.level = 0.95,
   cumul = FALSE
 ) {
+
   ## -----------------------
   ## Basic checks
   ## -----------------------
@@ -155,7 +157,7 @@ bcrosspred <- function(
   }
 
   #Get only CB coefficients
-  coef <- extract_coef(object, basis)
+  coef <- extract_coef(object, basis, combine_effects)
 
   #Get model link
   if (is.null(model.link)) {
@@ -347,213 +349,223 @@ bcrosspred <- function(
     Xpred <- basisvar
   }
 
-  # Create the estimated lag-specific effects (each sample in each column)
-  matfit <- array(
-    Xpred %*% coef,
-    dim = c(length(predvar), length(predlag), n_sample),
-    dimnames = list(
-      predvar,
-      paste0("lag", predlag),
-      paste0("sample", seq_len(n_sample))
+  # for each unit in the specified terms return a prediction stored in all_res
+  names_coef <- dimnames(coef)[[3]]
+  all_res <- list()
+  for (id in names_coef) {
+
+    coef_id <- coef[, , id]
+
+    # Create the estimated lag-specific effects (each sample in each column)
+    matfit <- array(
+      Xpred %*% coef_id,
+      dim = c(length(predvar), length(predlag), n_sample),
+      dimnames = list(
+        predvar,
+        paste0("lag", predlag),
+        paste0("sample", seq_len(n_sample))
+      )
     )
-  )
 
-  ## ----------------------
-  ## Overall & cumulative
-  ## ----------------------
+    ## ----------------------
+    ## Overall & cumulative
+    ## ----------------------
 
-  # Xpred arranged as blocks for each lag: sum over lags for overall effect
+    # Xpred arranged as blocks for each lag: sum over lags for overall effect
 
-  Xpredall <- 0
+    Xpredall <- 0
 
-  cumfit <- matrix(0, nrow(Xpred), n_sample)
+    cumfit <- matrix(0, nrow(Xpred), n_sample)
 
-  for (i in seq(length(predlag))) {
-    ind <- seq(length(predvar)) + length(predvar) * (i - 1)
-    Xpredall <- Xpredall + Xpred[ind, , drop = FALSE]
+    for (i in seq(length(predlag))) {
+      ind <- seq(length(predvar)) + length(predvar) * (i - 1)
+      Xpredall <- Xpredall + Xpred[ind, , drop = FALSE]
+
+      if (cumul) {
+        cumfit[ind, ] <- Xpredall %*% coef_id
+      }
+    }
+
+    # convert to array
+    cumfit <- array(
+      cumfit,
+      dim = c(length(predvar), length(predlag), n_sample),
+      dimnames = list(
+        predvar,
+        paste0("lag", predlag),
+        paste0("sample", seq_len(n_sample))
+      )
+    )
+
+    allfit <- Xpredall %*% coef_id
+    rownames(allfit) <- predvar
+    colnames(allfit) <- paste0("sample", seq_len(n_sample))
+
+    ## ----------------------
+    ## Build output object
+    ## ----------------------
+
+    # Initial list then add components
+    res <- list(exp_at = predvar)
+
+    if (type == "cb") {
+      res$lag_at <- predlag
+    }
+
+    if (!is.null(cen)) {
+      res$cen <- cen
+    }
+
+    colnames(coef_id) <- paste0("sample", seq_len(n_sample))
+
+    res <- c(
+      res,
+      list(
+        coefficients = coef_id,
+        matfit = matfit,
+        allfit = allfit
+      )
+    )
 
     if (cumul) {
-      cumfit[ind, ] <- Xpredall %*% coef
+      res$cumfit <- cumfit
     }
-  }
 
-  # convert to array
-  cumfit <- array(
-    cumfit,
-    dim = c(length(predvar), length(predlag), n_sample),
-    dimnames = list(
-      predvar,
-      paste0("lag", predlag),
-      paste0("sample", seq_len(n_sample))
-    )
-  )
-
-  allfit <- Xpredall %*% coef
-  rownames(allfit) <- predvar
-  colnames(allfit) <- paste0("sample", seq_len(n_sample))
-
-  ## ----------------------
-  ## Build output object
-  ## ----------------------
-
-  # Initial list then add components
-  res <- list(exp_at = predvar)
-
-  if (type == "cb") {
-    res$lag_at <- predlag
-  }
-
-  if (!is.null(cen)) {
-    res$cen <- cen
-  }
-
-  colnames(coef) <- paste0("sample", seq_len(n_sample))
-
-  res <- c(
-    res,
-    list(
-      coefficients = coef,
-      matfit = matfit,
-      allfit = allfit
-    )
-  )
-
-  if (cumul) {
-    res$cumfit <- cumfit
-  }
-
-  ## inverse link
-  if (!is.na(model.link) && model.link %in% c("log", "logit")) {
-    res$matRRfit <- exp(matfit)
-    res$allRRfit <- exp(allfit)
-    if (cumul) res$cumRRfit <- exp(cumfit)
-  }
-
-  ## -----------------------
-  ## summaries
-  ## -----------------------
-  coefsum <- extract_coef(object, basis, "coefficients.summary")
-
-  # recalculate quantiles if another ci.level is provided
-  quantiles <- c((1 - ci.level) / 2, 0.5, 1 - (1 - ci.level) / 2)
-  quantiles_orig <- as.numeric(gsub(
-    "[^0-9.]",
-    "",
-    grep("quant", colnames(coefsum), value = TRUE)
-  ))
-  ci_compute <- !identical(quantiles, quantiles_orig)
-
-  if (ci_compute) {
-    for (i in seq_along(quantiles)) {
-      colnames(coefsum)[
-        colnames(coefsum) == paste0(quantiles_orig[i], "quant")
-      ] <- paste0(quantiles[i], "quant")
-      coefsum[, paste0(quantiles[i], "quant")] <- apply(
-        coef,
-        1,
-        stats::quantile,
-        probs = quantiles[i]
-      )
+    ## inverse link
+    if (!is.na(model.link) && model.link %in% c("log", "logit")) {
+      res$matRRfit <- exp(matfit)
+      res$allRRfit <- exp(allfit)
+      if (cumul) res$cumRRfit <- exp(cumfit)
     }
-  }
 
-  sumcols <- colnames(coefsum)
+    ## -----------------------
+    ## summaries
+    ## -----------------------
 
-  res$coefficients.summary <- coefsum
+    quantiles <- c((1 - ci.level) / 2, 0.5, 1 - (1 - ci.level) / 2)
+    sumcols <- c("mean", "sd", paste0(quantiles, "quant"), "mode")
 
-  #matfit summary
-  matfitsum <- array(
-    dim = c(length(predvar), length(predlag), length(sumcols)),
-    dimnames = list(predvar, paste0("lag", predlag), sumcols)
-  )
+    # sampled coefficients summary
+    coefsum <- matrix(nrow = nrow(coef_id), ncol = length(sumcols))
+    rownames(coefsum) <- rownames(coef_id)
+    colnames(coefsum) <- sumcols
 
-  matfitsum[,, "mean"] <- apply(res$matfit, c(1, 2), mean)
-  matfitsum[,, "sd"] <- apply(res$matfit, c(1, 2), stats::sd)
+    coefsum[, "mean"] <- apply(coef_id, 1, mean)
+    coefsum[, "sd"] <- apply(coef_id, 1, stats::sd)
 
-  for (q in quantiles) {
-    matfitsum[,, paste0(q, "quant")] <- apply(
-      res$matfit,
-      c(1, 2),
-      stats::quantile,
-      probs = q
-    )
-  }
+    for (q in quantiles) {
+      coefsum[, paste0(q, "quant")] <- apply(coef_id, 1, stats::quantile, probs = q)
+    }
 
-  #calculate mode (using default kernel density estimate, revisar...)
-  matfitsum[,, "mode"] <- apply(res$matfit, c(1, 2), function(v) {
-    dv <- stats::density(v)
-    with(dv, x[which.max(y)])
-  })
+    #calculate mode (using default kernel density estimate, revisar...)
+    coefsum[, "mode"] <- apply(coef_id, 1, function(v) {
+      dv <- stats::density(v)
+      with(dv, x[which.max(y)])
+    })
 
-  res$matfit.summary <- matfitsum
+    res$coefficients.summary <- coefsum
 
-  if (cumul) {
-    #cumfit summary
-    cumfitsum <- array(
+    #matfit summary
+    matfitsum <- array(
       dim = c(length(predvar), length(predlag), length(sumcols)),
       dimnames = list(predvar, paste0("lag", predlag), sumcols)
     )
 
-    cumfitsum[,, "mean"] <- apply(res$cumfit, c(1, 2), mean)
-    cumfitsum[,, "sd"] <- apply(res$cumfit, c(1, 2), stats::sd)
+    matfitsum[,, "mean"] <- apply(res$matfit, c(1, 2), mean)
+    matfitsum[,, "sd"] <- apply(res$matfit, c(1, 2), stats::sd)
 
     for (q in quantiles) {
-      cumfitsum[,, paste0(q, "quant")] <- apply(
-        res$cumfit,
+      matfitsum[,, paste0(q, "quant")] <- apply(
+        res$matfit,
         c(1, 2),
         stats::quantile,
         probs = q
       )
     }
 
+
     #calculate mode (using default kernel density estimate, revisar...)
-    cumfitsum[,, "mode"] <- apply(res$cumfit, c(1, 2), function(v) {
+    matfitsum[,, "mode"] <- apply(res$matfit, c(1, 2), function(v) {
       dv <- stats::density(v)
       with(dv, x[which.max(y)])
     })
 
-    res$cumfit.summary <- cumfitsum
-  }
+    res$matfit.summary <- matfitsum
 
-  #allfit summary
-  allfitsum <- matrix(nrow = nrow(res$allfit), ncol = length(sumcols))
-  rownames(allfitsum) <- rownames(res$allfit)
-  colnames(allfitsum) <- sumcols
-
-  allfitsum[, "mean"] <- apply(res$allfit, 1, mean)
-  allfitsum[, "sd"] <- apply(res$allfit, 1, stats::sd)
-
-  for (q in quantiles) {
-    allfitsum[, paste0(q, "quant")] <- apply(
-      res$allfit,
-      1,
-      stats::quantile,
-      probs = q
-    )
-  }
-
-  #calculate mode (using default kernel density estimate, revisar...)
-  allfitsum[, "mode"] <- apply(res$allfit, 1, function(v) {
-    dv <- stats::density(v)
-    with(dv, x[which.max(y)])
-  })
-
-  res$allfit.summary <- allfitsum
-
-  # Relative-risk summaries
-  if (!is.na(model.link) && model.link %in% c("log", "logit")) {
-    res$matRRfit.summary <- exp(res$matfit.summary)
     if (cumul) {
-      res$cumRRfit.summary <- exp(res$cumfit.summary)
+      #cumfit summary
+      cumfitsum <- array(
+        dim = c(length(predvar), length(predlag), length(sumcols)),
+        dimnames = list(predvar, paste0("lag", predlag), sumcols)
+      )
+
+      cumfitsum[,, "mean"] <- apply(res$cumfit, c(1, 2), mean)
+      cumfitsum[,, "sd"] <- apply(res$cumfit, c(1, 2), stats::sd)
+
+      for (q in quantiles) {
+        cumfitsum[,, paste0(q, "quant")] <- apply(
+          res$cumfit,
+          c(1, 2),
+          stats::quantile,
+          probs = q
+        )
+      }
+
+      #calculate mode (using default kernel density estimate, revisar...)
+      cumfitsum[,, "mode"] <- apply(res$cumfit, c(1, 2), function(v) {
+        dv <- stats::density(v)
+        with(dv, x[which.max(y)])
+      })
+
+      res$cumfit.summary <- cumfitsum
     }
-    res$allRRfit.summary <- exp(res$allfit.summary)
+
+    #allfit summary
+    allfitsum <- matrix(nrow = nrow(res$allfit), ncol = length(sumcols))
+    rownames(allfitsum) <- rownames(res$allfit)
+    colnames(allfitsum) <- sumcols
+
+    allfitsum[, "mean"] <- apply(res$allfit, 1, mean)
+    allfitsum[, "sd"] <- apply(res$allfit, 1, stats::sd)
+
+    for (q in quantiles) {
+      allfitsum[, paste0(q, "quant")] <- apply(
+        res$allfit,
+        1,
+        stats::quantile,
+        probs = q
+      )
+    }
+
+    #calculate mode (using default kernel density estimate, revisar...)
+    allfitsum[, "mode"] <- apply(res$allfit, 1, function(v) {
+      dv <- stats::density(v)
+      with(dv, x[which.max(y)])
+    })
+
+    res$allfit.summary <- allfitsum
+
+    # Relative-risk summaries
+    if (!is.na(model.link) && model.link %in% c("log", "logit")) {
+      res$matRRfit.summary <- exp(res$matfit.summary)
+      if (cumul) {
+        res$cumRRfit.summary <- exp(res$cumfit.summary)
+      }
+      res$allRRfit.summary <- exp(res$allfit.summary)
+    }
+
+    all_res[[id]] <- res
+  }
+  
+  if(length(all_res) == 1) {
+    all_res <- all_res[[1]]
   }
 
-  res$ci.level <- ci.level
-  res$model.class <- "inla"
-  res$model.link <- model.link
+  all_res$ci.level <- ci.level
+  all_res$model.class <- "inla"
+  all_res$model.link <- model.link
 
-  class(res) <- "bcrosspred"
+  class(all_res) <- "bcrosspred"
 
-  return(res)
+  return(all_res)
 }
