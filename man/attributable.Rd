@@ -114,7 +114,7 @@ if (check_inla()) {
 mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
              data = london,
              family = "poisson",
-             sample.arg = list(seed = 432, seed = 1L))
+             sample.arg = list(n = 1000, seed = 432))
 
 # Predict
 cpred <- bcrosspred(mod, exp_at = temp)

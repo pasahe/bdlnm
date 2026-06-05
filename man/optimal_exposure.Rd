@@ -84,7 +84,7 @@ This function cannot be used when the specified basis function is one of \code{t
 if (check_inla()) {
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson",
-             sample.arg = list(seed = 432, seed = 1L))
+             sample.arg = list(n = 1000, seed = 432))
 
  # Find minimum risk exposure value
  mmt <- optimal_exposure(mod, "cb", exp_at = temp)
