@@ -281,7 +281,7 @@ Pau Satorra, Marcos Quijal-Zamorano.
 if (check_inla()) {
  # Fit the model
  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson",
-             sample.arg = list(seed = 432, seed = 1L))
+             sample.arg = list(n = 1000, seed = 432))
 }
 #> Warning: Since 'seed!=0', parallel model is disabled and serial model is selected, num.threads='1:1'
 
