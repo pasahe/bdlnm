@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# bdlnm
+# bdlnm <a href="https://pasahe.github.io/bdlnm/"><img src="man/figures/logo.png" align="right" height="139" alt="bdlnm website" /></a>
 
 <!-- badges: start -->
 
