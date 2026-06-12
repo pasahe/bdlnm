@@ -36,7 +36,8 @@ london_age <- london |>
     values_to = "mortality"
   ) |> 
   dplyr::mutate(
-    age = gsub("mort_", "", age)
+    age = gsub("mort_", "", age),
+    age = factor(age)
   )
 ```
 
@@ -73,7 +74,7 @@ arglag <- list(
 london_unique <- london_age[!duplicated(london_age$date), ]
 cb <- crossbasis(london_unique$tmean, lag = dlnm_var$max_lag, argvar, arglag)
 cb_attrs <- attributes(cb)
-cb <- cb[match(london_age$date, london_unique$date), ]
+cb <- rbind(cb, cb)
 class(cb) <- "crossbasis"
 cb_attrs$dim      <- dim(cb)
 cb_attrs$dimnames <- dimnames(cb)
@@ -85,6 +86,7 @@ Let’s define the seasonality of the mortality time series using a natural spli
 ```{r}
 # Seasonality of mortality time series
 seas <- ns(london$date, df = round(8 * length(london$date) / 365.25))
+seas <- rbind(seas, seas)
 ```
 
 Finally, we also define the temperature values for which predictions will be generated. These correspond to an evenly spaced grid with a 0.1ºC step covering the full range of observed temperatures in the data:
@@ -101,20 +103,18 @@ temp <- temp[temp >= min(london$tmean) & temp <= max(london$tmean)]
 We will fit a B-DLNM model with the effect of the crossbasis interacting with the age:
 
 ```{r, eval = inla_available}
-london$id_year <- as.numeric(as.factor(london$year))
-
 mod <- bdlnm(
-  mort_75plus ~ cb + cb*age + factor(dow) + seas,
-  data = london,
+  mort ~ cb*age + factor(dow)*age + seas*age,
+  data = london_age,
   family = "poisson",
   sample.arg = list(n = 1000, seed = 1L)
 )
 ```
 
-The `bdlnm()` function detects that there is a RE interacting term with the crossbasis and automatically expands this effect across all crossbasis coefficients. The matrix stored in `$coefficients` now contains the baseline estimated crossbasis coefficients (`cbv1.l1`, `cbv1.l2`, ...) and a coefficient for each unit in `id_year` (`id_year_cbv1.l1:1`, `id_year_cbv1.l1:2`, ...):
+The `bdlnm()` function runs `inla()` which correctly identifies the interaction term and expands this effect across all crossbasis coefficients. The matrix stored in `$coefficients` now contains the baseline estimated crossbasis coefficients (`cbv1.l1`, `cbv1.l2`, ...) and a coefficient for the other category in age (`cbv1.l1:age75plus`):
 
 ```{r}
-DT::datatable(mod$coefficients[grep("cb", rownames(mod$coefficients), value = TRUE), paste0("sample", 1:5)])
+DT::datatable(mod$coefficients)
 ```
 
 # Predict exposure-lag-response effects
@@ -123,43 +123,42 @@ We can predict the exposure–lag–response association between temperature and
 
 ```{r, eval = inla_available}
 tictoc::tic()
-cpred <- bcrosspred(mod, terms = "id_year", exp_at = temp)
+cpred <- bcrosspred(mod, combine_effects = ~ cb*age, exp_at = temp)
 tictoc::toc()
 ```
 
 A `bcrosspred` object is returned containing posterior samples of the estimated exposure–lag–response association for each different unit in `id_year`, and for the global:
 
 ```{r, eval = inla_available}
-str(cpred)
+str(cpred, max.level = 1)
 ```
 
 # Plot
 
-## Global
+## Age: 0-74
 
-We can visualize a 3d plot for all units:
+We can visualize a 3d plot:
 
 ```{r}
-plot(cpred, terms = "global", ptype = "3d", main = "Global effect")
+plot(cpred, terms = "age[reference]", ptype = "3d", main = "Age: 0-74, exposure-lag-response effect")
 ```
 
-## By unit
-
-We can visualize 3D plots for the desired units. We will only keep 5 to 5 years:
+Or the overall cumulative plot:
 
 ```{r}
-years <- seq(2000, 2010, by = 2)
-cpred_5 <- cpred[names(pred_list) %in% as.character(years)]
+plot(cpred, terms = "age[reference]", ptype = "overall", main = "Age: 0-74, overall cumulative effect")
 ```
 
-```{r}
-# combined plot for selected years
-years <- seq(2000, 2010, by = 2)
-term_names <- paste0("id_year[", seq(1, max(london$id_year), by = 2), "]")
+## Age: 75+
 
-par(mfrow = c(2, 3))
-for (i in seq_along(years)) {
-  plot(cpred, terms = term_names[i], ptype = "3d", main = years[i])
-}
-par(mfrow = c(1, 1))
+We can visualize a 3d plot:
+
+```{r}
+plot(cpred, terms = "age[75plus]", ptype = "3d", main = "Age: 75+, exposure-lag-response effect")
+```
+
+Or the overall cumulative plot:
+
+```{r}
+plot(cpred, terms = "age[75plus]", ptype = "overall", main = "Age: 75+, overall cumulative effect")
 ```

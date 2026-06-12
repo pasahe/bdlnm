@@ -208,13 +208,6 @@ plot.bcrosspred <- function(
 
   if (!is.null(terms)) {
 
-    if (!"global" %in% names(cpred)) {
-      cli::cli_abort(c(
-        "The {.arg terms} argument requires a {.arg terms} crosspred object.",
-        "i" = "Re-run {.fn bcrosspred} with the {.arg terms} argument specified."
-      ))
-    }
-
     if (!terms %in% names(cpred)) {
       cli::cli_abort(c(
         "Term {.val {terms}} not found in the crosspred object.",

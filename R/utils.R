@@ -93,86 +93,152 @@ extract_coef <- function(object, basis, combine_effects) {
 			}
 		}
 
-		# for each random effect id var, find unit ids from coef rownames
-		re_prefix <- paste0(re_id_vars, "_", cb_cols[1])   # use first cb col to find units
-		re_rows   <- rownames(coef)[grepl(paste(paste0("^", re_prefix, ":"), collapse = "|"), rownames(coef))]
-		if (length(re_rows) == 0) {
-			cli::cli_abort(c(
-				"No random effect coefficients found for {.val {re_id_vars}} and the provided basis.",
-				"i" = "Expected rownames like {.val {paste0(re_prefix[1], ':<id>')}} in the model coefficients."
-			))
-		}
-		unit_ids <- unique(gsub(".*:", "", re_rows))
-		n_units  <- length(unit_ids)
+		# we will suppose for now that a fixed and a random interaction effect are not specified at the same time
+		has_random <- length(re_id_vars) > 0
 
-		# global/mean slice
-		if (has_global) {
-			global_coef <- coef[cb_cols, , drop = FALSE]
-			# build array
-			all_ids <- c("global", paste0(re_id_vars[1], "[", unit_ids, "]"))
-			coef_cb <- array(
-				NA_real_,
-				dim      = c(n_cols, n_samples, n_units + 1L),
-				dimnames = list(cb_cols, colnames(coef), all_ids)
-			)
-			coef_cb[, , "global"] <- global_coef
-		}  else {
-			all_ids <- paste0(re_id_vars[1], "[", unit_ids, "]")
-			coef_cb <- array(
-				NA_real_,
-				dim      = c(n_cols, n_samples, n_units),
-				dimnames = list(cb_cols, colnames(coef), all_ids)
-			)
-		}
+		# identify fixed interaction terms:
+		has_fixed_interaction <- any(grepl(paste0("^", which_basis, ":"), fe_labels) | 
+                            grepl(paste0(":", which_basis, "$"), fe_labels))
+		
 
+		if (has_random) {
 
-		replace_call <- function(expr, target, replacement) {
-  		if (identical(expr, target)) return(replacement)
-  		if (is.call(expr)) {
-    		for (i in seq_along(expr)) expr[[i]] <- replace_call(expr[[i]], target, replacement)
-  		}
-  		expr
-		}
+			# for each random effect id var, find unit ids from coef rownames
+			re_prefix <- paste0(cb_cols[1], "_", re_id_vars)
+			re_rows   <- rownames(coef)[grepl(paste(paste0("^", re_prefix, ":"), collapse = "|"), rownames(coef))]
+			if (length(re_rows) == 0) {
+				cli::cli_abort(c(
+					"No random effect coefficients found for {.val {re_id_vars}} and the provided basis.",
+					"i" = "Expected rownames like {.val {paste0(re_prefix[1], ':<id>')}} in the model coefficients."
+				))
+			}
+			unit_ids <- unique(gsub(".*:", "", re_rows))
+			n_units  <- length(unit_ids)
 
-		for (k in unit_ids) {
-
-			k_named  <- paste0(re_id_vars[1], "[", k, "]")
-			eval_env <- new.env(parent = parent.frame())
-			expr <- combine_effects[[2]]
-
-			# assign fixed cb term -> its coefficient matrix
+			# global/mean slice
 			if (has_global) {
-				assign(which_basis, global_coef, envir = eval_env)
+				global_coef <- coef[cb_cols, , drop = FALSE]
+				# build array
+				all_ids <- c("global", paste0(re_id_vars[1], "[", unit_ids, "]"))
+				coef_cb <- array(
+					NA_real_,
+					dim      = c(n_cols, n_samples, n_units + 1L),
+					dimnames = list(cb_cols, colnames(coef), all_ids)
+				)
+				coef_cb[, , "global"] <- global_coef
+			}  else {
+				all_ids <- paste0(re_id_vars[1], "[", unit_ids, "]")
+				coef_cb <- array(
+					NA_real_,
+					dim      = c(n_cols, n_samples, n_units),
+					dimnames = list(cb_cols, colnames(coef), all_ids)
+				)
 			}
 
-			# assign each f() term -> its coefficient matrix for unit k
-			for (i in fe_f_idx) {
-				f_call      <- fe_vars[[i + 1]]
-				id_var_name <- deparse(f_call[[2]])
-				cb_arg_name <- deparse(f_call[[3]])
-				if (cb_arg_name != which_basis) next
 
-				re_row_names_k <- paste0(id_var_name, "_", cb_cols, ":", k)
-				missing_re     <- setdiff(re_row_names_k, rownames(coef))
-				if (length(missing_re) > 0) {
-					cli::cli_abort(c(
-						"Random effect coefficients not found for {.val {id_var_name}} = {.val {k}}.",
-						"x" = "{.val {missing_re}}"
-					))
+			replace_call <- function(expr, target, replacement) {
+				if (identical(expr, target)) return(replacement)
+				if (is.call(expr)) {
+					for (i in seq_along(expr)) expr[[i]] <- replace_call(expr[[i]], target, replacement)
 				}
-				re_coef_k           <- coef[re_row_names_k, , drop = FALSE]
-				rownames(re_coef_k) <- cb_cols
-
-				safe_name <- make.names(deparse(f_call, width.cutoff = 500))
-    		assign(safe_name, re_coef_k, envir = eval_env)
-				expr_str <- gsub(deparse(f_call, width.cutoff = 500), safe_name, 
-                 deparse(expr, width.cutoff = 500), fixed = TRUE)
-				expr     <- str2lang(expr_str)
+				expr
 			}
 
-			# evaluate the RHS of combine_effects in that environment
-			coef_cb[, , k_named] <- with(as.list(eval_env), eval(expr))
+			for (k in unit_ids) {
+
+				k_named  <- paste0(re_id_vars[1], "[", k, "]")
+				eval_env <- new.env(parent = parent.frame())
+				expr <- combine_effects[[2]]
+
+				# assign fixed cb term -> its coefficient matrix
+				if (has_global) {
+					assign(which_basis, global_coef, envir = eval_env)
+				}
+
+				# assign each f() term -> its coefficient matrix for unit k
+				for (i in fe_f_idx) {
+					f_call      <- fe_vars[[i + 1]]
+					id_var_name <- deparse(f_call[[2]])
+					cb_arg_name <- deparse(f_call[[3]])
+					if (cb_arg_name != which_basis) next
+
+					re_row_names_k <- paste0(cb_cols, "_", id_var_name, ":", k)
+					missing_re     <- setdiff(re_row_names_k, rownames(coef))
+					if (length(missing_re) > 0) {
+						cli::cli_abort(c(
+							"Random effect coefficients not found for {.val {id_var_name}} = {.val {k}}.",
+							"x" = "{.val {missing_re}}"
+						))
+					}
+					re_coef_k           <- coef[re_row_names_k, , drop = FALSE]
+					rownames(re_coef_k) <- cb_cols
+
+					safe_name <- make.names(deparse(f_call, width.cutoff = 500))
+					assign(safe_name, re_coef_k, envir = eval_env)
+					expr_str <- gsub(deparse(f_call, width.cutoff = 500), safe_name, 
+									deparse(expr, width.cutoff = 500), fixed = TRUE)
+					expr     <- str2lang(expr_str)
+				}
+
+				# evaluate the RHS of combine_effects in that environment
+				coef_cb[, , k_named] <- with(as.list(eval_env), eval(expr))
+			}
+		} else if (has_fixed_interaction) {
+
+			has_main_effect <- grepl("\\*", deparse(combine_effects[[2]], width.cutoff = 500))
+
+			# find the interaction variable name from fe_labels
+			int_labels <- fe_labels[grepl(paste0("^", which_basis, ":"), fe_labels) |
+															grepl(paste0(":", which_basis, "$"), fe_labels)]
+			int_var <- gsub(paste0(which_basis, ":|:", which_basis), "", int_labels[1])
+
+			# find all levels from interaction coefficients in coef
+			int_pattern <- paste0("^", cb_cols[1], ":", int_var)
+			int_rows    <- rownames(coef)[grepl(int_pattern, rownames(coef))]
+			int_levels  <- gsub(paste0("^", cb_cols[1], ":", int_var), "", int_rows)
+			
+			if (has_main_effect) {
+				all_ids <- c(paste0(int_var, "[reference]"),
+										paste0(int_var, "[", int_levels, "]"))
+			} else {
+				all_ids <- paste0(int_var, "[", int_levels, "]")
+			}
+
+			n_levels <- length(all_ids)
+
+			coef_cb <- array(
+				NA_real_,
+				dim      = c(n_cols, n_samples, n_levels),
+				dimnames = list(cb_cols, colnames(coef), all_ids)
+			)
+
+			# reference level: just global cb coefficients
+			if (has_main_effect) {
+				coef_cb[, , paste0(int_var, "[reference]")] <- coef[cb_cols, , drop = FALSE]
+			}
+
+			# other levels: global cb + interaction coefficients
+			for (lv in int_levels) {
+				int_row_names        <- paste0(cb_cols, ":", int_var, lv)
+				int_coef             <- coef[int_row_names, , drop = FALSE]
+				rownames(int_coef)   <- cb_cols
+				coef_cb[, , paste0(int_var, "[", lv, "]")] <- coef[cb_cols, , drop = FALSE] + int_coef
+			}
+
+		} else {
+
+			#simple case: just extract global cb coefficients
+			if (!identical(fe_labels, which_basis)) {
+				cli::cli_abort(c(
+					"The {.arg combine_effects} formula contains terms that are not recognized.",
+					"i" = "Expected only {.val {which_basis}} or interaction terms with it."
+				))
+			}
+
+			coef_cb <- coef[cb_cols, , drop = FALSE]
+
 		}
+		
 		
 	} else {
 		# extract only the raw basis coefficients

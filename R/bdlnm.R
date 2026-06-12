@@ -223,8 +223,8 @@ bdlnm <- function(
       if (!basis_arg_name %in% names(basis)) next
 
       cb_cols       <- paste0(basis_arg_name, colnames(basis[[basis_arg_name]]))
-      new_col_names <- paste0(id_var_name, "_", cb_cols)
-
+      new_col_names <- paste0(cb_cols, "_", id_var_name)
+      
       for (nc in new_col_names) {
         final_nc <- nc
         suffix   <- 1L
