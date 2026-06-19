@@ -48,7 +48,7 @@ The fitted model must be a distributed lag linear or non-linear model (DLNM). DL
 
 \section{INLA}{
 
-Models are fit using Integrated Nested Laplace approximation (INLA) via \code{\link[INLA:inla]{INLA::inla()}}. INLA is a method for approximate Bayesian inference. In the last years it has established itself as an alternative to other methods such as Markov chain Monte Carlo because of its speed and ease of use via the R-INLA package (\href{https://www.r-inla.org/what-is-inla}{What is INLA?}).
+Models are fit using Integrated Nested Laplace approximation (INLA) via \code{\link[INLA:inla]{INLA::inla()}}. INLA is a method for approximate Bayesian inference. In the last years it has established itself as an alternative to other methods such as Markov chain Monte Carlo because of its speed and ease of use via the R-INLA package (\href{https://www.r-inla.org/whatisinla/}{What is INLA?}).
 
 Additional arguments supplied via \code{...} are forwarded to \code{\link[INLA:inla]{INLA::inla()}} (see documentation for all available arguments). Internally, the function ensures that \code{control.compute = list(config = TRUE)} in order to enable posterior sample drawing with \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}}.
 
