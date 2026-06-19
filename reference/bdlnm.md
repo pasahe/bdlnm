@@ -129,7 +129,7 @@ Models are fit using Integrated Nested Laplace approximation (INLA) via
 method for approximate Bayesian inference. In the last years it has
 established itself as an alternative to other methods such as Markov
 chain Monte Carlo because of its speed and ease of use via the R-INLA
-package ([What is INLA?](https://www.r-inla.org/what-is-inla)).
+package ([What is INLA?](https://www.r-inla.org/whatisinla/)).
 
 Additional arguments supplied via `...` are forwarded to
 [`INLA::inla()`](https://rdrr.io/pkg/INLA/man/inla.html) (see
