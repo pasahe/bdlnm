@@ -37,6 +37,28 @@ check_inla <- function(error = FALSE) {
     return(FALSE)
   }
 
+   backend_ok <- tryCatch({
+    INLA::inla(
+      y ~ 1,
+      data = data.frame(y = c(0, 1)),
+      family = "binomial",
+      control.compute = list(config = FALSE),
+      verbose = FALSE
+    )
+    TRUE
+  }, error = function(e) FALSE)
+
+  if (!backend_ok) {
+    if (error) {
+      cli::cli_abort(c(
+        "Package {.pkg INLA} is installed but its backend executable is unavailable.",
+        "i" = "Try reinstalling {.pkg INLA} from the R-INLA repository."
+      ))
+    }
+    return(FALSE)
+  }
+  
+
   TRUE
 }
 
