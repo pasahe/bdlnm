@@ -277,7 +277,7 @@ bdlnm <- function(
       )
     }
   } else {
-    cc <- list(config = TRUE)
+    cc$config <- TRUE
   }
 
   inla_options[["control.compute"]] <- cc
