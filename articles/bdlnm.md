@@ -85,7 +85,7 @@ will be generated. These correspond to an evenly spaced grid with a
 ``` r
 
 # Prediction values (equidistant points)
-temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
+temp <- unique(round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1))
 # Ensure it falls inside the range of temperatures after rounding:
 temp <- temp[temp >= min(london$tmean) & temp <= max(london$tmean)]
 ```
