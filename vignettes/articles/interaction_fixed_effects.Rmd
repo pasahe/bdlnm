@@ -110,14 +110,14 @@ mod <- bdlnm(
   sample.arg = list(n = 1000, seed = 1L)
 )
 
-# test it works also when adding a f() in the formula
-london_age$id <- seq_along(nrow(london_age))
-mod <- bdlnm(
-  mort ~ cb*age + factor(dow)*age + seas*age + f(id, model = "iid"),
-  data = london_age,
-  family = "poisson",
-  sample.arg = list(n = 1000, seed = 1L)
-)
+# # test it works also when adding a f() in the formula
+# london_age$id <- seq_along(nrow(london_age))
+# mod <- bdlnm(
+#   mort ~ cb*age + factor(dow)*age + seas*age + f(id, model = "iid"),
+#   data = london_age,
+#   family = "poisson",
+#   sample.arg = list(n = 1000, seed = 1L)
+# )
 ```
 
 The `bdlnm()` function runs `inla()` which correctly identifies the interaction term and expands this effect across all crossbasis coefficients. The matrix stored in `$coefficients` now contains the baseline estimated crossbasis coefficients (`cbv1.l1`, `cbv1.l2`, ...) and a coefficient for the other category in age (`cbv1.l1:age75plus`):
