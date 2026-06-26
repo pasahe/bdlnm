@@ -194,15 +194,45 @@ bdlnm <- function(
         data[[cn]] <- base[, cn]
       }
 
-      # Replace bare basis terms in formula with basis columns
-      cb_expansion <- paste(colnames(base), collapse = " + ")
       formula_str <- deparse(formula, width.cutoff = 500)
-      formula <- as.formula(gsub(
-        paste0("(?<![,(])\\b", t, "\\b(?![^(]*\\))"),
-        cb_expansion,
-        formula_str,
-        perl = TRUE
-      ))
+
+      # check for interaction terms involving this basis: cb*x or cb:x or x*cb or x:cb
+      int_pattern <- paste0("\\b", t, "\\s*[*:]|[*:]\\s*", t, "\\b")
+      if (grepl(int_pattern, formula_str, perl = TRUE)) {
+        # find the interacting variable
+        int_match  <- regmatches(formula_str, regexpr(int_pattern, formula_str, perl = TRUE))
+        int_op     <- ifelse(grepl("\\*", int_match), "*", ":")
+        int_var    <- trimws(gsub(paste0("\\b", t, "\\b|[*:]"), "", int_match))
+
+        # expand cb * int_var to cbv1.l1 * int_var + cbv1.l2 * int_var + ...
+        cb_expansion <- paste(paste0(colnames(base), " ", int_op, " ", int_var), collapse = " + ")
+
+        # replace the whole interaction term
+        formula_str <- gsub(
+          paste0("(?<![,(])\\b", t, "\\s*", ifelse(int_op == "*", "\\*", ":"), "\\s*", int_var, "\\b(?![^(]*\\))"),
+          cb_expansion,
+          formula_str,
+          perl = TRUE
+        )
+        # also replace any remaining bare cb (the main effect from * expansion)
+        formula_str <- gsub(
+          paste0("(?<![,(])\\b", t, "\\b(?![^(]*\\))"),
+          paste(colnames(base), collapse = " + "),
+          formula_str,
+          perl = TRUE
+        )
+      } else {
+        # simple expansion: replace bare cb with cbv1.l1 + cbv1.l2 + ...
+        formula_str <- gsub(
+          paste0("(?<![,(])\\b", t, "\\b(?![^(]*\\))"),
+          paste(colnames(base), collapse = " + "),
+          formula_str,
+          perl = TRUE
+        )
+      }
+
+      formula <- as.formula(formula_str)
+
     }
 
     vars  <- attr(fterms, "variables")
