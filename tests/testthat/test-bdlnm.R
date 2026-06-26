@@ -197,6 +197,6 @@ test_that("allow to calculate WAIC", {
     control.compute = list(waic = TRUE)
   )
 
-  expect_true("waic" %in% names(mod$model))
+  expect_true(!is.null(mod$model$waic))
   
 })
