@@ -77,7 +77,7 @@ This function cannot be used when the specified basis function is one of \code{t
  seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
 
  # Prediction values (equidistant points)
- temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
+ temp <- unique(round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1))
  # Ensure it falls inside the range of temperatures after rounding:
  temp <- temp[temp >= min(london$tmean) & temp <= max(london$tmean)]
 

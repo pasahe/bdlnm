@@ -32,7 +32,7 @@ cb <- dlnm::crossbasis(slondon$tmean, lag = dlnm_var$max_lag, argvar, arglag)
 seas <- splines::ns(slondon$date, df = round(8 * length(slondon$date) / 365.25))
 
 # Prediction values (equidistant points)
-temp <- round(seq(min(slondon$tmean), max(slondon$tmean), by = 0.1), 1)
+temp <- unique(round(seq(min(slondon$tmean), max(slondon$tmean), by = 0.1), 1))
 # Ensure it falls inside the range of temperatures after rounding:
 temp <- temp[temp >= min(slondon$tmean) & temp <= max(slondon$tmean)]
 
