@@ -211,14 +211,14 @@ bdlnm <- function(
   # Ensure control.compute$config = TRUE
   cc <- inla_options[["control.compute"]]
 
-  if (!is.null(cc)) {
+  if (!is.null(cc$config)) {
     if (!cc$config) {
       cli::cli_abort(
         "{.arg control.compute(config = FALSE)} cannot be provided: {.arg config} must be {.val TRUE} to use {.fn inla.posterior.sample}."
       )
     }
   } else {
-    cc <- list(config = TRUE)
+    cc$config <- TRUE
   }
 
   inla_options[["control.compute"]] <- cc

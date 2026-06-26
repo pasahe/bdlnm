@@ -184,3 +184,19 @@ test_that("na.action is ignored when a random effect is included", {
   )
   expect_equal(nrow(mod_rt$model$model.matrix), nrow(slondon))
 })
+
+test_that("allow to calculate WAIC", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
+  mod <- bdlnm(
+    mort_75plus ~ cb + factor(dow) + seas,
+    data = slondon,
+    family = "poisson",
+    sample.arg = list(n = n_sim, seed = 1L),
+    control.compute = list(waic = TRUE)
+  )
+
+  expect_true("waic" %in% names(mod$model))
+  
+})

@@ -9,3 +9,7 @@
 * Fixed error in some examples.
 
 * Added logo.
+
+# bdlnm 0.1.1.9001
+
+* Solved bug when using `control.compute` INLA argument in `bdlnm()`.
