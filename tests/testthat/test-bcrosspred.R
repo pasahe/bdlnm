@@ -223,3 +223,10 @@ test_that("bcrosspred works when a random effect is included", {
   expect_equal(cpred_rt$model.link, "log")
 
 })
+
+test_that("bscrosspred warns when prediction grid is outside the crossbasis temperature range", {
+  temp2 <- sort(c(-5, 35, temp))
+  expect_warning(
+    cpred <- bcrosspred(mod, exp_at = temp2)
+  )
+})

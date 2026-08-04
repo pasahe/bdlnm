@@ -13,3 +13,5 @@
 # bdlnm 0.1.1.9001
 
 * Solved bug when using `control.compute` INLA argument in `bdlnm()`.
+
+* `bcrosspred()` now warns, rather than errors, when prediction values supplied in `exp_at` fall outside the cross-basis exposure range.
