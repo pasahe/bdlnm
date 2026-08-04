@@ -21,3 +21,7 @@ CRAN release: 2026-06-19
 
 - Solved bug when using `control.compute` INLA argument in
   [`bdlnm()`](https://pasahe.github.io/bdlnm/reference/bdlnm.md).
+
+- [`bcrosspred()`](https://pasahe.github.io/bdlnm/reference/bcrosspred.md)
+  now warns, rather than errors, when prediction values supplied in
+  `exp_at` fall outside the cross-basis exposure range.
