@@ -196,15 +196,8 @@ bcrosspred <- function(
     if (!is.numeric(exp_at)) {
       cli::cli_abort("{.arg exp_at} must be a numeric vector.")
     } else {
-      # check if exposure is contained in range
-      if (any(exp_at > exp_to | exp_at < exp_from)) {
-        cli::cli_abort(
-          "{.arg exp_at} is outside the range of exposure values defined by the specified {.arg basis}."
-        )
-      } else {
-        # if values are duplicated or not sorted
-        predvar <- sort(unique(exp_at))
-      }
+      # if values are duplicated or not sorted
+      predvar <- sort(unique(exp_at))
     }
   }
 
