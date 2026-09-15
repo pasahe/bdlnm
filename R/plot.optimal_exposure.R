@@ -3,6 +3,7 @@
 #' It plots a histogram of the posterior distribution of the optimal effect exposure values returned by [optimal_exposure()].
 #'
 #' @param x An object of class `"optimal_exposure"` returned by [optimal_exposure()].
+#' @param select Character string identifying the prediction to plot when `x` contains multiple predictions. It must exactly match one of the prediction names in `x`. Omitted when `x` contains a single prediction.
 #' @param show_median Logical. If `TRUE` (default) the function draws a vertical line for the median of all the posterior samples. If `FALSE` it doesn't draw any additional line.
 #' @param vline.arg Optional list of graphical arguments passed to [graphics::abline()] when drawing the median vertical line.
 #' @param ... Optional graphical parameters passed to [graphics::hist()].
@@ -77,6 +78,7 @@ plot.optimal_exposure <- function(
   x,
   show_median = TRUE,
   vline.arg = NULL,
+  select = NULL,
   ...
 ) {
   ## ---------------------------
@@ -88,6 +90,14 @@ plot.optimal_exposure <- function(
       "{.arg x} must be an x of class {.cls optimal_exposure} as returned by {.fn optimal_exposure}."
     )
   }
+
+  x <- select_named_result(
+    x,
+    select = select,
+    required_components = c("est", "summary"),
+    result_class = "optimal_exposure",
+    result_label = "optimal-exposure result"
+  )
 
   ## ---------------------------
   ## Plot

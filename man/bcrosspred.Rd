@@ -2,11 +2,12 @@
 % Please edit documentation in R/bcrosspred.R
 \name{bcrosspred}
 \alias{bcrosspred}
-\title{Predict exposure-lag-response effects from a Bayesian distributed-lag model (B-DLNM).}
+\title{Predict exposure-lag-response effects from a Bayesian distributed-lag model (B-DLNM)}
 \usage{
 bcrosspred(
   object,
   basis = NULL,
+  combine_effects = NULL,
   exp_at = NULL,
   lag_at = NULL,
   cen = NULL,
@@ -20,43 +21,53 @@ bcrosspred(
 
 \item{basis}{If the \code{bdlnm} model has more than one basis, the name of the basis to use to compute predictions. It must be one of \code{names(object$basis)}. If the model contains only one basis it is selected automatically.}
 
+\item{combine_effects}{Optional one-sided formula for models with basis-specific interaction effects. It specifies which effects involving the selected basis should be combined for prediction. It can request the standalone basis (ex. \code{~ cb}), a fixed interaction with the basis (ex. \code{~ cb * group}), or a basis-specific random effect (ex. \code{~ cb + f(id, cb, model = "iid")}). If \code{NULL}, predictions use only the standalone basis coefficients.}
+
 \item{exp_at}{Numeric vector of exposure values at which to evaluate predictions. If \code{NULL}, the exposure range is extracted from the attributes of \code{basis} and a grid of 50 values is constructed using \code{\link[=pretty]{pretty()}}.}
 
 \item{lag_at}{Numeric vector of integer lag values at which to evaluate predictions. Only used when \code{basis} is a \code{crossbasis}. If \code{NULL}, the full lag range stored in \code{basis} is used with a step of \code{1}.}
 
-\item{cen}{Centering exposure value for predictions. If \code{NULL} the centering value depends on the exposure basis function or set to a mid-range value (see Details).}
+\item{cen}{Centering exposure value for predictions. If \code{NULL} the centering value depends on the exposure basis function or set to a mid-range value (see \code{Details}).}
 
 \item{model.link}{Optional character specifying the model link (if \code{NULL} it is inferred from the fitted model).}
 
 \item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}). Credible interval quantiles are computed from the posterior samples.}
 
-\item{cumul}{Logical; if \code{TRUE} compute incremental cumulative effects along lags (default \code{FALSE}). It will give the cumulative effect from lag 0 up to each subsequent lag (e.g., lag \code{0}, lag \verb{0–1}, lag \verb{0–2}, etc.).}
+\item{cumul}{Logical; if \code{TRUE} compute incremental cumulative effects along lags (default \code{FALSE}). It will give the cumulative effect from lag \code{0} up to each subsequent lag (e.g., lag \code{0}, lag \verb{0–1}, lag \verb{0–2}, etc.).}
 }
 \value{
-An object of class \code{"bcrosspred"} (a list) with elements including:
+An object of class \code{"bcrosspred"}. When no interaction is requested, it is a single prediction list. When \code{combine_effects} requests a basis
+interaction, it is a named collection containing one prediction list for each interaction level or random-effect unit, together with the shared elements \code{ci.level}, \code{model.class}, and \code{model.link}.
+
+Each individual prediction contains:
 \itemize{
-\item \code{exp_at}: the exposure grid used for prediction as supplied via the \code{exp_at} argument (vector).
-\item \code{lag_at}: if basis is \code{crossbasis}, the lag grid used for prediction as supplied via the \code{lag_at} argument (vector).
-\item \code{cen}: the exposure centering value used for prediction (number).
-\item \code{coefficients}: matrix of posterior coefficient draws (columns = samples).
-\item \code{coefficients.summary}: matrix of coefficient summaries (mean, sd, quantiles, mode).
-\item \code{matfit}: 3D array of sampled lag-specific effects (exp × lag × samples).
-\item \code{matfit.summary}: 3D array of summaries for \code{matfit} (exp × lag × summary-statistics).
-\item \code{allfit}: matrix of sampled overall cumulative (summed across lags) effects (exp × samples).
-\item \code{allfit.summary}: matrix of summaries for \code{allfit} (exp x summary-statistics).
-\item \code{cumfit}: (optional) 3D array of sampled incremental cumulative effects (exp × lag × samples).
-\item \code{cumfit.summary}: (optional) 3D array of summaries for \code{cumfit} (exp × lag × summary-statistics).
-\item \code{matRRfit}, \code{allRRfit}, \code{matRRfit.summary}, \code{allRRfit.summary}, \code{cumRRfit.summary} (optional), \code{cumRRfit.summary} (optional: relative-risk versions (only when link is \code{log} or \code{logit}).
-\item \code{ci.level}, \code{model.class}, \code{model.link}.
+\item \code{exp_at}: exposure values used for prediction.
+\item \code{lag_at}: lag values used for prediction; absent for a \code{onebasis}.
+\item \code{cen}: exposure centering value.
+\item \code{coefficients}: matrix of posterior coefficient draws.
+\item \code{coefficients.summary}: matrix of coefficient summaries.
+\item \code{matfit}: array of sampled exposure-lag-specific effects.
+\item \code{matfit.summary}: array of summaries for \code{matfit}.
+\item \code{allfit}: matrix of sampled overall cumulative effects.
+\item \code{allfit.summary}: matrix of summaries for \code{allfit}.
+\item \code{cumfit} and \code{cumfit.summary}: incremental cumulative effects and their
+summaries, when \code{cumul = TRUE}.
+\item \code{matRRfit}, \code{allRRfit}, \code{matRRfit.summary}, and \code{allRRfit.summary}, plus
+\code{cumRRfit} and \code{cumRRfit.summary} when applicable: relative-risk versions
+returned for \code{log} and \code{logit} links.
 }
 }
 \description{
-Calculate predictions from a fitted Bayesian distributed lag non-linear model (\code{\link[=bdlnm]{bdlnm()}}). Predicted associations are computed on a grid of values of the exposure and lags, relative to a reference exposure center value. The function gives posterior samples of exposure–lag-specific associations, overall cumulative associations (summed across lags) and optionally incremental cumulative associations, together with summary statistics (mean, sd, credible interval quantiles and mode).
+Calculate predictions from a fitted Bayesian distributed lag non-linear model (\code{\link[=bdlnm]{bdlnm()}}). Predicted associations are computed on a grid of values of the exposure and lags, relative to a reference exposure center value. The function gives posterior samples of exposure–lag-specific associations, overall cumulative associations (summed across lags) and optionally incremental cumulative associations, together with summary statistics (mean, sd, credible interval quantiles and mode). When \code{combine_effects} includes a basis interaction, separate predictions are returned for each interaction level or random-effect unit.
 }
 \details{
 The function computes predictions for specific combinations of exposure and lag values specified in \code{exp_at} and \code{lag_at.} All values must lie within the range defined by the specified \code{basis.} Note that if the specified \code{basis} is a \code{onebasis}, \code{lag_at} is ignored. If either argument is \code{NULL}, the grid is derived from the attributes of the specified \code{basis}: for exposure values, a grid of approximately 50 values is constructed using \code{\link[=pretty]{pretty()}} within the exposure range; for lag values, an integer sequence covering the full lag range with a step of 1 is used.
 
 Predictions are computed relative to a centering/reference value (\code{cen}). If \code{NULL}, the default \code{cen} depends on the exposure-response basis function: for \code{strata}, \code{thr} and \code{integer} the reference corresponds to the reference category, and for \code{lin} the reference is set to 0. For other choices, such as \code{ns}, \code{bs}, \code{poly} or other existing or user-defined functions, the default centering value is set to an approximate mid-range value. For non-linear exposure-response associations is sometimes recommended to manually set the centering value to a data-driven center such as the optimal exposure value (see \code{\link[=optimal_exposure]{optimal_exposure()}}).
+
+When a model contains a basis-specific interaction and \code{combine_effects} requests that interaction, interaction-specific predictions are returned as
+a named collection. For fixed interactions, the names identify the levels of the interacting variable. For basis-specific random effects, they identify
+the random-effect units; a \code{global} prediction is also included when the standalone basis is requested. The \code{basis_interaction} attribute identifies the selected interaction variable and records its type and values.
 
 Posterior sample of the predicted associations are stored as matrices for the overall cumulative effect and 3D arrays for the exposure-lag-specific predictions. Summaries across these samples are computed using the mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to \code{ci.level}) and an approximate mode obtained from a kernel density estimate. Relative risks versions of these associations (exponentiated predictions) are also included if \code{model.link} is equal to \code{"log"} or \code{"logit"}. The \code{model.link} can be manually specified or, if \code{NULL}, it is tried to be inferred from the \code{model} type in \code{object}.
 

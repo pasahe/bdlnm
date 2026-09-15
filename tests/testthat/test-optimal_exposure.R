@@ -27,6 +27,7 @@ test_that("optimal_exposure returns object of class optimal_exposure with expect
   ms_cols <- names(mmt$summary)
   expect_true(all(c("mean", "sd", "mode") %in% ms_cols))
   expect_true(any(grepl("quant$", ms_cols)))
+
 })
 
 test_that("optimal_exposure returns object of class optimal_exposure with expected components (onebasis)", {
@@ -50,7 +51,7 @@ test_that("optimal_exposure returns object of class optimal_exposure with expect
     sample.arg = list(n = n_sim, seed = 1L)
   ))
   expect_warning(cpred_2 <- bcrosspred(mod_2, exp_at = temp))
-  mmt_2 <- optimal_exposure(mod_2, exp_at = temp)
+  mmt_2 <- optimal_exposure(cpred_2)
 
   # Basic structure
   expect_s3_class(mmt_2, "optimal_exposure")
@@ -76,12 +77,12 @@ test_that("optimal_exposure returns object of class optimal_exposure with expect
   expect_true(any(grepl("quant$", ms_cols)))
 })
 
-test_that("optimal_exposure works with default at (reconstructs grid from basis)", {
+test_that("optimal_exposure uses the grid stored in bcrosspred", {
   skip_on_cran()
   skip_if_not(check_inla(), "INLA not available")
 
-  # Should not error when 'at' is not provided
-  expect_silent(mmt2 <- optimal_exposure(mod))
+  cpred_default <- suppressWarnings(bcrosspred(mod))
+  expect_silent(mmt2 <- optimal_exposure(cpred_default))
 
   # Must return class and exp attribute
   expect_s3_class(mmt2, "optimal_exposure")
@@ -89,16 +90,68 @@ test_that("optimal_exposure works with default at (reconstructs grid from basis)
   expect_equal(length(attr(mmt2, "exp_at")), 48)
 })
 
-test_that("optimal_exposure errors when object is not a bdlnm output or basis wrong", {
+test_that("optimal_exposure calculates fixed-interaction results", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
+  optimal_fixed <- optimal_exposure(cpred_fixed_interaction)
+
+  expect_s3_class(optimal_fixed, "optimal_exposure")
+  expect_identical(
+    names(optimal_fixed),
+    c("group[a]", "group[b]")
+  )
+
+  for (result_name in names(optimal_fixed)) {
+    expect_s3_class(optimal_fixed[[result_name]], "optimal_exposure")
+    expected <- cpred_fixed_interaction[[result_name]]$exp_at[apply(
+      cpred_fixed_interaction[[result_name]]$allfit,
+      2L,
+      which.min
+    )]
+    names(expected) <- paste0("sample", seq_along(expected))
+    expect_identical(optimal_fixed[[result_name]]$est, expected)
+  }
+})
+
+test_that("optimal_exposure calculates random-interaction results", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
+  optimal_random <- optimal_exposure(cpred_random_interaction)
+
+  expected_names <- c("global", paste0("id_group[", seq_len(5), "]"))
+  expect_s3_class(optimal_random, "optimal_exposure")
+  expect_identical(names(optimal_random), expected_names)
+
+  for (result_name in expected_names) {
+    expect_s3_class(optimal_random[[result_name]], "optimal_exposure")
+  }
+})
+
+test_that("optimal_exposure validates its object and prediction arguments", {
   skip_on_cran()
   skip_if_not(check_inla(), "INLA not available")
 
   # NULL x should error
-  expect_snapshot_error(optimal_exposure(exp_at = temp))
+  expect_error(
+    optimal_exposure(exp_at = temp),
+    "argument .*object.* is missing"
+  )
 
-  # NULL basis should not error
-  expect_silent(optimal_exposure(mod, exp_at = temp))
+  # Direct model use is retained only as a deprecated compatibility path
+  expect_warning(
+    optimal_exposure(mod, exp_at = temp),
+    "bdlnm.*deprecated"
+  )
 
-  # wrong basis type should error
-  expect_snapshot_error(optimal_exposure(mod, basis = "ob", exp_at = temp))
+  expect_error(
+    optimal_exposure(mod_interaction, exp_at = temp),
+    "containing basis interactions cannot be used directly"
+  )
+
+  expect_error(
+    optimal_exposure(cpred, exp_at = temp),
+    "Prediction arguments cannot be supplied"
+  )
 })

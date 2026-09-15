@@ -52,7 +52,61 @@ if (check_inla()) {
   # Predict
   cpred <- bcrosspred(mod, exp_at = temp)
 
-  # # compute centering (MMT) using optimal_exposure
-  mmt <- optimal_exposure(mod, exp_at = temp)
+  # Compute centering (MMT) using optimal_exposure
+  mmt <- optimal_exposure(cpred)
   cen <- mmt$summary[["0.5quant"]]
+
+  # Shared fixed-interaction fixtures
+  interaction_data <- slondon
+  interaction_data$group <- factor(
+    rep(c("a", "b"), length.out = nrow(interaction_data))
+  )
+  interaction_data$id_group <- rep(
+    seq_len(5), length.out = nrow(interaction_data)
+  )
+
+  mod_interaction <- suppressWarnings(
+    bdlnm(
+      mort_75plus ~ cb * group + factor(dow) + seas +
+        f(id_group, model = "iid"),
+      data = interaction_data,
+      family = "poisson",
+      sample.arg = list(n = 2L, seed = 1L)
+    )
+  )
+
+  cpred_fixed_interaction <- suppressWarnings(
+    bcrosspred(
+      mod_interaction,
+      combine_effects = ~ cb * group,
+      exp_at = interaction_data$tmean,
+      cen = cen
+    )
+  )
+
+  # Shared random-interaction fixtures
+  random_data <- slondon
+  random_data$id_group <- rep(seq_len(5), length.out = nrow(random_data))
+
+  mod_random <- suppressWarnings(
+    bdlnm(
+      mort_75plus ~ cb + factor(dow) + seas +
+        f(id_group, cb, model = "iid"),
+      data = random_data,
+      family = "poisson",
+      sample.arg = list(n = 2L, seed = 1L)
+    )
+  )
+
+  cpred_random_interaction <- suppressWarnings(
+    bcrosspred(
+      mod_random,
+      combine_effects = ~ cb + f(id_group, cb, model = "iid"),
+      exp_at = random_data$tmean,
+      cen = cen
+    )
+  )
+
+  # Centered prediction used by attributable tests
+  cpred_centered <- bcrosspred(mod, exp_at = unique(slondon$tmean), cen = cen)
 }

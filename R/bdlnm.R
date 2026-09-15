@@ -11,12 +11,12 @@
 #' @param ... Additional arguments passed to [INLA::inla()].
 #'
 #' @section Distributed lag non-linear model:
-#' The fitted model must be a distributed lag linear or non-linear model (DLNM). DLNMs describe potentially non-linear and delayed (lagged) associations between an exposure and an outcome, commonly referred to as exposure–lag–response relationships. This modelling framework is based on the definition of a cross-basis (a bi-dimensional space of functions) constructed with [dlnm::crossbasis()], which defines the exposure–response and lag–response functions simultaneously. The cross-basis object must be created beforehand and supplied as an object in the calling environment (not as a column inside data) and explicitly included in the model formula (e.g., y ~ cb + ...). A basis object constructed with [dlnm::onebasis()] can be used instead when the model is restricted to a uni-dimensional exposure–response relationship (i.e., without lagged effects). All basis objects included in the model `formula` are stored and returned as a named list in the `basis` component. Any of these basis objects can later be supplied to [bcrosspred()] to extract predictions for the corresponding exposure–lag–response (or exposure-response, if created with `onebasis`) association.
+#' The fitted model has to be a distributed lag linear or non-linear model (DLNM). DLNMs describe potentially non-linear and delayed (lagged) associations between an exposure and an outcome, commonly referred to as exposure–lag–response relationships. This modelling framework is based on the definition of a cross-basis (a bi-dimensional space of functions) constructed with [dlnm::crossbasis()], which defines the exposure–response and lag–response functions simultaneously. The cross-basis object must be created beforehand and supplied as an object in the calling environment (not as a column inside data) and explicitly included in the model formula (e.g., y ~ cb + ...). A basis object constructed with [dlnm::onebasis()] can be used instead when the model is restricted to a uni-dimensional exposure–response relationship (i.e., without lagged effects). All basis objects included in the model `formula` are detected, stored and returned as a named list in the `basis` component. Any of these basis objects can later be supplied to [bcrosspred()] to extract predictions for the corresponding exposure–lag–response (or exposure-response, if created with `onebasis`) association.
 #'
 #' @section INLA:
 #' Models are fit using Integrated Nested Laplace approximation (INLA) via [INLA::inla()]. INLA is a method for approximate Bayesian inference. In the last years it has established itself as an alternative to other methods such as Markov chain Monte Carlo because of its speed and ease of use via the R-INLA package (\href{https://www.r-inla.org/what-is-inla}{What is INLA?}).
 #'
-#' Additional arguments supplied via `...` are forwarded to [INLA::inla()] (see documentation for all available arguments). Internally, the function ensures that `control.compute = list(config = TRUE)` in order to enable posterior sample drawing with [INLA::inla.posterior.sample()].
+#' Additional arguments supplied via `...` are forwarded to [INLA::inla()] (see their documentation for all available arguments). Internally, the function ensures that `control.compute = list(config = TRUE)` in order to enable posterior sample drawing with [INLA::inla.posterior.sample()]. 
 #'
 #' In the presence of missing values in variables referenced in formula, the `na.action` argument controls how the model frame is constructed. If `na.action` is set to [na.omit] (the default set by [options]), a complete-case analysis is performed and any row with a missing value in a variable appearing in formula is removed. If `na.action` is set to [na.pass] instead, missing values are retained in the model frame and passed to INLA.
 #'
@@ -31,7 +31,7 @@
 #'
 #' @section Posterior samples:
 #'
-#' After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via [INLA::inla.posterior.sample()]. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a `"crossbasis"` built from an exposure basis with C parameters and a lag basis with L parameters, there will be C × L cross-basis associated coefficients (named e.g. v1.l1, ..., vC.lL). For a `"onebasis"` object the coefficients follow the simpler form b1, ... bC.
+#' After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via [INLA::inla.posterior.sample()]. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a `"crossbasis"` built from an exposure basis with `C` parameters and a lag basis with `L` parameters, there will be `C × L` cross-basis associated coefficients (named e.g. `v1.l1`, ..., `vC.lL`). For a `"onebasis"` object the coefficients follow the simpler form `b1`, ..., `bC`.
 #'
 #' Additional arguments supplied via `sample.arg` are forwarded to [INLA::inla.posterior.sample()] (see documentation for all available arguments). By default, the number of samples is `1000`. Be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric `seed` in `sample.arg`.
 #'
@@ -42,9 +42,11 @@
 #'
 #' @return An S3 object of class `"bdlnm"` with the following components:
 #' - `model`: the fitted `INLA` model returned by [INLA::inla()].
-#' - `basis`: a named list containing all basis of class `crossbasis` or `onebasis` included in the model `formula`.
+#' - `basis`: a named list containing all the detected basis of class `crossbasis` or `onebasis` included in the model `formula`.
 #' - `coefficients`: a matrix whose columns are posterior sample draws returned by [INLA::inla.posterior.sample()] (named `sample1`, `sample2`, ...) and whose rows are all model coefficients.
 #' - `coefficients.summary`: a matrix of summary statistics for all the posterior samples stored in `coefficients` (mean, sd, quantiles, mode).
+#'
+#' The `"n_sim"` attribute records the number of posterior samples. When the formula contains interactions involving a basis, the `"basis_interaction"` attribute records their type (`"fixed"` or `"random"`), variable values, and the reference value for categorical fixed interactions.
 #'
 #' @author Pau Satorra, Marcos Quijal-Zamorano.
 #'
@@ -60,8 +62,8 @@
 #' Rue H., Martino S., Chopin N. (2009). Approximate Bayesian inference for latent Gaussian models by using integrated nested Laplace approximations. _Journal of the Royal Statistical Society: Series B_, 71(2), 319-392. <doi:10.1111/j.1467-9868.2008.00700.x>.
 #'
 #' @seealso [bcrosspred()] to predict exposure–lag–response associations for a `bdlnm` object,
-#' @seealso [attributable()] to calculate attributable fractions and numbers for a `bdlnm` object,
-#' @seealso [optimal_exposure()] to estimate exposure values that optimise the predicted effect for a `bdlnm` object.
+#' @seealso [attributable()] to calculate attributable fractions and numbers for a `bcrosspred` object,
+#' @seealso [optimal_exposure()] to estimate exposure values that optimise the predicted effect for a `bcrosspred` object.
 #'
 #' @export
 #'
@@ -160,6 +162,12 @@ bdlnm <- function(
     )
   }
 
+  basis_interaction <- basis_interaction_info(
+    formula = formula,
+    basis = basis,
+    data = data
+  )
+
   # ----------------------------
   # Build model frame, model design matrix and response
   # ----------------------------
@@ -193,89 +201,16 @@ bdlnm <- function(
       for (cn in colnames(base)) {
         data[[cn]] <- base[, cn]
       }
-
-      formula_str <- deparse(formula, width.cutoff = 500)
-
-      # handle interaction terms first: cb*x or cb:x or x*cb or x:cb
-      for (op in c("\\*", ":")) {
-        # cb OP x
-        pattern <- paste0("\\b", t, "\\s*", op, "\\s*(\\w+)")
-        if (grepl(pattern, formula_str, perl = TRUE)) {
-          int_var      <- gsub(paste0(".*\\b", t, "\\s*", op, "\\s*(\\w+).*"), "\\1", formula_str)
-          real_op      <- gsub("\\\\", "", op)
-          cb_expansion <- paste(paste0(colnames(base), " ", real_op, " ", int_var), collapse = " + ")
-          formula_str  <- gsub(paste0("\\b", t, "\\s*", op, "\\s*", int_var), cb_expansion, formula_str, perl = TRUE)
-        }
-        # x OP cb
-        pattern <- paste0("(\\w+)\\s*", op, "\\s*\\b", t, "\\b")
-        if (grepl(pattern, formula_str, perl = TRUE)) {
-          int_var      <- gsub(paste0(".*(\\w+)\\s*", op, "\\s*\\b", t, "\\b.*"), "\\1", formula_str)
-          real_op      <- gsub("\\\\", "", op)
-          cb_expansion <- paste(paste0(int_var, " ", real_op, " ", colnames(base)), collapse = " + ")
-          formula_str  <- gsub(paste0("\\b", int_var, "\\s*", op, "\\s*", t, "\\b"), cb_expansion, formula_str, perl = TRUE)
-        }
-      }
-
-      # then replace any remaining bare cb
-      formula_str <- gsub(
-        paste0("(?<![,(])\\b", t, "\\b(?![^(]*\\))"),
-        paste(colnames(base), collapse = " + "),
-        formula_str,
-        perl = TRUE
-      )
-
-      formula <- as.formula(formula_str)
-
     }
 
-    vars  <- attr(fterms, "variables")
-    f_idx <- attr(fterms, "specials")$f
-    for (i in f_idx) {
-      f_call         <- vars[[i + 1]]
-      id_var_name    <- deparse(f_call[[2]])   # id is first
-      basis_arg_name <- deparse(f_call[[3]])   # cb is second
+    expanded <- expand_basis_formula(
+      formula = formula,
+      basis = basis,
+      data = data
+    )
 
-      if (!id_var_name %in% names(data)) {
-        cli::cli_abort(c(
-          "Column {.var {id_var_name}} not found in {.arg data}.",
-          "i" = "Found in formula term {.code {deparse(f_call, width.cutoff = 500)}}.",
-          "i" = "Available columns: {.and {names(data)}}."
-        ))
-      }
-
-      if (!basis_arg_name %in% names(basis)) next
-
-      cb_cols       <- paste0(basis_arg_name, colnames(basis[[basis_arg_name]]))
-      new_col_names <- paste0(cb_cols, "_", id_var_name)
-      
-      for (nc in new_col_names) {
-        final_nc <- nc
-        suffix   <- 1L
-        while (final_nc %in% names(data)) {
-          final_nc <- paste0(nc, ".", suffix)
-          suffix   <- suffix + 1L
-        }
-        data[[final_nc]] <- data[[id_var_name]]
-      }
-
-      extra_args_str <- ""
-      if (length(f_call) > 3) {
-        nms         <- names(f_call)
-        extra_parts <- vapply(seq(4, length(f_call)), function(j) {
-          nm <- if (!is.null(nms) && nzchar(nms[j])) paste0(nms[j], " = ") else ""
-          paste0(nm, deparse(f_call[[j]]))
-        }, character(1))
-        extra_args_str <- paste0(", ", paste(extra_parts, collapse = ", "))
-      }
-
-      new_f_terms <- paste0("f(", new_col_names, ", ", cb_cols, extra_args_str, ")", collapse = " + ")
-      orig_f_str  <- gsub('\\"', '"', deparse(f_call, width.cutoff = 500), fixed = TRUE)
-      formula_str <- deparse(formula, width.cutoff = 500)
-      formula     <- as.formula(paste(
-        gsub(paste0("\\s*\\+\\s*", gsub("([().\"\\\\])", "\\\\\\1", orig_f_str)), "", formula_str),
-        "+", new_f_terms
-      ))
-    }
+    formula <- expanded$formula
+    data <- expanded$data
   }
 
   # ----------------------------
@@ -385,6 +320,16 @@ bdlnm <- function(
   coef_names    <- gsub(":\\d+$", "", rownames(coef))
   has_multiple  <- coef_names %in% coef_names[duplicated(coef_names)]
   rownames(coef) <- ifelse(has_multiple, rownames(coef), gsub(":1$", "", rownames(coef)))
+  rownames(coef) <- normalize_basis_interaction_names(rownames(coef), basis)
+
+  if (anyDuplicated(rownames(coef))) {
+    duplicated_names <- unique(rownames(coef)[duplicated(rownames(coef))])
+    cli::cli_abort(c(
+      "Coefficient-name normalization produced duplicated names.",
+      "x" = "Duplicated: {.val {duplicated_names}}."
+    ))
+  }
+
   colnames(coef) <- paste0("sample", seq_len(ncol(coef)))
   # fixed effects first
   coef <- rbind(coef[!has_multiple, , drop = FALSE], coef[has_multiple, , drop = FALSE])
@@ -422,6 +367,9 @@ bdlnm <- function(
   )
 
   attr(res, "n_sim") <- sample.arg$n
+  if (length(basis_interaction) > 0L) {
+    attr(res, "basis_interaction") <- basis_interaction
+  }
 
   class(res) <- c("bdlnm")
 

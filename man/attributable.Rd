@@ -2,44 +2,38 @@
 % Please edit documentation in R/attributable.R
 \name{attributable}
 \alias{attributable}
-\title{Calculate attributable number and fractions from a Bayesian distributed-lag model (B-DLNM).}
+\title{Calculate attributable numbers and fractions from posterior predictions}
 \usage{
 attributable(
   object,
   data,
   name_date = NULL,
-  name_exposure,
+  name_exposure = NULL,
   name_cases = NULL,
   name_filter = NULL,
   dir = "back",
   basis = NULL,
   cen,
-  range = NULL,
-  lag_average = TRUE
+  lag_average = TRUE,
+  columns = NULL
 )
 }
 \arguments{
-\item{object}{A fitted \code{"bdlnm"} class object returned by \code{\link[=bdlnm]{bdlnm()}}.}
+\item{object}{A \code{"bcrosspred"} object returned by \code{\link[=bcrosspred]{bcrosspred()}}. Passing a fitted \code{"bdlnm"} object is deprecated.}
 
-\item{data}{A data frame containing the temporal series needed to calculate attributable measures. It can include a date column (optional, see \code{name_date}), the exposure values (mandatory, see \code{name_exposure}), the number of cases (optional, see \code{name_cases}) and a binary (\code{0/1}) filter column (optional, see \code{name_filter}).}
+\item{data}{A data frame containing the temporal series needed to calculate attributable measures.}
 
-\item{name_date}{Optional single string with the name of the column in \code{data} containing the date. The column must be of class \code{Date} or \code{POSIXt}. When provided the function checks that the series is regularly spaced (see \code{Details}).}
-
-\item{name_exposure}{Single string with the name of the exposure column in \code{data}.}
-
-\item{name_cases}{Optional single string with the name of the cases column in \code{data}. If not provided, the function returns only attributable fractions (AF) per time point.}
-
-\item{name_filter}{Optional single string with the name of a binary (\code{0/1}) column in \code{data}. Only rows with value \code{1} are used to compute total AF and AN and per-time results are returned only for the filtered rows.}
+\item{name_date, name_exposure, name_cases, name_filter}{Deprecated column-name arguments. Use \code{columns} instead.}
 
 \item{dir}{Character; direction of the algorithm to calculate attributable measures. \code{"back"} (default) calculates AF and AN attributing current-time outcome to past exposures; \code{"forw"} calculates AF and AN attributing current-time exposure to future outcomes.}
 
-\item{basis}{If the \code{bdlnm} model has more than one basis, the name of the basis to use to compute predictions. It must be one of \code{names(object$basis)}. If the model contains only one basis it is selected automatically.}
+\item{basis}{Deprecated. Only used when \code{object} is a \code{"bdlnm"} model. If the model has more than one basis, the name of the basis to use.}
 
-\item{cen}{Numeric scalar; centering exposure value used to compute predictions. If missing the function will attempt to read it from the attributes of the specified \code{basis}. If no centering is available the function aborts.}
-
-\item{range}{Optional numeric vector of length 2 with the exposure range for which attributable measures will be calculated. Values outside \code{range} are coerced to \code{cen} before prediction.}
+\item{cen}{Deprecated. Only used when \code{object} is a \code{"bdlnm"} model. Numeric scalar specifying the centering exposure value.}
 
 \item{lag_average}{Logical (default \code{TRUE}). When \code{TRUE} use lag-averaged contributions to compute AN in the forward algorithm; when \code{FALSE} use the full lag-structured contributions instead.}
+
+\item{columns}{Named list mapping the roles required by \code{attributable()} to columns in \code{data}. The \code{exp} element is required; \code{cases}, \code{date}, \code{filter}, and \code{int} are optional. See \code{Details} for the definition and requirements of each element.}
 }
 \value{
 A list with components:
@@ -55,10 +49,30 @@ A list with components:
 }
 }
 \description{
-Compute attributable numbers (AN) and attributable fractions (AF) from a fitted Bayesian distributed lag non-linear model (\code{\link[=bdlnm]{bdlnm()}}). The function uses posterior predicted relative risks from \code{\link[=bcrosspred]{bcrosspred()}} and applies a forward or backward lag algorithm to compute per-time and total attributable measures, optionally filtering the calculation to a subset of time points.
+Compute attributable numbers (AN) and attributable fractions (AF) from posterior predicted relative risks returned by \code{\link[=bcrosspred]{bcrosspred()}}. The function applies a forward or backward lag algorithm to compute per-time and total attributable measures, optionally filtering the calculation to a subset of time points.
 }
 \details{
-The function first obtains posterior predicted effects at the observed exposure values by calling \code{\link[=bcrosspred]{bcrosspred()}} with \code{exp_at = data[[name_exposure]]}. Predictions must include relative-risk scale predictions so the previously fitted \code{"bdlnm"} model must have a \code{log} or \code{logit} link; otherwise the function aborts. These predictions require a defined centering value (\code{cen}), as attributable measures are always computed with respect to a reference exposure. This reference exposure is usually an optimal exposure computed with the \code{\link[=optimal_exposure]{optimal_exposure()}} function, such as the Minimum Mortality Temperature (MMT).
+The supported elements of \code{columns} are:
+\itemize{
+\item \code{exp}: required single string naming the numeric exposure column.
+\item \code{cases}: optional single string naming the numeric cases column. If omitted, only attributable fractions per time point are returned.
+\item \code{date}: optional single string naming a \code{Date} or \code{POSIXt} column. When supplied, the function checks that observations are ordered and regularly spaced.
+\item \code{filter}: optional single string naming a numeric binary (\code{0}/\code{1}) column. Only observations equal to \code{1} are included in total attributable measures and returned in the per-time results.
+\item \code{int}: optional single string naming the interaction column that assigns each observation to the corresponding interaction-specific prediction. It is required when \code{object} contains interaction-specific predictions, and its name must match the interaction variable recorded in \code{object}.
+}
+
+\code{data} must represent one regularly spaced time series; multiple concurrent series or panel data are not supported. If only seasonal observations are available, expand the data to the full sequence, insert \code{NA} for missing exposures or cases, and use \code{filter} to select the relevant observations.
+
+The prediction grid in \code{object} must include every non-missing exposure value
+observed in the column identified by \code{columns$exp}. Values are matched
+directly to the \code{exp_at} grid of each relevant prediction; \code{attributable()}
+does not interpolate predictions for exposure values that are absent from
+that grid. Therefore, before calculating attributable measures, construct
+centered relative-risk predictions with an exposure grid that includes the
+unique non-missing values in \code{data[[columns$exp]]}, for example by passing
+those values to the \code{exp_at} argument of \code{\link[=bcrosspred]{bcrosspred()}}. The grid may contain
+additional exposure values, and repeated or missing exposure observations in
+\code{data} do not need to be passed repeatedly to \code{bcrosspred()}.
 
 Two different algorithms can be chosen to calculate attributable measures:
 \itemize{
@@ -68,9 +82,9 @@ Two different algorithms can be chosen to calculate attributable measures:
 
 Both algorithms are fully described by Gasparrini and Leone (2014) \url{doi:10.1186/1471-2288-14-55}.
 
-Required columns to calculate \code{AF} and \code{AN} are \code{name_exposure} and \code{name_cases} columns. If \code{name_cases} is not supplied only AF per time can be computed and the output will only contain two elements: \verb{$af} and \verb{$af.summary}. If \code{name_date} is provided the function checks that dates are equispaced (checks seconds, minutes, hours, days, weeks, months or years). Time series have to be equispaced because the algorithms used to calculate attributable measures rely on consecutive time points over the lag window,. For example, if you only have seasonal observations (e.g., summers) expand the data to the full sequence and insert \code{NA} for missing exposures/cases and use \code{name_filter} to compute measures only for the seasonal subset.
+For interaction-specific predictions, the backward algorithm uses the interaction value at the outcome time for all lagged exposures contributing to that outcome. For each exposure time, the forward algorithm uses the interaction value at the future outcome time corresponding to each lag.
 
-Only \code{"bdlnm"} objects fitted with a cross-basis are supported; models fitted with a one-basis (no lag) are not suitable for attributable calculations.
+Only predictions from a cross-basis are supported; one-basis predictions with no lag dimension are not suitable for attributable calculations.
 }
 \note{
 This function is inspired by \code{attrdl()} developed by Gasparrini and Leone (2014) \url{doi:10.1186/1471-2288-14-55}. It has been adapted to work in a Bayesian framework within the \pkg{bdlnm} package.
@@ -116,16 +130,16 @@ mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
              family = "poisson",
              sample.arg = list(seed = 432, seed = 1L))
 
-# Predict
-cpred <- bcrosspred(mod, exp_at = temp)
-
 # compute centering (MMT) using optimal_exposure
-mmt <- optimal_exposure(mod, exp_at = temp)
+cpred <- bcrosspred(mod, exp_at = temp)
+mmt <- optimal_exposure(cpred)
 cen <- mmt$summary[["0.5quant"]]
 
+# Centered predictions covering the observed exposures
+cpred <- bcrosspred(mod, exp_at = london$tmean, cen = cen)
+
 # Attributable numbers and fractions (using the backwards algorithm):
-attr <- attributable(mod, london, name_date = "date",
-name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
+attr <- attributable(cpred, london, columns = list(date = "date", exp = "tmean", cases = "mort_75plus"), dir = "back")
 }
 
 

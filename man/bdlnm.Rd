@@ -21,7 +21,7 @@ bdlnm(
 
 \item{family}{Character. Family name passed to \code{\link[INLA:inla]{INLA::inla()}} (default \code{"gaussian"}).}
 
-\item{sample.arg}{List of arguments passed to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. Defaults to \code{list(n = 1000, seed = 0L)} (draws \code{1000} posterior samples; seed at random). For reproducible sampling set a non-zero numeric \code{seed}.}
+\item{sample.arg}{List of arguments passed to \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}}. Defaults to \code{list(n = 1000, seed = 0L)} (draws \code{1000} posterior samples; seed at random). For reproducible sampling set a non-zero numeric \code{seed}.}
 
 \item{ci.level}{Numeric in \verb{(0,1)} giving the credible interval level (default \code{0.95}). Credible interval quantiles are computed to summarize coefficients from the posterior samples.}
 
@@ -33,24 +33,26 @@ bdlnm(
 An S3 object of class \code{"bdlnm"} with the following components:
 \itemize{
 \item \code{model}: the fitted \code{INLA} model returned by \code{\link[INLA:inla]{INLA::inla()}}.
-\item \code{basis}: a named list containing all basis of class \code{crossbasis} or \code{onebasis} included in the model \code{formula}.
-\item \code{coefficients}: a matrix whose columns are posterior sample draws returned by \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}} (named \code{sample1}, \code{sample2}, ...) and whose rows are all model coefficients.
+\item \code{basis}: a named list containing all the detected basis of class \code{crossbasis} or \code{onebasis} included in the model \code{formula}.
+\item \code{coefficients}: a matrix whose columns are posterior sample draws returned by \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}} (named \code{sample1}, \code{sample2}, ...) and whose rows are all model coefficients.
 \item \code{coefficients.summary}: a matrix of summary statistics for all the posterior samples stored in \code{coefficients} (mean, sd, quantiles, mode).
 }
+
+The \code{"n_sim"} attribute records the number of posterior samples. When the formula contains interactions involving a basis, the \code{"basis_interaction"} attribute records their type (\code{"fixed"} or \code{"random"}), variable values, and the reference value for categorical fixed interactions.
 }
 \description{
-Fit a distributed lag non-linear model (DLNM) using a Bayesian framework. The function calls \code{\link[INLA:inla]{INLA::inla()}} to fit the model and then draws posterior samples of the model fixed effects with \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. See the package vignette for worked examples and recommended workflows.
+Fit a distributed lag non-linear model (DLNM) using a Bayesian framework. The function calls \code{\link[INLA:inla]{INLA::inla()}} to fit the model and then draws posterior samples of the model fixed effects with \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}}. See the package vignette for worked examples and recommended workflows.
 }
 \section{Distributed lag non-linear model}{
 
-The fitted model must be a distributed lag linear or non-linear model (DLNM). DLNMs describe potentially non-linear and delayed (lagged) associations between an exposure and an outcome, commonly referred to as exposure–lag–response relationships. This modelling framework is based on the definition of a cross-basis (a bi-dimensional space of functions) constructed with \code{\link[dlnm:crossbasis]{dlnm::crossbasis()}}, which defines the exposure–response and lag–response functions simultaneously. The cross-basis object must be created beforehand and supplied as an object in the calling environment (not as a column inside data) and explicitly included in the model formula (e.g., y ~ cb + ...). A basis object constructed with \code{\link[dlnm:onebasis]{dlnm::onebasis()}} can be used instead when the model is restricted to a uni-dimensional exposure–response relationship (i.e., without lagged effects). All basis objects included in the model \code{formula} are stored and returned as a named list in the \code{basis} component. Any of these basis objects can later be supplied to \code{\link[=bcrosspred]{bcrosspred()}} to extract predictions for the corresponding exposure–lag–response (or exposure-response, if created with \code{onebasis}) association.
+The fitted model has to be a distributed lag linear or non-linear model (DLNM). DLNMs describe potentially non-linear and delayed (lagged) associations between an exposure and an outcome, commonly referred to as exposure–lag–response relationships. This modelling framework is based on the definition of a cross-basis (a bi-dimensional space of functions) constructed with \code{\link[dlnm:crossbasis]{dlnm::crossbasis()}}, which defines the exposure–response and lag–response functions simultaneously. The cross-basis object must be created beforehand and supplied as an object in the calling environment (not as a column inside data) and explicitly included in the model formula (e.g., y ~ cb + ...). A basis object constructed with \code{\link[dlnm:onebasis]{dlnm::onebasis()}} can be used instead when the model is restricted to a uni-dimensional exposure–response relationship (i.e., without lagged effects). All basis objects included in the model \code{formula} are detected, stored and returned as a named list in the \code{basis} component. Any of these basis objects can later be supplied to \code{\link[=bcrosspred]{bcrosspred()}} to extract predictions for the corresponding exposure–lag–response (or exposure-response, if created with \code{onebasis}) association.
 }
 
 \section{INLA}{
 
 Models are fit using Integrated Nested Laplace approximation (INLA) via \code{\link[INLA:inla]{INLA::inla()}}. INLA is a method for approximate Bayesian inference. In the last years it has established itself as an alternative to other methods such as Markov chain Monte Carlo because of its speed and ease of use via the R-INLA package (\href{https://www.r-inla.org/what-is-inla}{What is INLA?}).
 
-Additional arguments supplied via \code{...} are forwarded to \code{\link[INLA:inla]{INLA::inla()}} (see documentation for all available arguments). Internally, the function ensures that \code{control.compute = list(config = TRUE)} in order to enable posterior sample drawing with \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}.
+Additional arguments supplied via \code{...} are forwarded to \code{\link[INLA:inla]{INLA::inla()}} (see their documentation for all available arguments). Internally, the function ensures that \code{control.compute = list(config = TRUE)} in order to enable posterior sample drawing with \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}}.
 
 In the presence of missing values in variables referenced in formula, the \code{na.action} argument controls how the model frame is constructed. If \code{na.action} is set to \link{na.omit} (the default set by \link{options}), a complete-case analysis is performed and any row with a missing value in a variable appearing in formula is removed. If \code{na.action} is set to \link{na.pass} instead, missing values are retained in the model frame and passed to INLA.
 
@@ -68,9 +70,9 @@ When missing values are present in the data supplied to \code{\link[INLA:inla]{I
 \section{Posterior samples}{
 
 
-After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}}. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a \code{"crossbasis"} built from an exposure basis with C parameters and a lag basis with L parameters, there will be C × L cross-basis associated coefficients (named e.g. v1.l1, ..., vC.lL). For a \code{"onebasis"} object the coefficients follow the simpler form b1, ... bC.
+After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}}. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a \code{"crossbasis"} built from an exposure basis with \code{C} parameters and a lag basis with \code{L} parameters, there will be \verb{C × L} cross-basis associated coefficients (named e.g. \code{v1.l1}, ..., \code{vC.lL}). For a \code{"onebasis"} object the coefficients follow the simpler form \code{b1}, ..., \code{bC}.
 
-Additional arguments supplied via \code{sample.arg} are forwarded to \code{\link[INLA:posterior.sample]{INLA::inla.posterior.sample()}} (see documentation for all available arguments). By default, the number of samples is \code{1000}. Be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric \code{seed} in \code{sample.arg}.
+Additional arguments supplied via \code{sample.arg} are forwarded to \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}} (see documentation for all available arguments). By default, the number of samples is \code{1000}. Be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric \code{seed} in \code{sample.arg}.
 
 Posterior sample estimations are then summarized across samples using mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to \code{ci.level}) and an approximate mode obtained from a kernel density estimate.
 }
@@ -133,9 +135,9 @@ Rue H., Martino S., Chopin N. (2009). Approximate Bayesian inference for latent 
 \seealso{
 \code{\link[=bcrosspred]{bcrosspred()}} to predict exposure–lag–response associations for a \code{bdlnm} object,
 
-\code{\link[=attributable]{attributable()}} to calculate attributable fractions and numbers for a \code{bdlnm} object,
+\code{\link[=attributable]{attributable()}} to calculate attributable fractions and numbers for a \code{bcrosspred} object,
 
-\code{\link[=optimal_exposure]{optimal_exposure()}} to estimate exposure values that optimise the predicted effect for a \code{bdlnm} object.
+\code{\link[=optimal_exposure]{optimal_exposure()}} to estimate exposure values that optimise the predicted effect for a \code{bcrosspred} object.
 }
 \author{
 Pau Satorra, Marcos Quijal-Zamorano.

@@ -2,11 +2,12 @@
 % Please edit documentation in R/plot.bcrosspred.R
 \name{plot.bcrosspred}
 \alias{plot.bcrosspred}
-\title{Plot the predicted effects from a Bayesian distributed-lag model (B-DLNM).}
+\title{Plot the predicted effects from a Bayesian distributed-lag model (B-DLNM)}
 \usage{
 \method{plot}{bcrosspred}(
   x,
   ptype,
+  select = NULL,
   exp_at = NULL,
   lag_at = NULL,
   ci = "area",
@@ -21,6 +22,10 @@
 \item{x}{An object of class \code{"bcrosspred"} returned by \code{\link[=bcrosspred]{bcrosspred()}}.}
 
 \item{ptype}{Character. Plot type: one of \code{"slices"}, \code{"overall"}, \code{"3d"} or \code{"contour"}.}
+
+\item{select}{Optional single character string identifying which prediction
+to plot from a basis-interaction prediction collection. It must exactly
+match one of the prediction names in \code{x}. See \code{Details}.}
 
 \item{exp_at}{Numeric vector of exposure values (predictor) for the \code{"slices"} plot type (maximum length of 4).}
 
@@ -52,6 +57,8 @@ The function supports different visualizations for posterior effects predicted b
 \item \code{"3d"}: 3D plot of the surface of the predicted effect for each exposure and lag. Uses the median of the posterior samples. Not meaningful for single lag models. Additional graphical arguments can be included, such as \code{theta} or \code{phi} (perspective), \code{border} or \code{shade} (surface), \code{xlab}, \code{ylab} or \code{zlab} (axis labelling) and \code{col.} See \code{\link[=persp]{persp()}} for additional information.
 \item \code{"contour"}: filled contour of the surface of the predicted effect for each exposure and lag. Uses the median of the posterior samples. Not meaningful for single lag models. Additional graphical arguments can be included, such as \code{plot.title}, \code{plot.axes} or \code{key.title} for titles and axis and key labelling. See \code{\link[=filled.contour]{filled.contour()}} for additional information.
 }
+
+When \code{x} contains interaction-specific predictions, the \code{select} argument will be used to select one of them for plotting. Available values are the names of the prediction elements in \code{x}, for example, \code{"group[a]"} or \code{"group[b]"} for a fixed interaction and \code{"global"} or \code{"id[1]"} for a basis-specific random effect. If more than one prediction is available, \code{select} is required; if exactly one is available, it is selected automatically. Only one prediction can be plotted per call. This argument cannot be used for a standalone prediction object.
 
 The function will call the specified original base plotting functions for each different \code{ptype}. Via the argument \code{...} the user can change the graphical parameters that will be passed to these functions. See the original functions for a complete list of the arguments. Some arguments, if not specified, are set to different default values than the original functions.
 

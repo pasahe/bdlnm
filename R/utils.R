@@ -40,6 +40,343 @@ check_inla <- function(error = FALSE) {
 	TRUE
 }
 
+# Identify named results stored inside a collection object.
+named_result_names <- function(x, required_components) {
+	names(x)[vapply(
+		x,
+		function(element) {
+			is.list(element) &&
+				all(required_components %in% names(element))
+		},
+		logical(1L)
+	)]
+}
+
+# Normalize the orientation of fixed basis-interaction coefficient names.
+normalize_basis_interaction_names <- function(coefficient_names, basis) {
+	basis_coefficient_names <- unlist(
+		Map(
+			function(basis_name, basis_object) {
+				paste0(basis_name, colnames(basis_object))
+			},
+			names(basis),
+			basis
+		),
+		use.names = FALSE
+	)
+
+	vapply(
+		coefficient_names,
+		function(coefficient_name) {
+			components <- strsplit(
+				coefficient_name,
+				":",
+				fixed = TRUE
+			)[[1L]]
+			basis_position <- which(components %in% basis_coefficient_names)
+
+			if (
+				length(components) >= 2L &&
+					length(basis_position) == 1L &&
+					basis_position != 1L
+			) {
+				components <- c(
+					components[[basis_position]],
+					components[-basis_position]
+				)
+			}
+
+			paste(components, collapse = ":")
+		},
+		character(1L),
+		USE.NAMES = FALSE
+	)
+}
+
+# Select one result from a named collection while preserving standalone objects.
+select_named_result <- function(
+	x,
+	select = NULL,
+	required_components,
+	metadata_names = character(0),
+	result_class,
+	result_label = "result"
+) {
+	is_interaction_result <- !is.null(attr(x, "basis_interaction"))
+	result_label_sentence <- paste0(
+		toupper(substr(result_label, 1L, 1L)),
+		substr(result_label, 2L, nchar(result_label))
+	)
+
+	if (!is_interaction_result) {
+		if (!is.null(select)) {
+			cli::cli_abort(
+				"{.arg select} can only be used when {.arg x} contains multiple {result_label}s."
+			)
+		}
+		return(x)
+	}
+
+	result_names <- named_result_names(x, required_components)
+	if (length(result_names) == 0L) {
+		cli::cli_abort(
+			"Interaction-specific {result_label}s expected in {.arg x} could not be found."
+		)
+	}
+
+	if (is.null(select)) {
+		if (length(result_names) > 1L) {
+			cli::cli_abort(c(
+				"{.arg select} must identify the {result_label} to use.",
+				"i" = "Available {result_label}s: {.and {result_names}}."
+			))
+		}
+		select <- result_names[[1L]]
+	} else {
+		if (
+			!is.character(select) ||
+				length(select) != 1L ||
+				is.na(select) ||
+				!nzchar(select)
+		) {
+			cli::cli_abort(
+				"{.arg select} must be a single non-empty character string."
+			)
+		}
+
+		if (!select %in% result_names) {
+			cli::cli_abort(c(
+				"{result_label_sentence} {.val {select}} was not found in {.arg x}.",
+				"i" = "Available {result_label}s: {.and {result_names}}."
+			))
+		}
+	}
+
+	selected_result <- x[[select]]
+	for (metadata_name in metadata_names) {
+		if (is.null(selected_result[[metadata_name]])) {
+			selected_result[[metadata_name]] <- x[[metadata_name]]
+		}
+	}
+	class(selected_result) <- result_class
+	selected_result
+}
+
+#' Combine formula expressions with addition
+#'
+#' Combines a list of language objects into a single expression joined by `+`.
+#' This internal utility is used when expanding basis terms in model formulas.
+#'
+#' @param expressions A non-empty list of language objects.
+#'
+#' @return A language object containing the combined expression.
+#'
+#' @keywords internal
+#' @export
+sum_formula_expressions <- function(expressions) {
+	if (length(expressions) == 1L) {
+		return(expressions[[1L]])
+	}
+
+	Reduce(
+		function(left, right) call("+", left, right),
+		expressions
+	)
+}
+
+#' Expand basis terms in a model formula
+#'
+#' Expands basis symbols and basis-specific random-effect terms by manipulating
+#' the formula language objects. Generated grouping columns required by expanded
+#' random-effect terms are added to `data`.
+#'
+#' @param formula A model formula.
+#' @param basis A named list of `crossbasis` or `onebasis` objects.
+#' @param data A data frame containing the variables referenced in `formula`.
+#'
+#' @return A list containing the expanded `formula` and updated `data`.
+#'
+#' @keywords internal
+#' @export
+expand_basis_formula <- function(formula, basis, data) {
+	formula_terms <- terms(formula, specials = "f", keep.order = TRUE)
+	term_labels <- attr(formula_terms, "term.labels")
+	expanded_terms <- list()
+
+	for (term_label in term_labels) {
+		term_expression <- str2lang(term_label)
+
+		# Expand basis-specific random-effect terms: f(id, basis, ...).
+		if (
+			is.call(term_expression) &&
+			identical(term_expression[[1L]], as.name("f")) &&
+			length(term_expression) >= 3L &&
+			is.symbol(term_expression[[3L]]) &&
+			as.character(term_expression[[3L]]) %in% names(basis)
+		) {
+			id_expression <- term_expression[[2L]]
+			basis_name <- as.character(term_expression[[3L]])
+
+			if (!is.symbol(id_expression)) {
+				cli::cli_abort(
+					"The first argument of an {.fn f} term involving a basis must be a column name."
+				)
+			}
+
+			id_name <- as.character(id_expression)
+
+			if (!id_name %in% names(data)) {
+				cli::cli_abort(c(
+					"Column {.var {id_name}} not found in {.arg data}.",
+					"i" = "Found in formula term {.code {deparse1(term_expression)}}.",
+					"i" = "Available columns: {.and {names(data)}}."
+				))
+			}
+
+			basis_columns <- paste0(basis_name, colnames(basis[[basis_name]]))
+
+			for (basis_column in basis_columns) {
+				generated_id <- paste0(basis_column, "_", id_name)
+
+				if (generated_id %in% names(data)) {
+					cli::cli_abort(
+						"Cannot generate column {.var {generated_id}} because it already exists in {.arg data}."
+					)
+				}
+
+				data[[generated_id]] <- data[[id_name]]
+
+				random_term <- term_expression
+				random_term[[2L]] <- as.name(generated_id)
+				random_term[[3L]] <- as.name(basis_column)
+				expanded_terms[[length(expanded_terms) + 1L]] <- random_term
+			}
+
+			next
+		}
+
+		# Iteratively substitute every basis occurring in a fixed-effect term.
+		term_basis <- intersect(all.vars(term_expression), names(basis))
+		term_expansions <- list(term_expression)
+
+		for (basis_name in term_basis) {
+			basis_columns <- paste0(basis_name, colnames(basis[[basis_name]]))
+			new_expansions <- list()
+
+			for (term_expansion in term_expansions) {
+				for (basis_column in basis_columns) {
+					replacement <- setNames(list(as.name(basis_column)), basis_name)
+					new_expansions[[length(new_expansions) + 1L]] <- do.call(
+						substitute,
+						list(term_expansion, replacement)
+					)
+				}
+			}
+
+			term_expansions <- new_expansions
+		}
+
+		expanded_terms <- c(expanded_terms, term_expansions)
+	}
+
+	expanded_rhs <- sum_formula_expressions(expanded_terms)
+
+	if (attr(formula_terms, "intercept") == 0L) {
+		expanded_rhs <- call("-", expanded_rhs, 1L)
+	}
+
+	expanded_formula <- call("~", formula[[2L]], expanded_rhs)
+	class(expanded_formula) <- "formula"
+	environment(expanded_formula) <- environment(formula)
+
+	list(
+		formula = expanded_formula,
+		data = data
+	)
+}
+
+#' Describe interactions involving a basis
+#'
+#' Extracts compact metadata for fixed and random interactions involving a
+#' cross-basis or one-basis in a model formula.
+#'
+#' @param formula A model formula.
+#' @param basis A named list of basis objects.
+#' @param data A data frame containing the variables referenced in `formula`.
+#'
+#' @return A nested list indexed by basis and interaction-variable names.
+#'
+#' @keywords internal
+basis_interaction_info <- function(formula, basis, data) {
+	formula_terms <- terms(formula, specials = "f", keep.order = TRUE)
+	term_expressions <- lapply(attr(formula_terms, "term.labels"), str2lang)
+	interaction_info <- list()
+
+	variable_values <- function(variable, fixed = FALSE) {
+		if (!variable %in% names(data)) {
+			cli::cli_abort(
+				"Interaction variable {.var {variable}} was not found in {.arg data}."
+			)
+		}
+
+		x <- data[[variable]]
+		if (fixed && (is.factor(x) || is.character(x) || is.logical(x))) {
+			x <- if (is.factor(x)) x else factor(x)
+			values <- levels(x)
+			list(values = values, reference = values[[1L]])
+		} else if (fixed) {
+			# Continuous fixed interactions do not have categorical values or a
+			# reference level.
+			list(values = NULL, reference = NULL)
+		} else {
+			values <- if (is.factor(x)) levels(x) else unique(x[!is.na(x)])
+			list(values = values)
+		}
+	}
+
+	for (term in term_expressions) {
+		if (
+			is.call(term) &&
+			identical(term[[1L]], as.name("f")) &&
+			length(term) >= 3L &&
+			is.symbol(term[[2L]]) &&
+			is.symbol(term[[3L]]) &&
+			as.character(term[[3L]]) %in% names(basis)
+		) {
+			variable <- as.character(term[[2L]])
+			basis_name <- as.character(term[[3L]])
+			value_info <- variable_values(variable)
+
+			interaction_info[[basis_name]][[variable]] <- list(
+				type = "random",
+				values = value_info$values
+			)
+			next
+		}
+
+		if (!is.call(term) || !identical(term[[1L]], as.name(":"))) next
+
+		term_variables <- all.vars(term)
+		basis_names <- intersect(term_variables, names(basis))
+		if (length(basis_names) != 1L) next
+
+		interaction_variables <- setdiff(term_variables, basis_names)
+		if (length(interaction_variables) != 1L) next
+
+		basis_name <- basis_names[[1L]]
+		variable <- interaction_variables[[1L]]
+		value_info <- variable_values(variable, fixed = TRUE)
+
+		interaction_info[[basis_name]][[variable]] <- list(
+			type = "fixed",
+			values = value_info$values,
+			reference = value_info$reference
+		)
+	}
+
+	interaction_info
+}
+
 # Function to select only the coefficients from the basis from all the posterior samples
 extract_coef <- function(object, basis, combine_effects) {
 	# find if basis is present in object$basis
@@ -70,56 +407,158 @@ extract_coef <- function(object, basis, combine_effects) {
 
 	if (!is.null(combine_effects)) {
 	
-		# parse combine_effects to identify fixed and random cb terms
-		fe_terms <- terms(combine_effects, specials = "f")
-		fe_vars  <- attr(fe_terms, "variables")
-		fe_f_idx <- attr(fe_terms, "specials")$f
+		combine_terms <- terms(
+			combine_effects,
+			specials = "f",
+			keep.order = TRUE
+		)
+		term_labels <- attr(combine_terms, "term.labels")
+		term_expressions <- lapply(term_labels, str2lang)
 
-		# identify fixed cb term: is which_basis present as a non-f() term?
-		fe_labels  <- attr(fe_terms, "term.labels")
-		fe_f_labels <- if (!is.null(fe_f_idx)) {
-			vapply(fe_f_idx, function(i) deparse(fe_vars[[i + 1]], width.cutoff = 500), character(1))
-		} else character(0)
-		has_global <- which_basis %in% setdiff(fe_labels, fe_f_labels) && all(cb_cols %in% rownames(coef))
+		global_terms <- vapply(
+			term_expressions,
+			function(term) is.symbol(term) && identical(as.character(term), which_basis),
+			logical(1)
+		)
+		has_standalone_basis <- any(global_terms)
 
-		# identify random effect terms: f(id_var, cb, ...) where cb matches which_basis
+		random_terms <- logical(length(term_expressions))
 		re_id_vars <- character(0)
-		if (!is.null(fe_f_idx)) {
-			for (i in fe_f_idx) {
-				f_call         <- fe_vars[[i + 1]]
-				id_var_name    <- deparse(f_call[[2]])
-				cb_arg_name    <- deparse(f_call[[3]])
-				if (cb_arg_name == which_basis) re_id_vars <- c(re_id_vars, id_var_name)
+
+		for (i in seq_along(term_expressions)) {
+			term <- term_expressions[[i]]
+
+			if (
+				is.call(term) &&
+				identical(term[[1L]], as.name("f")) &&
+				length(term) >= 3L
+			) {
+				if (
+					is.symbol(term[[3L]]) &&
+					identical(as.character(term[[3L]]), which_basis)
+				) {
+					if (!is.symbol(term[[2L]])) {
+						cli::cli_abort(
+							"The first argument of an {.fn f} term in {.arg combine_effects} must be a grouping-variable name."
+						)
+					}
+
+					random_terms[[i]] <- TRUE
+					re_id_vars <- c(re_id_vars, as.character(term[[2L]]))
+				} else {
+					cli::cli_abort(
+						"All {.fn f} terms in {.arg combine_effects} must involve the selected basis {.val {which_basis}}."
+					)
+				}
 			}
 		}
 
-		# we will suppose for now that a fixed and a random interaction effect are not specified at the same time
-		has_random <- length(re_id_vars) > 0
+		fixed_interaction_terms <- logical(length(term_expressions))
+		interaction_expression <- NULL
+		interaction_variable <- NULL
 
-		# identify fixed interaction terms:
-		has_fixed_interaction <- any(grepl(paste0("^", which_basis, ":"), fe_labels) | 
-                            grepl(paste0(":", which_basis, "$"), fe_labels))
+		for (i in seq_along(term_expressions)) {
+			term <- term_expressions[[i]]
+
+			if (is.call(term) && identical(term[[1L]], as.name(":")) && length(term) == 3L) {
+				left_is_basis <- is.symbol(term[[2L]]) &&
+					identical(as.character(term[[2L]]), which_basis)
+				right_is_basis <- is.symbol(term[[3L]]) &&
+					identical(as.character(term[[3L]]), which_basis)
+
+				if (left_is_basis || right_is_basis) {
+					fixed_interaction_terms[[i]] <- TRUE
+					interaction_expression <- if (left_is_basis) term[[3L]] else term[[2L]]
+					interaction_variables <- all.vars(interaction_expression)
+
+					if (length(interaction_variables) != 1L) {
+						cli::cli_abort(
+							"A fixed interaction in {.arg combine_effects} must involve the selected basis and one variable."
+						)
+					}
+
+					interaction_variable <- interaction_variables[[1L]]
+				}
+			}
+		}
+
+		if (sum(random_terms) > 1L) {
+			cli::cli_abort(
+				"Only one basis-specific {.fn f} term is currently supported in {.arg combine_effects}."
+			)
+		}
+
+		if (sum(fixed_interaction_terms) > 1L) {
+			cli::cli_abort(
+				"Only one fixed interaction is currently supported in {.arg combine_effects}."
+			)
+		}
+
+		has_random <- any(random_terms)
+		has_fixed_interaction <- any(fixed_interaction_terms)
+
+		if (has_random && has_fixed_interaction) {
+			cli::cli_abort(
+				"Fixed and random basis interactions cannot currently be combined in {.arg combine_effects}."
+			)
+		}
+
+		allowed_terms <- global_terms | random_terms | fixed_interaction_terms
+
+		if (has_fixed_interaction) {
+			interaction_main_term <- vapply(
+				term_expressions,
+				function(term) identical(term, interaction_expression),
+				logical(1)
+			)
+			allowed_terms <- allowed_terms | interaction_main_term
+		}
+
+		if (any(!allowed_terms)) {
+			cli::cli_abort(c(
+				"The {.arg combine_effects} formula contains unsupported terms.",
+				"x" = "Unsupported: {.val {term_labels[!allowed_terms]}}"
+			))
+		}
+
+		if (!has_standalone_basis && !has_random && !has_fixed_interaction) {
+			cli::cli_abort(
+				"The selected basis {.val {which_basis}} was not found in {.arg combine_effects}."
+			)
+		}
+
+		if (has_standalone_basis) {
+			missing_global <- setdiff(cb_cols, rownames(coef))
+
+			if (length(missing_global) > 0L) {
+				cli::cli_abort(c(
+          "Global basis coefficients were requested in {.arg combine_effects}, but were not found for {.val {which_basis}}.",
+          "x" = "Missing: {.val {missing_global}}",
+          "i" = "Remove the global {.val {which_basis}} term from {.arg combine_effects} if the fitted model only contains basis-specific effects."
+        ))
+			}
+		}
 		
 
 		if (has_random) {
 
 			# for each random effect id var, find unit ids from coef rownames
-			re_prefix <- paste0(cb_cols[1], "_", re_id_vars)
-			re_rows   <- rownames(coef)[grepl(paste(paste0("^", re_prefix, ":"), collapse = "|"), rownames(coef))]
+			re_prefix <- paste0(cb_cols[1], "_", re_id_vars[[1L]], ":")
+			re_rows <- rownames(coef)[startsWith(rownames(coef), re_prefix)]
 			if (length(re_rows) == 0) {
 				cli::cli_abort(c(
 					"No random effect coefficients found for {.val {re_id_vars}} and the provided basis.",
-					"i" = "Expected rownames like {.val {paste0(re_prefix[1], ':<id>')}} in the model coefficients."
+					"i" = "Expected rownames starting with {.val {re_prefix}} in the model coefficients."
 				))
 			}
-			unit_ids <- unique(gsub(".*:", "", re_rows))
+			unit_ids <- unique(substring(re_rows, nchar(re_prefix) + 1L))
 			n_units  <- length(unit_ids)
 
 			# global/mean slice
-			if (has_global) {
+			if (has_standalone_basis) {
 				global_coef <- coef[cb_cols, , drop = FALSE]
 				# build array
-				all_ids <- c("global", paste0(re_id_vars[1], "[", unit_ids, "]"))
+				all_ids <- c("global", paste0(re_id_vars[[1L]], "[", unit_ids, "]"))
 				coef_cb <- array(
 					NA_real_,
 					dim      = c(n_cols, n_samples, n_units + 1L),
@@ -127,7 +566,7 @@ extract_coef <- function(object, basis, combine_effects) {
 				)
 				coef_cb[, , "global"] <- global_coef
 			}  else {
-				all_ids <- paste0(re_id_vars[1], "[", unit_ids, "]")
+				all_ids <- paste0(re_id_vars[[1L]], "[", unit_ids, "]")
 				coef_cb <- array(
 					NA_real_,
 					dim      = c(n_cols, n_samples, n_units),
@@ -135,73 +574,90 @@ extract_coef <- function(object, basis, combine_effects) {
 				)
 			}
 
-
-			replace_call <- function(expr, target, replacement) {
-				if (identical(expr, target)) return(replacement)
-				if (is.call(expr)) {
-					for (i in seq_along(expr)) expr[[i]] <- replace_call(expr[[i]], target, replacement)
-				}
-				expr
-			}
-
 			for (k in unit_ids) {
+				k_named <- paste0(re_id_vars[[1L]], "[", k, "]")
+				re_row_names_k <- paste0(cb_cols, "_", re_id_vars[[1L]], ":", k)
+				missing_re <- setdiff(re_row_names_k, rownames(coef))
 
-				k_named  <- paste0(re_id_vars[1], "[", k, "]")
-				eval_env <- new.env(parent = parent.frame())
-				expr <- combine_effects[[2]]
-
-				# assign fixed cb term -> its coefficient matrix
-				if (has_global) {
-					assign(which_basis, global_coef, envir = eval_env)
+				if (length(missing_re) > 0) {
+					cli::cli_abort(c(
+						"Random effect coefficients not found for {.val {re_id_vars[[1L]]}} = {.val {k}}.",
+						"x" = "{.val {missing_re}}"
+					))
 				}
 
-				# assign each f() term -> its coefficient matrix for unit k
-				for (i in fe_f_idx) {
-					f_call      <- fe_vars[[i + 1]]
-					id_var_name <- deparse(f_call[[2]])
-					cb_arg_name <- deparse(f_call[[3]])
-					if (cb_arg_name != which_basis) next
+				re_coef_k <- coef[re_row_names_k, , drop = FALSE]
+				rownames(re_coef_k) <- cb_cols
 
-					re_row_names_k <- paste0(cb_cols, "_", id_var_name, ":", k)
-					missing_re     <- setdiff(re_row_names_k, rownames(coef))
-					if (length(missing_re) > 0) {
-						cli::cli_abort(c(
-							"Random effect coefficients not found for {.val {id_var_name}} = {.val {k}}.",
-							"x" = "{.val {missing_re}}"
-						))
-					}
-					re_coef_k           <- coef[re_row_names_k, , drop = FALSE]
-					rownames(re_coef_k) <- cb_cols
-
-					safe_name <- make.names(deparse(f_call, width.cutoff = 500))
-					assign(safe_name, re_coef_k, envir = eval_env)
-					expr_str <- gsub(deparse(f_call, width.cutoff = 500), safe_name, 
-									deparse(expr, width.cutoff = 500), fixed = TRUE)
-					expr     <- str2lang(expr_str)
+				if (has_standalone_basis) {
+					re_coef_k <- global_coef + re_coef_k
 				}
 
-				# evaluate the RHS of combine_effects in that environment
-				coef_cb[, , k_named] <- with(as.list(eval_env), eval(expr))
+				coef_cb[, , k_named] <- re_coef_k
 			}
 		} else if (has_fixed_interaction) {
+			interaction_prefix <- deparse1(interaction_expression)
+			int_levels <- character(0)
+			has_continuous_interaction <- FALSE
 
-			has_main_effect <- grepl("\\*", deparse(combine_effects[[2]], width.cutoff = 500))
+			for (coefficient_name in rownames(coef)) {
+				name_parts <- strsplit(coefficient_name, ":", fixed = TRUE)[[1L]]
 
-			# find the interaction variable name from fe_labels
-			int_labels <- fe_labels[grepl(paste0("^", which_basis, ":"), fe_labels) |
-															grepl(paste0(":", which_basis, "$"), fe_labels)]
-			int_var <- gsub(paste0(which_basis, ":|:", which_basis), "", int_labels[1])
+				if (length(name_parts) != 2L) next
 
-			# find all levels from interaction coefficients in coef
-			int_pattern <- paste0("^", cb_cols[1], ":", int_var)
-			int_rows    <- rownames(coef)[grepl(int_pattern, rownames(coef))]
-			int_levels  <- gsub(paste0("^", cb_cols[1], ":", int_var), "", int_rows)
+				if (identical(name_parts[[1L]], cb_cols[[1L]])) {
+					interaction_component <- name_parts[[2L]]
+				} else if (identical(name_parts[[2L]], cb_cols[[1L]])) {
+					interaction_component <- name_parts[[1L]]
+				} else {
+					next
+				}
+
+				if (startsWith(interaction_component, interaction_prefix)) {
+					level <- substring(
+						interaction_component,
+						nchar(interaction_prefix) + 1L
+					)
+
+					if (nzchar(level)) {
+						int_levels <- c(int_levels, level)
+					} else {
+						has_continuous_interaction <- TRUE
+					}
+				}
+			}
+
+			int_levels <- unique(int_levels)
+
+			if (length(int_levels) == 0L && has_continuous_interaction) {
+				cli::cli_abort(c(
+					"A continuous interaction was found for {.val {which_basis}} and {.val {interaction_variable}}.",
+					"i" = "Continuous interactions are not currently supported by {.arg combine_effects} because no value of {.val {interaction_variable}} is specified for prediction.",
+					"i" = "If {.val {interaction_variable}} represents categories, include it as a factor in the fitted model."
+				))
+			}
+
+			if (length(int_levels) == 0L) {
+				cli::cli_abort(c(
+					"No interaction coefficients were found for {.val {which_basis}} and {.val {interaction_variable}}.",
+					"i" = "Make sure the fitted model contains an interaction between these terms, or remove the interaction from {.arg combine_effects}."
+				))
+			}
 			
-			if (has_main_effect) {
-				all_ids <- c(paste0(int_var, "[reference]"),
-										paste0(int_var, "[", int_levels, "]"))
+			if (has_standalone_basis) {
+				interaction_metadata <- attr(object, "basis_interaction")[[which_basis]][[interaction_variable]]
+				reference_level <- interaction_metadata$reference
+				if (is.null(reference_level)) {
+					reference_level <- "reference"
+				}
+				reference_id <- paste0(interaction_variable, "[", reference_level, "]")
+
+				all_ids <- c(
+					reference_id,
+					paste0(interaction_variable, "[", int_levels, "]")
+				)
 			} else {
-				all_ids <- paste0(int_var, "[", int_levels, "]")
+				all_ids <- paste0(interaction_variable, "[", int_levels, "]")
 			}
 
 			n_levels <- length(all_ids)
@@ -213,29 +669,56 @@ extract_coef <- function(object, basis, combine_effects) {
 			)
 
 			# reference level: just global cb coefficients
-			if (has_main_effect) {
-				coef_cb[, , paste0(int_var, "[reference]")] <- coef[cb_cols, , drop = FALSE]
+			if (has_standalone_basis) {
+				global_coef <- coef[cb_cols, , drop = FALSE]
+				coef_cb[, , reference_id] <- global_coef
 			}
 
 			# other levels: global cb + interaction coefficients
 			for (lv in int_levels) {
-				int_row_names        <- paste0(cb_cols, ":", int_var, lv)
-				int_coef             <- coef[int_row_names, , drop = FALSE]
-				rownames(int_coef)   <- cb_cols
-				coef_cb[, , paste0(int_var, "[", lv, "]")] <- coef[cb_cols, , drop = FALSE] + int_coef
+				interaction_component <- paste0(interaction_prefix, lv)
+				int_row_names <- character(length(cb_cols))
+
+				for (i in seq_along(cb_cols)) {
+					basis_first <- paste0(cb_cols[[i]], ":", interaction_component)
+					basis_second <- paste0(interaction_component, ":", cb_cols[[i]])
+
+					if (basis_first %in% rownames(coef)) {
+						int_row_names[[i]] <- basis_first
+					} else if (basis_second %in% rownames(coef)) {
+						int_row_names[[i]] <- basis_second
+					} else {
+						cli::cli_abort(
+							"Interaction coefficient not found for {.val {cb_cols[[i]]}} and level {.val {lv}}."
+						)
+					}
+				}
+
+				int_coef <- coef[int_row_names, , drop = FALSE]
+				rownames(int_coef) <- cb_cols
+
+				if (has_standalone_basis) {
+					int_coef <- global_coef + int_coef
+				}
+
+				coef_cb[, , paste0(interaction_variable, "[", lv, "]")] <- int_coef
 			}
 
 		} else {
 
 			#simple case: just extract global cb coefficients
-			if (!identical(fe_labels, which_basis)) {
+			if (!identical(term_labels, which_basis)) {
 				cli::cli_abort(c(
 					"The {.arg combine_effects} formula contains terms that are not recognized.",
 					"i" = "Expected only {.val {which_basis}} or interaction terms with it."
 				))
 			}
 
-			coef_cb <- coef[cb_cols, , drop = FALSE]
+			coef_cb <- array(
+				coef[cb_cols, , drop = FALSE],
+				dim = c(n_cols, n_samples, 1L),
+				dimnames = list(cb_cols, colnames(coef), "global")
+			)
 
 		}
 		

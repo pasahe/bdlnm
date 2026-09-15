@@ -1,22 +1,29 @@
-#' Calculate attributable number and fractions from a Bayesian distributed-lag model (B-DLNM).
+#' Calculate attributable numbers and fractions from posterior predictions
 #'
-#' Compute attributable numbers (AN) and attributable fractions (AF) from a fitted Bayesian distributed lag non-linear model ([bdlnm()]). The function uses posterior predicted relative risks from [bcrosspred()] and applies a forward or backward lag algorithm to compute per-time and total attributable measures, optionally filtering the calculation to a subset of time points.
+#' Compute attributable numbers (AN) and attributable fractions (AF) from posterior predicted relative risks returned by [bcrosspred()]. The function applies a forward or backward lag algorithm to compute per-time and total attributable measures, optionally filtering the calculation to a subset of time points.
 #'
-#' @param object A fitted `"bdlnm"` class object returned by [bdlnm()].
-#' @param data A data frame containing the temporal series needed to calculate attributable measures. It can include a date column (optional, see `name_date`), the exposure values (mandatory, see `name_exposure`), the number of cases (optional, see `name_cases`) and a binary (`0/1`) filter column (optional, see `name_filter`).
-#' @param name_date Optional single string with the name of the column in `data` containing the date. The column must be of class `Date` or `POSIXt`. When provided the function checks that the series is regularly spaced (see `Details`).
-#' @param name_exposure Single string with the name of the exposure column in `data`.
-#' @param name_cases Optional single string with the name of the cases column in `data`. If not provided, the function returns only attributable fractions (AF) per time point.
-#' @param name_filter Optional single string with the name of a binary (`0/1`) column in `data`. Only rows with value `1` are used to compute total AF and AN and per-time results are returned only for the filtered rows.
+#' @param object A `"bcrosspred"` object returned by [bcrosspred()]. Passing a fitted `"bdlnm"` object is deprecated.
+#' @param data A data frame containing the temporal series needed to calculate attributable measures.
+#' @param name_date,name_exposure,name_cases,name_filter Deprecated column-name arguments. Use `columns` instead.
+#' @param columns Named list mapping the roles required by `attributable()` to columns in `data`. The `exp` element is required; `cases`, `date`, `filter`, and `int` are optional. See `Details` for the definition and requirements of each element.
 #' @param dir Character; direction of the algorithm to calculate attributable measures. `"back"` (default) calculates AF and AN attributing current-time outcome to past exposures; `"forw"` calculates AF and AN attributing current-time exposure to future outcomes.
-#' @param basis If the `bdlnm` model has more than one basis, the name of the basis to use to compute predictions. It must be one of `names(object$basis)`. If the model contains only one basis it is selected automatically.
-#' @param cen Numeric scalar; centering exposure value used to compute predictions. If missing the function will attempt to read it from the attributes of the specified `basis`. If no centering is available the function aborts.
-#' @param range Optional numeric vector of length 2 with the exposure range for which attributable measures will be calculated. Values outside `range` are coerced to `cen` before prediction.
+#' @param basis Deprecated. Only used when `object` is a `"bdlnm"` model. If the model has more than one basis, the name of the basis to use.
+#' @param cen Deprecated. Only used when `object` is a `"bdlnm"` model. Numeric scalar specifying the centering exposure value.
 #' @param lag_average Logical (default `TRUE`). When `TRUE` use lag-averaged contributions to compute AN in the forward algorithm; when `FALSE` use the full lag-structured contributions instead.
 #'
 #' @details
 #'
-#' The function first obtains posterior predicted effects at the observed exposure values by calling [bcrosspred()] with `exp_at = data[[name_exposure]]`. Predictions must include relative-risk scale predictions so the previously fitted `"bdlnm"` model must have a `log` or `logit` link; otherwise the function aborts. These predictions require a defined centering value (`cen`), as attributable measures are always computed with respect to a reference exposure. This reference exposure is usually an optimal exposure computed with the [optimal_exposure()] function, such as the Minimum Mortality Temperature (MMT).
+#' The supported elements of `columns` are:
+#'
+#' - `exp`: required single string naming the numeric exposure column.
+#' - `cases`: optional single string naming the numeric cases column. If omitted, only attributable fractions per time point are returned.
+#' - `date`: optional single string naming a `Date` or `POSIXt` column. When supplied, the function checks that observations are ordered and regularly spaced.
+#' - `filter`: optional single string naming a numeric binary (`0`/`1`) column. Only observations equal to `1` are included in total attributable measures and returned in the per-time results.
+#' - `int`: optional single string naming the interaction column that assigns each observation to the corresponding interaction-specific prediction. It is required when `object` contains interaction-specific predictions, and its name must match the interaction variable recorded in `object`.
+#'
+#' `data` must represent one regularly spaced time series; multiple concurrent series or panel data are not supported. If only seasonal observations are available, expand the data to the full sequence, insert `NA` for missing exposures or cases, and use `filter` to select the relevant observations.
+#'
+#' The prediction grid in `object` must include every non-missing exposure value observed in the data's exposure column. Values are matched directly to the `exp_at` grid of each relevant prediction. Therefore, before calculating attributable measures, construct centered relative-risk predictions with an exposure grid that includes the unique non-missing values in `data[[columns$exp]]` (ex. `bcrosspred(cpred, exp_at = unique(data[[columns$exp]]))`). 
 #'
 #' Two different algorithms can be chosen to calculate attributable measures:
 #'
@@ -25,10 +32,9 @@
 #'
 #' Both algorithms are fully described by Gasparrini and Leone (2014) <doi:10.1186/1471-2288-14-55>.
 #'
-#' Required columns to calculate `AF` and `AN` are `name_exposure` and `name_cases` columns. If `name_cases` is not supplied only AF per time can be computed and the output will only contain two elements: `$af` and `$af.summary`. If `name_date` is provided the function checks that dates are equispaced (checks seconds, minutes, hours, days, weeks, months or years). Time series have to be equispaced because the algorithms used to calculate attributable measures rely on consecutive time points over the lag window,. For example, if you only have seasonal observations (e.g., summers) expand the data to the full sequence and insert `NA` for missing exposures/cases and use `name_filter` to compute measures only for the seasonal subset.
+#' For interaction-specific predictions, the backward algorithm uses the interaction value at the outcome time for all lagged exposures contributing to that outcome. For each exposure time, the forward algorithm uses the interaction value at the future outcome time corresponding to each lag.
 #'
-#' Only `"bdlnm"` objects fitted with a cross-basis are supported; models fitted with a one-basis (no lag) are not suitable for attributable calculations.
-#'
+#' Only predictions from a cross-basis are supported; one-basis predictions with no lag dimension are not suitable for attributable calculations.
 #'
 #' @return A list with components:
 #'   - `af`: matrix (rows = time points, columns = posterior samples) with attributable fractions per time point.
@@ -47,7 +53,7 @@
 #' @references
 #'
 #' Gasparrini A., Leone M. (2014). Attributable risk from distributed lag models. _BMC Medical Research Methodology_, 14, 55. <doi:10.1186/1471-2288-14-55>.
-#' 
+#'
 #' Quijal-Zamorano M., Martinez-Beneito M.A., Ballester J., Marí-Dell'Olmo M. (2024). Spatial Bayesian distributed lag non-linear models (SB-DLNM) for small-area exposure-lag-response epidemiological modelling. _International Journal of Epidemiology_, 53(3), dyae061. <doi:10.1093/ije/dyae061>.
 #'
 #' @seealso [bcrosspred()] to predict exposure–lag–response associations for a `"bdlnm"` object,
@@ -97,16 +103,16 @@
 #'              family = "poisson",
 #'              sample.arg = list(seed = 432, seed = 1L))
 #'
-#' # Predict
-#' cpred <- bcrosspred(mod, exp_at = temp)
-#'
 #' # compute centering (MMT) using optimal_exposure
-#' mmt <- optimal_exposure(mod, exp_at = temp)
+#' cpred <- bcrosspred(mod, exp_at = temp)
+#' mmt <- optimal_exposure(cpred)
 #' cen <- mmt$summary[["0.5quant"]]
 #'
+#' # Centered predictions covering the observed exposures
+#' cpred <- bcrosspred(mod, exp_at = london$tmean, cen = cen)
+#'
 #' # Attributable numbers and fractions (using the backwards algorithm):
-#' attr <- attributable(mod, london, name_date = "date",
-#' name_exposure = "tmean", name_cases = "mort_75plus", cen = cen, dir = "back")
+#' attr <- attributable(cpred, london, columns = list(date = "date", exp = "tmean", cases = "mort_75plus"), dir = "back")
 #' }
 #'
 #'
@@ -114,48 +120,129 @@ attributable <- function(
   object,
   data,
   name_date = NULL,
-  name_exposure,
+  name_exposure = NULL,
   name_cases = NULL,
   name_filter = NULL,
   dir = "back",
   basis = NULL,
   cen,
-  range = NULL,
-  lag_average = TRUE
+  lag_average = TRUE,
+  columns = NULL
 ) {
   ## -----------------------
   ## Basic checks
   ## -----------------------
 
-  # check object
-  check_bdlnm(object)
+  cen_missing <- missing(cen)
+  is_prediction <- inherits(object, "bcrosspred")
 
-  # basis
-  name_basis <- basis
-  obj_basis <- object$basis
-
-  if (!is.null(basis)) {
-    if (is.character(basis) && length(basis) == 1) {
-      if (!basis %in% names(obj_basis)) {
-        cli::cli_abort(
-          "The name of the basis in {.arg basis} must match the name of the basis stored in {.arg object$basis}: {.or {.val {names(obj_basis)}}}."
-        )
-      } else {
-        basis <- obj_basis[[basis]]
-      }
-    } else {
+  if (is_prediction) {
+    if (!is.list(object)) {
       cli::cli_abort(
-        "The {.arg basis} argument must be a character element specifying the name of the basis stored in {.arg object$basis}."
+        "{.arg object} must be a valid {.cls bcrosspred} object returned by {.fn bcrosspred}."
       )
     }
+
+    if (!is.null(basis) || !cen_missing) {
+      cli::cli_abort(c(
+        "Prediction arguments cannot be supplied when {.arg object} is a {.cls bcrosspred} object.",
+        "i" = "Select the basis and centering value when calling {.fn bcrosspred}."
+      ))
+    }
+
+    required_components <- c("exp_at", "lag_at", "matfit", "allfit.summary")
+    interaction_info <- attr(object, "basis_interaction")
+    is_interaction_prediction <- !is.null(interaction_info)
+
+    if (is_interaction_prediction) {
+      prediction_names <- named_result_names(
+        object,
+        required_components = required_components
+      )
+
+      if (length(prediction_names) == 0L) {
+        cli::cli_abort(
+          "{.arg object} must be a valid cross-basis {.cls bcrosspred} object returned by {.fn bcrosspred}."
+        )
+      }
+
+      predictions <- object[prediction_names]
+    } else {
+      if (!all(required_components %in% names(object))) {
+        cli::cli_abort(
+          "{.arg object} must be a valid cross-basis {.cls bcrosspred} object returned by {.fn bcrosspred}."
+        )
+      }
+      prediction_names <- character(0)
+      predictions <- list(global = object)
+    }
+
+    cpred <- predictions[[1L]]
+    cen <- cpred$cen
+    if (is.null(cen)) {
+      cli::cli_abort(c(
+        "{.arg object} must contain predictions centered at a reference exposure.",
+        "i" = "Rerun {.fn bcrosspred} with a numeric {.arg cen} value."
+      ))
+    }
   } else {
-    if (length(obj_basis) > 1) {
+    is_interaction_prediction <- FALSE
+    check_bdlnm(object)
+
+    name_basis <- basis
+    obj_basis <- object$basis
+
+    if (!is.null(basis)) {
+      if (is.character(basis) && length(basis) == 1) {
+        if (!basis %in% names(obj_basis)) {
+          cli::cli_abort(
+            "The name of the basis in {.arg basis} must match the name of the basis stored in {.arg object$basis}: {.or {.val {names(obj_basis)}}}."
+          )
+        } else {
+          basis <- obj_basis[[basis]]
+        }
+      } else {
+        cli::cli_abort(
+          "The {.arg basis} argument must be a character element specifying the name of the basis stored in {.arg object$basis}."
+        )
+      }
+    } else if (length(obj_basis) > 1) {
       cli::cli_abort(
         "{.arg basis} must be provided containing the name of the basis to select for predictions (stored in {.arg object$basis}): {.or {.val {names(obj_basis)}}}."
       )
     } else {
       basis <- obj_basis[[1]]
     }
+
+    selected_basis_name <- if (is.null(name_basis)) {
+      names(obj_basis)[[1L]]
+    } else {
+      name_basis
+    }
+    basis_interactions <- attr(object, "basis_interaction")[[
+      selected_basis_name
+    ]]
+    if (!is.null(basis_interactions)) {
+      cli::cli_abort(c(
+        "A {.cls bdlnm} model containing basis interactions cannot be used directly in {.fn attributable}.",
+        "i" = "Call {.fn bcrosspred} with the appropriate {.arg combine_effects}, then pass the resulting prediction object to {.fn attributable}."
+      ))
+    }
+
+    if (cen_missing || is.null(cen)) {
+      cen <- attributes(basis)$argvar$cen
+      if (is.null(cen)) {
+        cli::cli_abort(
+          "Centering value must be specified ({.arg cen}) or specified as an attribute of the basis."
+        )
+      }
+    }
+
+    cli::cli_warn(c(
+      "Using a {.cls bdlnm} object directly in {.fn attributable} is deprecated.",
+      "i" = "Call {.fn bcrosspred} first with an exposure grid covering the observed exposures and a centering value, then pass its result to {.fn attributable}.",
+      "i" = "For interaction models, select the required effects with {.arg combine_effects} when calling {.fn bcrosspred}."
+    ))
   }
 
   # data
@@ -169,9 +256,86 @@ attributable <- function(
     cli::cli_abort("{.arg data} must be a {.cls data.frame}.")
   }
 
+  legacy_columns <- c(
+    date = !missing(name_date),
+    exp = !missing(name_exposure),
+    cases = !missing(name_cases),
+    filter = !missing(name_filter)
+  )
+
+  if (!is.null(columns)) {
+    if (!is.list(columns) || is.null(names(columns)) || any(names(columns) == "")) {
+      cli::cli_abort(
+        "{.arg columns} must be a named list."
+      )
+    }
+
+    allowed_columns <- c("exp", "cases", "date", "filter", "int")
+    unknown_columns <- setdiff(names(columns), allowed_columns)
+    if (length(unknown_columns) > 0L) {
+      cli::cli_abort(c(
+        "Unknown element{?s} in {.arg columns}: {.val {unknown_columns}}.",
+        "i" = "Allowed elements are {.or {.val {allowed_columns}}}."
+      ))
+    }
+
+    if (anyDuplicated(names(columns))) {
+      cli::cli_abort("Elements in {.arg columns} must have unique names.")
+    }
+
+    if (is.null(columns$exp)) {
+      cli::cli_abort("{.arg columns} must contain an {.val exp} element.")
+    }
+
+    overlapping_columns <- intersect(names(columns), names(legacy_columns)[legacy_columns])
+    if (length(overlapping_columns) > 0L) {
+      cli::cli_abort(c(
+        "Column roles cannot be supplied in both {.arg columns} and deprecated {.arg name_*} arguments.",
+        "x" = "Supplied twice: {.val {overlapping_columns}}"
+      ))
+    }
+
+    name_exposure <- columns$exp
+    if (!is.null(columns$date)) name_date <- columns$date
+    if (!is.null(columns$cases)) name_cases <- columns$cases
+    if (!is.null(columns$filter)) name_filter <- columns$filter
+    name_int <- columns$int
+  } else {
+    name_int <- NULL
+  }
+
+  if (any(legacy_columns)) {
+    cli::cli_warn(c(
+      "The {.arg name_date}, {.arg name_exposure}, {.arg name_cases}, and {.arg name_filter} arguments are deprecated.",
+      "i" = "Supply column names through {.arg columns}."
+    ))
+  }
+
+  column_values <- columns[!vapply(columns, is.null, logical(1))]
+  if (length(column_values) > 0L) {
+    invalid_columns <- names(column_values)[!vapply(
+      column_values,
+      function(x) is.character(x) && length(x) == 1L,
+      logical(1)
+    )]
+    if (length(invalid_columns) > 0L) {
+      cli::cli_abort(
+        "Each element of {.arg columns} must be a single string naming a column in {.arg data}."
+      )
+    }
+
+    missing_columns <- unlist(column_values, use.names = FALSE)
+    missing_columns <- missing_columns[!missing_columns %in% names(data)]
+    if (length(missing_columns) > 0L) {
+      cli::cli_abort(
+        "Column{?s} {.val {missing_columns}} from {.arg columns} {?is/are} not present in {.arg data}."
+      )
+    }
+  }
+
   # name_exposure (required)
   if (
-    missing(name_exposure) ||
+    is.null(name_exposure) ||
       !is.character(name_exposure) ||
       length(name_exposure) != 1L
   ) {
@@ -187,6 +351,53 @@ attributable <- function(
   }
 
   exp <- data[[name_exposure]]
+
+  if (!is.null(name_int)) {
+    int <- as.character(data[[name_int]])
+  } else {
+    int <- NULL
+  }
+
+  if (is_interaction_prediction) {
+    if (is.null(interaction_info) || is.null(interaction_info$variable)) {
+      cli::cli_abort(
+        "{.arg object} does not contain the interaction metadata required by {.fn attributable}."
+      )
+    }
+
+    if (is.null(name_int)) {
+      cli::cli_abort(c(
+        "{.arg columns} must contain an {.val int} element for interaction predictions.",
+        "i" = "Use the interaction variable {.val {interaction_info$variable}}."
+      ))
+    }
+
+    if (!identical(name_int, interaction_info$variable)) {
+      cli::cli_abort(c(
+        "The {.val int} element of {.arg columns} does not match the interaction in {.arg object}.",
+        "x" = "Expected {.val {interaction_info$variable}}, not {.val {name_int}}."
+      ))
+    }
+
+    observation_prediction <- paste0(name_int, "[", int, "]")
+    missing_predictions <- unique(
+      observation_prediction[!is.na(int) & !observation_prediction %in% prediction_names]
+    )
+    if (length(missing_predictions) > 0L) {
+      cli::cli_abort(c(
+        "{.arg object} does not contain predictions for every interaction value in {.arg data}.",
+        "x" = "{length(missing_predictions)} interaction value{?s} {?is/are} missing."
+      ))
+    }
+    observation_prediction[is.na(int)] <- NA_character_
+  } else {
+    if (!is.null(name_int)) {
+      cli::cli_abort(
+        "The {.val int} element of {.arg columns} can only be used with interaction predictions."
+      )
+    }
+    observation_prediction <- rep("global", nrow(data))
+  }
 
   # name_date (optional)
   if (!is.null(name_date)) {
@@ -317,21 +528,6 @@ attributable <- function(
     cli::cli_abort("{.arg dir} must be one of: {.val 'back'}, {.val 'forw'}.")
   }
 
-  # define centering value
-
-  # get range of the exposure stored in the attributes of the crossbasis
-  range_val <- attr(basis, "range")
-
-  # if NULL try to extract it from basis
-  if (is.null(cen)) {
-    cen <- attributes(basis)$argvar$cen
-    if (is.null(cen)) {
-      cli::cli_abort(
-        "Centering value must be specified ({.arg cen}) or specified as an attribute of the basis."
-      )
-    }
-  }
-
   if (!is.numeric(cen) || length(cen) != 1L) {
     cli::cli_abort("{.arg cen} must be a numeric scalar.")
   }
@@ -340,37 +536,65 @@ attributable <- function(
   ## Prepare
   ## -----------------------
 
-  # get number of samples
-  n_sample <- attr(object, "n_sim")
+  if (!is_prediction) {
+    cpred <- tryCatch(
+      suppressMessages(bcrosspred(
+        object,
+        basis = name_basis,
+        exp_at = exp,
+        cen = cen
+      )),
+      error = function(e) {
+        cli::cli_abort(
+          "Failed computing predictions with {.fn bcrosspred}: {conditionMessage(e)}"
+        )
+      }
+    )
+    predictions <- list(global = cpred)
+  }
 
-  # get lags
-  lag <- attr(basis, "lag")
-  predlag <- seq(from = lag[1], to = lag[2], by = 1)
+  observed_exp <- unique(exp[!is.na(exp)])
+  missing_exp <- observed_exp[!observed_exp %in% cpred$exp_at]
+  if (length(missing_exp) > 0L) {
+    cli::cli_abort(c(
+      "{.arg object} does not contain predictions for every observed exposure in {.arg data}.",
+      "x" = "{length(missing_exp)} unique exposure value{?s} {?is/are} missing.",
+      "i" = "Call {.fn bcrosspred} with an {.arg exp_at} grid equal to {.code unique(data[[name_exposure]])}."
+    ))
+  }
 
-  # obtain centered predictions at the exposure values
-  cpred <- tryCatch(
-    suppressMessages(bcrosspred(
-      object,
-      basis = name_basis,
-      exp_at = exp,
-      cen = cen
-    )),
-    error = function(e) {
-      cli::cli_abort(
-        "Failed computing predictions with {.fn bcrosspred}: {conditionMessage(e)}"
-      )
-    }
+  lag <- range(cpred$lag_at)
+
+  has_relative_risk <- vapply(
+    predictions,
+    function(prediction) !is.null(prediction$matRRfit),
+    logical(1L)
   )
-
-  cp <- cpred$matfit
-
-  if (!is.null(cpred$matRRfit)) {
-    cp_rr <- cpred$matRRfit
-  } else {
+  if (!all(has_relative_risk)) {
     # if there is no RR available in the model we can not calculate attributable numbers
     cli::cli_abort(
-      "An attributable fraction cannot be computed because predicted effects are not on the relative-risk scale. Ensure the link of the {.arg object} model is {.val 'log'} or {.val 'logit'}."
+      "An attributable fraction cannot be computed because predictions are not on the relative-risk scale. Ensure {.fn bcrosspred} uses a model with a {.val 'log'} or {.val 'logit'} link."
     )
+  }
+
+  n_sample <- dim(predictions[[1L]]$matRRfit)[3L]
+  lag_names <- paste0("lag", seq(lag[1], lag[2]))
+
+  get_relative_risk <- function(exposure, prediction_id, lag_name, sample) {
+    relative_risk <- rep(NA_real_, length(exposure))
+    valid <- !is.na(exposure) & !is.na(prediction_id)
+
+    for (id in unique(prediction_id[valid])) {
+      index <- valid & !is.na(prediction_id) & prediction_id == id
+      prediction <- predictions[[id]]
+      relative_risk[index] <- prediction$matRRfit[
+        match(exposure[index], prediction$exp_at),
+        lag_name,
+        sample
+      ]
+    }
+
+    relative_risk
   }
 
   ## -----------------------
@@ -389,9 +613,40 @@ attributable <- function(
       lagged_cases <- tsModel::Lag(cases, seq(-lag[1], -lag[2]))
     }
 
+    if (is_interaction_prediction) {
+      future_prediction <- matrix(
+        NA_character_,
+        nrow = length(exp),
+        ncol = length(lag_names),
+        dimnames = list(NULL, lag_names)
+      )
+      time_index <- seq_along(exp)
+      for (j in seq_along(lag_names)) {
+        outcome_index <- time_index + lag[[1L]] + j - 1L
+        valid_index <- outcome_index >= 1L & outcome_index <= length(exp)
+        future_prediction[valid_index, j] <- observation_prediction[
+          outcome_index[valid_index]
+        ]
+      }
+    } else {
+      future_prediction <- matrix(
+        "global",
+        nrow = length(exp),
+        ncol = length(lag_names),
+        dimnames = list(NULL, lag_names)
+      )
+    }
+
     for (i in seq_len(n_sample)) {
       # filter for i-th sample
-      rr_sample <- cp_rr[match(exp, cpred$exp_at), , i]
+      rr_sample <- vapply(seq_along(lag_names), function(j) {
+        get_relative_risk(
+          exposure = exp,
+          prediction_id = future_prediction[, j],
+          lag_name = lag_names[[j]],
+          sample = i
+        )
+      }, numeric(length(exp)))
       af_sample <- (rr_sample - 1) / rr_sample
 
       all_sample <- exp(rowSums(log(rr_sample)))
@@ -445,12 +700,12 @@ attributable <- function(
     for (i in seq_len(n_sample)) {
       # calculate the matrix of backward rr: get the rr associated to each temperature and lag specified in the column of back_lagged_temp
       back_lagged_rr <- sapply(colnames(back_lagged_temp), function(col_lag) {
-        rr <- cp_rr[
-          match(back_lagged_temp[, col_lag], cpred$exp_at),
-          col_lag,
-          i
-        ]
-        return(rr)
+        get_relative_risk(
+          exposure = back_lagged_temp[, col_lag],
+          prediction_id = observation_prediction,
+          lag_name = col_lag,
+          sample = i
+        )
       })
       back_rr <- exp(rowSums(log(back_lagged_rr)))
 
@@ -618,6 +873,10 @@ attributable <- function(
       af = M_af,
       af.summary = as.data.frame(M_afsum, stringsAsFactors = FALSE)
     )
+  }
+
+  if (is_interaction_prediction) {
+    attr(res, "basis_interaction") <- interaction_info
   }
 
   return(res)

@@ -4,12 +4,9 @@ test_that("attributable returns expected structure and summaries (backwards)", {
 
   expect_silent(
     attr <- attributable(
-      mod,
+      cpred_centered,
       slondon,
-      "date",
-      "tmean",
-      "mort_75plus",
-      cen = cen
+      columns = list(date = "date", exp = "tmean", cases = "mort_75plus")
     )
   )
 
@@ -58,12 +55,9 @@ test_that("attributable returns expected structure and summaries (forward)", {
 
   expect_silent(
     attr <- attributable(
-      mod,
+      cpred_centered,
       slondon,
-      "date",
-      "tmean",
-      "mort_75plus",
-      cen = cen,
+      columns = list(date = "date", exp = "tmean", cases = "mort_75plus"),
       dir = "forw"
     )
   )
@@ -118,13 +112,14 @@ test_that("attributable returns filtered time-series matrices when filter is spe
 
   expect_warning(
     attr2 <- attributable(
-      mod,
+      cpred_centered,
       slondon,
-      "date",
-      "tmean",
-      "mort_75plus",
-      "summer",
-      cen = cen
+      columns = list(
+        date = "date",
+        exp = "tmean",
+        cases = "mort_75plus",
+        filter = "summer"
+      )
     )
   )
 
@@ -150,7 +145,11 @@ test_that("attributable works when cases = NULL (only AF returned)", {
 
   # Expect a warning (informing that only AF will be calculated)
   expect_warning(
-    attr3 <- attributable(mod, slondon, "date", "tmean", cen = cen)
+    attr3 <- attributable(
+      cpred_centered,
+      slondon,
+      columns = list(date = "date", exp = "tmean")
+    )
   )
 
   expect_type(attr3, "list")
@@ -166,22 +165,16 @@ test_that("attributable gives error when time series are not ordered or not prov
 
   slondon2 <- slondon[order(slondon$tmean), ]
   expect_snapshot_error(attributable(
-    mod,
+    cpred_centered,
     slondon2,
-    "date",
-    "tmean",
-    "mort_75plus",
-    cen = cen
+    columns = list(date = "date", exp = "tmean", cases = "mort_75plus")
   ))
 
   slondon2 <- slondon[-2, ]
   expect_snapshot_error(attributable(
-    mod,
+    cpred_centered,
     slondon2,
-    "date",
-    "tmean",
-    "mort_75plus",
-    cen = cen
+    columns = list(date = "date", exp = "tmean", cases = "mort_75plus")
   ))
 
   # Works if date is provided on a weekly basis
@@ -192,12 +185,9 @@ test_that("attributable gives error when time series are not ordered or not prov
     by = "week"
   )[seq_len(nrow(slondon2))]
   expect_silent(attributable(
-    mod,
+    cpred_centered,
     slondon2,
-    "date",
-    "tmean",
-    "mort_75plus",
-    cen = cen
+    columns = list(date = "date", exp = "tmean", cases = "mort_75plus")
   ))
 
   # Works if date is provided on a monthly basis
@@ -208,12 +198,9 @@ test_that("attributable gives error when time series are not ordered or not prov
     by = "month"
   )[seq_len(nrow(slondon2))]
   expect_silent(attributable(
-    mod,
+    cpred_centered,
     slondon2,
-    "date",
-    "tmean",
-    "mort_75plus",
-    cen = cen
+    columns = list(date = "date", exp = "tmean", cases = "mort_75plus")
   ))
 
   # Works if date is provided on a yearly basis
@@ -224,11 +211,138 @@ test_that("attributable gives error when time series are not ordered or not prov
     by = "year"
   )[seq_len(nrow(slondon2))]
   expect_silent(attributable(
-    mod,
+    cpred_centered,
     slondon2,
-    "date",
-    "tmean",
-    "mort_75plus",
-    cen = cen
+    columns = list(date = "date", exp = "tmean", cases = "mort_75plus")
   ))
+})
+
+test_that("attributable requires predictions when int is supplied", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
+  expect_error(
+    attributable(
+      mod_interaction,
+      interaction_data,
+      columns = list(
+        date = "date",
+        exp = "tmean",
+        cases = "mort_75plus",
+        int = "group"
+      ),
+      cen = cen
+    ),
+    "containing basis interactions cannot be used directly"
+  )
+})
+
+test_that("attributable must be calculated from centered predictions", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
+  cpred_without_center <- cpred_centered
+  cpred_without_center$cen <- NULL
+
+  expect_error(
+    attributable(
+      cpred_without_center,
+      slondon,
+      "date",
+      "tmean",
+      "mort_75plus"
+    ),
+    "centered at a reference exposure"
+  )
+
+})
+
+test_that("attributable uses fixed interaction predictions", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
+  fixed_attributable <- attributable(
+    cpred_fixed_interaction,
+    interaction_data,
+    columns = list(
+      date = "date",
+      exp = "tmean",
+      cases = "mort_75plus",
+      int = "group"
+    )
+  )
+
+  expect_equal(dim(fixed_attributable$af), c(nrow(interaction_data), 2L))
+  expect_equal(dim(fixed_attributable$an), c(nrow(interaction_data), 2L))
+})
+
+test_that("attributable uses random interaction predictions", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
+  random_attributable <- attributable(
+    cpred_random_interaction,
+    random_data,
+    columns = list(
+      date = "date",
+      exp = "tmean",
+      cases = "mort_75plus",
+      int = "id_group"
+    ),
+    dir = "forw"
+  )
+
+  expect_equal(dim(random_attributable$af), c(nrow(random_data), 2L))
+  expect_equal(dim(random_attributable$an), c(nrow(random_data), 2L))
+})
+
+test_that("attributable validates interaction columns", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
+  expect_error(
+    attributable(
+      cpred_fixed_interaction,
+      interaction_data,
+      columns = list(
+        date = "date",
+        exp = "tmean",
+        cases = "mort_75plus"
+      )
+    ),
+    "must contain an.*int.*element"
+  )
+
+  expect_error(
+    attributable(
+      cpred_fixed_interaction,
+      interaction_data,
+      columns = list(
+        date = "date",
+        exp = "tmean",
+        cases = "mort_75plus",
+        int = "id_group"
+      )
+    ),
+    "does not match the interaction"
+  )
+
+  interaction_data_missing_level <- interaction_data
+  interaction_data_missing_level$group <- as.character(
+    interaction_data_missing_level$group
+  )
+  interaction_data_missing_level$group[1L] <- "c"
+  expect_error(
+    attributable(
+      cpred_fixed_interaction,
+      interaction_data_missing_level,
+      columns = list(
+        date = "date",
+        exp = "tmean",
+        cases = "mort_75plus",
+        int = "group"
+      )
+    ),
+    "does not contain predictions for every interaction value"
+  )
 })

@@ -33,6 +33,56 @@ test_that("does an overall plot (crossbasis)", {
   ))
 })
 
+test_that("selects one prediction from a random-interaction bcrosspred object", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
+  expect_no_error(
+    plot(cpred_random_interaction, "overall", select = "global")
+  )
+  expect_no_error(
+    plot(cpred_random_interaction, "overall", select = "id_group[1]")
+  )
+  expect_error(
+    plot(cpred_random_interaction, "overall"),
+    "select.*Available predictions"
+  )
+  expect_error(
+    plot(cpred_random_interaction, "overall", select = "id_group[20]"),
+    "Prediction.*was not found"
+  )
+  expect_error(
+    plot(
+      cpred_random_interaction,
+      "overall",
+      select = c("id_group[1]", "id_group[2]")
+    ),
+    "single non-empty character string"
+  )
+})
+
+test_that("selects one prediction from a fixed-interaction bcrosspred object", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
+  expect_no_error(
+    plot(cpred_fixed_interaction, "overall", select = "group[a]")
+  )
+  expect_no_error(
+    plot(cpred_fixed_interaction, "overall", select = "group[b]")
+  )
+})
+
+test_that("rejects select for a standalone prediction", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
+  expect_error(
+    plot(cpred, "overall", select = "global"),
+    "only be used when.*contains multiple predictions"
+  )
+})
+
 
 test_that("does a 3d plot", {
   skip_on_cran()

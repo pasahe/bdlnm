@@ -1,8 +1,8 @@
 ---
-title: "bdlnm"
+title: "Basis interactions with fixed effects"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{bdlnm}
+  %\VignetteIndexEntry{Basis interactions with fixed effects}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
@@ -21,10 +21,9 @@ inla_available <- bdlnm::check_inla()
 library(bdlnm)
 library(dlnm)
 library(splines)
-library(utils)
 ```
 
-In this example, we will estimate the temperature-mortality effect for each age group, in the city of London. 
+In this example, we will estimate the temperature–mortality association for each age group (0-74 and 75+ years) in the city of London.
 
 First, we have to convert the data from wide to long:
 
@@ -36,14 +35,15 @@ london_age <- london |>
     values_to = "mortality"
   ) |> 
   dplyr::mutate(
-    age = gsub("mort_", "", age),
+    age = sub("^mort_", "", age),
     age = factor(age)
-  )
+  ) |>
+  dplyr::arrange(age, date)
 ```
 
 # Set DLNM parameters
 
-We will start by building the crossbasis with the `dlnm` package. The crossbasis has to be built on the unique series of temperature (now we have each temperature repeated twice, one for each age group).
+We will start by building the crossbasis with the `dlnm` package. Because the long dataset contains one temperature series for each age group, we use the `group` argument to identify the two consecutive time series. This prevents lagged values from carrying over from one age group to the other.
 
 We will use a natural spline with three knots for the exposure–response function, placed at the 10th, 75th, and 90th percentiles of daily mean temperature, and a natural spline for the lag–response function, with knots equally spaced on the log scale up to a maximum lag of 21 days:
 
@@ -71,103 +71,105 @@ arglag <- list(
 )
 
 # Create crossbasis
-london_unique <- london_age[!duplicated(london_age$date), ]
-cb <- crossbasis(london_unique$tmean, lag = dlnm_var$max_lag, argvar, arglag)
-cb_attrs <- attributes(cb)
-cb <- rbind(cb, cb)
-class(cb) <- "crossbasis"
-cb_attrs$dim      <- dim(cb)
-cb_attrs$dimnames <- dimnames(cb)
-attributes(cb) <- cb_attrs
+cb <- crossbasis(
+  london_age$tmean,
+  lag = dlnm_var$max_lag,
+  argvar,
+  arglag,
+  group = london_age$age
+)
 ```
 
 Let’s define the seasonality of the mortality time series using a natural spline with 8 degrees of freedom per year, which flexibly controls for long-term and seasonal trends in mortality:
 
 ```{r}
 # Seasonality of mortality time series
-seas <- ns(london$date, df = round(8 * length(london$date) / 365.25))
-seas <- rbind(seas, seas)
+n_years <- length(unique(london_age$date)) / 365.25
+seas <- ns(london_age$date, df = round(8 * n_years))
 ```
 
-Finally, we also define the temperature values for which predictions will be generated. These correspond to an evenly spaced grid with a 0.1ºC step covering the full range of observed temperatures in the data:
+Finally, we also define the temperature values for which predictions will be generated. These correspond to an evenly spaced grid with a 0.1 °C step covering the full range of observed temperatures in the data. We also explicitly select the median temperature as the common centering temperature so that the age-specific associations have the same reference:
 
 ```{r}
 # Prediction values (equidistant points)
 temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 # Ensure it falls inside the range of temperatures after rounding:
 temp <- temp[temp >= min(london$tmean) & temp <= max(london$tmean)]
+cen <- median(london$tmean, na.rm = TRUE)
 ```
 
 # Fit the model and posterior samples
 
-We will fit a B-DLNM model with the effect of the crossbasis interacting with the age:
+We will fit a B-DLNM model in which the temperature–mortality association represented by the crossbasis interacts with age group:
 
 ```{r, eval = inla_available}
 mod <- bdlnm(
-  mort ~ cb*age + factor(dow)*age + seas*age,
+  mortality ~ cb * age + factor(dow) * age + seas * age,
   data = london_age,
   family = "poisson",
   sample.arg = list(n = 1000, seed = 1L)
 )
-
-# # test it works also when adding a f() in the formula
-# london_age$id <- seq_along(nrow(london_age))
-# mod <- bdlnm(
-#   mort ~ cb*age + factor(dow)*age + seas*age + f(id, model = "iid"),
-#   data = london_age,
-#   family = "poisson",
-#   sample.arg = list(n = 1000, seed = 1L)
-# )
 ```
 
-The `bdlnm()` function runs `inla()` which correctly identifies the interaction term and expands this effect across all crossbasis coefficients. The matrix stored in `$coefficients` now contains the baseline estimated crossbasis coefficients (`cbv1.l1`, `cbv1.l2`, ...) and a coefficient for the other category in age (`cbv1.l1:age75plus`):
+The `bdlnm()` function identifies the interaction term and expands it across all crossbasis coefficients. With treatment contrasts, `cb * age` produces standalone crossbasis coefficients for the reference age group and interaction coefficients describing how the association for the other age group differs.
 
-```{r}
-DT::datatable(mod$coefficients)
+```{r, eval = inla_available}
+rownames(mod$coefficients)
 ```
 
 # Predict exposure-lag-response effects
 
-We can predict the exposure–lag–response association between temperature and mortality from the fitted model in each different `id_year` unit, specifying it with `terms`:
+We request age-specific predictions by including the fixed interaction in `combine_effects`, which will combin the coefficients for the second group with the standalone coefficients when its association. This returns one prediction for each age-group level, with both predictions evaluated over the same exposure and lag grids and relative to the same centering temperature:
 
 ```{r, eval = inla_available}
-tictoc::tic()
-cpred <- bcrosspred(mod, combine_effects = ~ cb*age, exp_at = temp)
-tictoc::toc()
+cpred <- bcrosspred(
+  mod,
+  combine_effects = ~ cb * age,
+  exp_at = temp,
+  cen = cen
+)
 ```
 
-A `bcrosspred` object is returned containing posterior samples of the estimated exposure–lag–response association for each different unit in `id_year`, and for the global:
+A `bcrosspred` object is returned containing the estimated exposure–lag–response association for each age group:
 
 ```{r, eval = inla_available}
 str(cpred, max.level = 1)
 ```
 
+The `basis_interaction` attribute records information about the interaction:
+
+```{r}
+attr(cpred, "basis_interaction")
+```
+
 # Plot
 
-## Age: 0-74
+## Exposure–lag–response associations
 
-We can visualize a 3d plot:
+We can display the age-specific exposure–lag–response associations side by side:
 
-```{r}
-plot(cpred, terms = "age[reference]", ptype = "3d", main = "Age: 0-74, exposure-lag-response effect")
+```{r, eval = inla_available, fig.width = 10, fig.height = 5}
+zlim <- range(
+  cpred[["age[00_74]"]]$matRRfit.summary[, , "0.5quant"],
+  cpred[["age[75plus]"]]$matRRfit.summary[, , "0.5quant"],
+  na.rm = TRUE
+)
+par(mfrow = c(1, 2))
+plot(cpred, select = "age[00_74]", ptype = "3d", zlim = zlim, main = "Age 0–74")
+plot(cpred, select = "age[75plus]", ptype = "3d", zlim = zlim, main = "Age 75+")
 ```
 
-Or the overall cumulative plot:
+## Overall cumulative associations
 
-```{r}
-plot(cpred, terms = "age[reference]", ptype = "overall", main = "Age: 0-74, overall cumulative effect")
-```
+The corresponding overall cumulative associations can also be compared in the same layout:
 
-## Age: 75+
-
-We can visualize a 3d plot:
-
-```{r}
-plot(cpred, terms = "age[75plus]", ptype = "3d", main = "Age: 75+, exposure-lag-response effect")
-```
-
-Or the overall cumulative plot:
-
-```{r}
-plot(cpred, terms = "age[75plus]", ptype = "overall", main = "Age: 75+, overall cumulative effect")
+```{r, eval = inla_available, fig.width = 10, fig.height = 5}
+ylim <- range(
+  cpred[["age[00_74]"]]$allRRfit,
+  cpred[["age[75plus]"]]$allRRfit,
+  na.rm = TRUE
+)
+par(mfrow = c(1, 2))
+plot(cpred, select = "age[00_74]", ptype = "overall", ylim = ylim, main = "Age 0–74")
+plot(cpred, select = "age[75plus]", ptype = "overall", ylim = ylim, main = "Age 75+")
 ```

@@ -4,7 +4,7 @@
 \alias{plot.optimal_exposure}
 \title{Plot posterior distribution of optimal effect exposure values}
 \usage{
-\method{plot}{optimal_exposure}(x, show_median = TRUE, vline.arg = NULL, ...)
+\method{plot}{optimal_exposure}(x, show_median = TRUE, vline.arg = NULL, select = NULL, ...)
 }
 \arguments{
 \item{x}{An object of class \code{"optimal_exposure"} returned by \code{\link[=optimal_exposure]{optimal_exposure()}}.}
@@ -12,6 +12,8 @@
 \item{show_median}{Logical. If \code{TRUE} (default) the function draws a vertical line for the median of all the posterior samples. If \code{FALSE} it doesn't draw any additional line.}
 
 \item{vline.arg}{Optional list of graphical arguments passed to \code{\link[graphics:abline]{graphics::abline()}} when drawing the median vertical line.}
+
+\item{select}{Character string identifying the prediction to plot when \code{x} contains multiple predictions. It must exactly match one of the prediction names in \code{x}. Omitted when \code{x} contains a single prediction.}
 
 \item{...}{Optional graphical parameters passed to \code{\link[graphics:hist]{graphics::hist()}}.}
 }

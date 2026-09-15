@@ -102,12 +102,26 @@ The returned object is of class bdlnm and contains the fitted INLA model, the cr
 str(mod, max.level = 1)
 ```
 
-# Minimum mortality temperature
+# Uncentered predicted effects
 
-We estimate the minimum mortality temperature (MMT), defined as the temperature at which the overall mortality risk is minimized. This optimal value will later be used to center the estimated relative risks.
+We first predict the uncentered exposure–lag–response association over the candidate temperature grid:
 
 ```{r, eval = inla_available}
-mmt <- optimal_exposure(mod, exp_at = temp)
+cpred_uncentered <- bcrosspred(mod, exp_at = temp, cen = FALSE)
+```
+
+A `bcrosspred` object is returned containing posterior samples of the estimated exposure–lag–response association for the supplied temperature values and lags, together with their summaries.
+
+```{r, eval = inla_available}
+str(cpred_uncentered)
+```
+
+# Optimal exposure value
+
+An optimal exposure value can be estimated from the predicted overall effects and subsequently used to center the predictions. For example, in a temperature-mortality study like this, we can estimate the minimum mortality temperature (MMT), defined as the temperature at which the predicted overall mortality risk is minimized for each posterior sample.
+
+```{r, eval = inla_available}
+mmt <- optimal_exposure(cpred_uncentered)
 
 str(mmt)
 ```
@@ -122,25 +136,19 @@ plot(
 )
 ```
 
-To make the predictions, we will center the risk at the median of these values:
+For this example, we use the median of the posterior MMT distribution as the centering value.
 
 ```{r, eval = inla_available}
 cen <- mmt$summary[["0.5quant"]]
 cen
 ```
 
-# Predict exposure-lag-response effects
+# Centered predicted effects
 
-Predict the exposure–lag–response association between temperature and mortality from the fitted model at the supplied temperature grid, centering the predictions at the MMT value:
+We recalculate the exposure–lag–response association over the supplied temperature grid, this time centering the predictions at the selected MMT value:
 
 ```{r, eval = inla_available}
 cpred <- bcrosspred(mod, exp_at = temp, cen = cen)
-```
-
-A `bcrosspred` object is returned containing posterior samples of the estimated exposure–lag–response association for the supplied temperature values and lags, together with their summaries.
-
-```{r, eval = inla_available}
-str(cpred)
 ```
 
 For instance, the estimated `crossbasis` coefficients are stored as:
