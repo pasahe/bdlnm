@@ -1,0 +1,235 @@
+---
+title: "Attributable measures"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+inla_available <- bdlnm::check_inla()
+```
+
+```{r setup}
+library(bdlnm)
+library(dlnm)
+library(dplyr)
+library(tidyr)
+library(stats)
+library(splines)
+library(utils)
+library(ggplot2)
+library(lubridate)
+```
+
+This article provides a short tutorial on how to calculate attributable measures using the `attributable()` function. The built-in london dataset is used as an example to estimate mortality attributable fractions and attributable numbers associated with temperature among the population aged 75 years or older in London during the period 2000–2012.
+
+First, we prepare the data, construct the DLNM cross-basis, fit the Bayesian DLNM model, predict the relative risks for each temperature and lag, and estimate the minimum mortality temperature (MMT) used to center them before computing attributable measures. More detailed information about these steps can be found in the main vignette.
+
+```{r warning=FALSE, eval = inla_available}
+# Exposure-response and lag-response spline parameters
+dlnm_var <- list(
+  var_prc = c(10, 75, 90),
+  var_fun = "ns",
+  lag_fun = "ns",
+  max_lag = 21,
+  lagnk = 3
+)
+
+# Cross-basis parameters
+argvar <- list(
+  fun = dlnm_var$var_fun,
+  knots = quantile(london$tmean, dlnm_var$var_prc / 100, na.rm = TRUE),
+  Bound = range(london$tmean, na.rm = TRUE)
+)
+
+arglag <- list(
+  fun = dlnm_var$lag_fun,
+  knots = logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk)
+)
+
+# Create crossbasis
+cb <- crossbasis(london$tmean, lag = dlnm_var$max_lag, argvar, arglag)
+
+# Seasonality of mortality time series
+seas <- ns(london$date, df = round(8 * length(london$date) / 365.25))
+
+# Prediction values (equidistant points)
+temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
+# Ensure it falls inside the range of temperatures after rounding:
+temp <- temp[temp >= min(london$tmean) & temp <= max(london$tmean)]
+
+# Model
+
+mod <- bdlnm(
+  mort_75plus ~ cb + factor(dow) + seas,
+  data = london,
+  family = "poisson",
+  sample.arg = list(seed = 432)
+)
+
+# Compute MMT centering value using optimal_exposure
+cpred_uncentered <- bcrosspred(mod, exp_at = temp, cen = FALSE)
+mmt <- optimal_exposure(cpred_uncentered)
+cen <- mmt$summary[["0.5quant"]]
+```
+
+Relative risks used by `attributable()` must be centered at a reference exposure value. In this example, we use the estimated MMT. In addition, every non-missing value in `london$tmean` must be represented in the `bcrosspred` object passed to `attributable()`. We therefore recalculate the centered predictions using a grid containing all observed temperature values:
+
+```{r, eval = inla_available}
+cpred_attr <- bcrosspred(mod, exp_at = unique(london$tmean), cen = cen)
+```
+
+With all set, we can calculate attributable numbers and fractions. Gasparrini and Leone (2014) describe the methodology in detail: [Attributable risk from distributed lag models](https://doi.org/10.1186/1471-2288-14-55).
+
+We can compute attributable fractions and attributable numbers using the backward algorithm, which quantifies the current burden attributable to the set of exposure events experienced in the past:
+
+```{r, eval = inla_available}
+attr_back <- attributable(
+  cpred_attr,
+  london,
+  columns = list(date = "date", exp = "tmean", cases = "mort_75plus"),
+  dir = "back"
+)
+```
+
+The output is a list containing posterior samples of attributable fractions and attributable numbers computed per day and for the full study period, together with summaries across posterior samples:
+
+```{r, eval = inla_available}
+str(attr_back)
+```
+
+Using `ggplot2` we can visualize the time series of daily attributable fractions and attributable numbers:
+
+```{r fig.width = 10, eval = inla_available}
+london |>
+  mutate(
+    "Attributable Fractions" = attr_back$af.summary[, "0.5quant"],
+    "Attributable Numbers" = attr_back$an.summary[, "0.5quant"]
+  ) |>
+  pivot_longer(
+    c("Attributable Fractions", "Attributable Numbers"),
+    names_to = "name",
+    values_to = "val"
+  ) |>
+  ggplot(aes(x = date, y = val, color = name)) +
+  facet_wrap(~name, scales = "free_y") +
+  geom_line() +
+  scale_x_date(date_breaks = "2 years") +
+  labs(x = "Date", y = "") +
+  guides(color = "none") +
+  theme_bw()
+```
+
+The total attributable fraction and attributable number over the full period are:
+
+```{r, eval = inla_available}
+options(scipen = 999)
+
+rbind(
+  "Attributable fraction" = attr_back$aftotal.summary,
+  "Attributable number" = attr_back$antotal.summary
+) |>
+  knitr::kable(digits = 2)
+```
+
+Alternatively, we can use the forward algorithm, which quantifies the future burden attributable to a given exposure event:
+
+```{r, eval = inla_available}
+attr_forw <- attributable(
+  cpred_attr,
+  london,
+  columns = list(date = "date", exp = "tmean", cases = "mort_75plus"),
+  dir = "forw"
+)
+```
+
+We can plot the time series of daily attributable fractions and attributable numbers based on the forward algorithm:
+
+```{r fig.width = 10, eval = inla_available}
+london |>
+  mutate(
+    "Attributable Fractions" = attr_forw$af.summary[, "0.5quant"],
+    "Attributable Numbers" = attr_forw$an.summary[, "0.5quant"]
+  ) |>
+  pivot_longer(
+    c("Attributable Fractions", "Attributable Numbers"),
+    names_to = "name",
+    values_to = "val"
+  ) |>
+  ggplot(aes(x = date, y = val, color = name)) +
+  facet_wrap(~name, scales = "free_y") +
+  geom_line() +
+  scale_x_date(date_breaks = "2 years") +
+  labs(x = "Date", y = "") +
+  guides(color = "none") +
+  theme_bw()
+```
+
+The total attributable fraction and attributable number over the full period (forward algorithm) are:
+
+```{r, eval = inla_available}
+rbind(
+  "Attributable fraction" = attr_forw$aftotal.summary,
+  "Attributable number" = attr_forw$antotal.summary
+) |>
+  knitr::kable(digits = 2)
+```
+
+Finally, we can restrict the calculation to specific time periods using a filter variable. For example, we can compute attributable measures only for summer months:
+
+```{r, eval = inla_available}
+slondon <- london |>
+  mutate(
+    summer = case_when(
+      month(date) >= 6 & month(date) <= 8 ~ 1,
+      .default = 0
+    )
+  )
+
+attr_summer <- attributable(
+  cpred_attr,
+  slondon,
+  columns = list(
+    date = "date",
+    exp = "tmean",
+    cases = "mort_75plus",
+    filter = "summer"
+  ),
+  dir = "back"
+)
+```
+
+We can plot the time series of daily attributable fractions and attributable numbers for summers only:
+
+```{r fig.width = 10, eval = inla_available}
+slondon |>
+  filter(summer == 1) |>
+  mutate(
+    "Attributable Fractions" = attr_summer$af.summary[, "0.5quant"],
+    "Attributable Numbers" = attr_summer$an.summary[, "0.5quant"]
+  ) |>
+  pivot_longer(
+    c("Attributable Fractions", "Attributable Numbers"),
+    names_to = "name",
+    values_to = "val"
+  ) |>
+  ggplot(aes(x = date, y = val, color = name, group = year)) +
+  facet_wrap(~name, scales = "free_y") +
+  geom_line() +
+  scale_x_date(date_breaks = "2 years") +
+  labs(x = "Date", y = "") +
+  guides(color = "none") +
+  theme_bw()
+```
+
+The total attributable fraction and number, only for summers, are:
+
+```{r, eval = inla_available}
+rbind(
+  "Attributable fraction" = attr_summer$aftotal.summary,
+  "Attributable number" = attr_summer$antotal.summary
+) |>
+  knitr::kable(digits = 2)
+```
+

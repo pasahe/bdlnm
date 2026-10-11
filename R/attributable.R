@@ -97,11 +97,12 @@
 #'
 #' # Model
 #'
+#' \dontrun{
 #' if (check_inla()) {
 #' mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
 #'              data = london,
 #'              family = "poisson",
-#'              sample.arg = list(seed = 432, seed = 1L))
+#'              sample.arg = list(n = 1000, seed = 1L))
 #'
 #' # compute centering (MMT) using optimal_exposure
 #' cpred <- bcrosspred(mod, exp_at = temp)
@@ -112,7 +113,17 @@
 #' cpred <- bcrosspred(mod, exp_at = london$tmean, cen = cen)
 #'
 #' # Attributable numbers and fractions (using the backwards algorithm):
-#' attr <- attributable(cpred, london, columns = list(date = "date", exp = "tmean", cases = "mort_75plus"), dir = "back")
+#' attr <- attributable(
+#'   cpred,
+#'   london,
+#'   columns = list(
+#'     date = "date",
+#'     exp = "tmean",
+#'     cases = "mort_75plus"
+#'   ),
+#'   dir = "back"
+#' )
+#' }
 #' }
 #'
 #'
@@ -606,6 +617,15 @@ attributable <- function(
   an <- af <- numeric(n_sample) # total
   names(an) <- names(af) <- paste0("sample", seq_len(n_sample))
 
+  if (tot) {
+    case_ind <- if (is.null(filter)) {
+      rep(TRUE, length(cases))
+    } else {
+      filter == 1
+    }
+    total_cases <- sum(cases[case_ind], na.rm = TRUE)
+  }
+
   # forward perspective: contributions from the current time point to future time points
   if (dir == "forw") {
     if (!is.null(cases)) {
@@ -670,7 +690,7 @@ attributable <- function(
           !is.na(M_an[, i]) & (filter == 1)
         }
 
-        if (sum(ind) == length(cases)) {
+        if (!any(ind)) {
           cli::cli_abort(c(
             "All time points are excluded by the filter or have a missing attributable number.",
             "i" = "Remember that if the number of cases is missing in some of the lags of a time point, an attributable number for that time point will be missing."
@@ -687,7 +707,7 @@ attributable <- function(
         }
 
         af[i] <- sum(M_an[ind, i]) / sum_cases
-        an[i] <- af[i] * sum(cases, na.rm = TRUE)
+        an[i] <- af[i] * total_cases
       }
     }
 
@@ -726,7 +746,7 @@ attributable <- function(
           !is.na(M_an[, i]) & (filter == 1)
         }
 
-        if (sum(ind) == length(cases)) {
+        if (!any(ind)) {
           cli::cli_abort(c(
             "All time points are excluded by the filter or have a missing attributable number.",
             "i" = "Remember that if the number of cases is missing in some of the lags of a time point, an attributable number for that time point will be missing."
@@ -743,7 +763,7 @@ attributable <- function(
         }
 
         af[i] <- sum(M_an[ind, i]) / sum_cases
-        an[i] <- af[i] * sum(cases, na.rm = TRUE)
+        an[i] <- af[i] * total_cases
       }
     }
   }

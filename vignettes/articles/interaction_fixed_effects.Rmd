@@ -23,7 +23,9 @@ library(dlnm)
 library(splines)
 ```
 
-In this example, we will estimate the temperature–mortality association for each age group (0-74 and 75+ years) in the city of London.
+This vignette adapts the interaction-model tutorial developed by Marcos Quijal-Zamorano. It reproduces the age-specific temperature–mortality analysis using the higher-level functions provided by **bdlnm**, rather than implementing each step manually. The original tutorial is available at [Interaction model with Bayesian DLNMs](https://github.com/marcosqz/interaction_model_bdlnm/blob/main/Title.md).
+
+The goal is to estimate the temperature–mortality association for two age groups (0–74 and 75+ years) in the city of London.
 
 First, we have to convert the data from wide to long:
 
@@ -70,7 +72,15 @@ arglag <- list(
   knots = logknots(dlnm_var$max_lag, nk = dlnm_var$lagnk)
 )
 
-# Create crossbasis
+# Create the crossbasis for total mortality
+cb_total <- crossbasis(
+  london$tmean,
+  lag = dlnm_var$max_lag,
+  argvar,
+  arglag
+)
+
+# Create the crossbasis for the age-specific model
 cb <- crossbasis(
   london_age$tmean,
   lag = dlnm_var$max_lag,
@@ -85,20 +95,43 @@ Let’s define the seasonality of the mortality time series using a natural spli
 ```{r}
 # Seasonality of mortality time series
 n_years <- length(unique(london_age$date)) / 365.25
+seas_total <- ns(london$date, df = round(8 * n_years))
 seas <- ns(london_age$date, df = round(8 * n_years))
 ```
 
-Finally, we also define the temperature values for which predictions will be generated. These correspond to an evenly spaced grid with a 0.1 °C step covering the full range of observed temperatures in the data. We also explicitly select the median temperature as the common centering temperature so that the age-specific associations have the same reference:
+Finally, we also define the temperature values for which predictions will be generated. These correspond to an evenly spaced grid with a 0.1 °C step covering the full range of observed temperatures in the data:
 
 ```{r}
 # Prediction values (equidistant points)
 temp <- round(seq(min(london$tmean), max(london$tmean), by = 0.1), 1)
 # Ensure it falls inside the range of temperatures after rounding:
 temp <- temp[temp >= min(london$tmean) & temp <= max(london$tmean)]
-cen <- median(london$tmean, na.rm = TRUE)
 ```
 
-# Fit the model and posterior samples
+# Estimate the common minimum mortality temperature
+
+To make the age-specific associations directly comparable, both will be centered at the same temperature. This reference temperature will be set at the minimum mortality temperature (MMT) estimated from an overall model on the total mortality (`mort`):
+
+```{r, eval = inla_available}
+mod_total <- bdlnm(
+  mort ~ cb_total + factor(dow) + seas_total,
+  data = london,
+  family = "poisson",
+  sample.arg = list(n = 1000, seed = 1L)
+)
+
+cpred_total_uncentered <- bcrosspred(
+  mod_total,
+  exp_at = temp,
+  cen = FALSE
+)
+
+mmt_total <- optimal_exposure(cpred_total_uncentered)
+plot(mmt_total)
+cen <- mmt_total$summary[["0.5quant"]]
+```
+
+# Fit the interaction model and posterior samples
 
 We will fit a B-DLNM model in which the temperature–mortality association represented by the crossbasis interacts with age group:
 
@@ -111,15 +144,15 @@ mod <- bdlnm(
 )
 ```
 
-The `bdlnm()` function identifies the interaction term and expands it across all crossbasis coefficients. With treatment contrasts, `cb * age` produces standalone crossbasis coefficients for the reference age group and interaction coefficients describing how the association for the other age group differs.
+The `bdlnm()` function identifies the interaction term and expands it across all crossbasis coefficients. With treatment contrasts, `cb * age` produces standalone crossbasis coefficients for the reference age group and interaction coefficients describing how the association for the other age group differs:
 
 ```{r, eval = inla_available}
-rownames(mod$coefficients)
+grep("cb", rownames(mod$coefficients), value = TRUE)
 ```
 
 # Predict exposure-lag-response effects
 
-We request age-specific predictions by including the fixed interaction in `combine_effects`, which will combin the coefficients for the second group with the standalone coefficients when its association. This returns one prediction for each age-group level, with both predictions evaluated over the same exposure and lag grids and relative to the same centering temperature:
+We request age-specific predictions by including the fixed interaction in `combine_effects`, which combines the interaction coefficients for the second group with the standalone crossbasis coefficients. This returns one prediction for each age-group level, with both predictions evaluated over the same exposure and lag grids and relative to the same centering temperature:
 
 ```{r, eval = inla_available}
 cpred <- bcrosspred(
@@ -138,8 +171,19 @@ str(cpred, max.level = 1)
 
 The `basis_interaction` attribute records information about the interaction:
 
-```{r}
+```{r, eval = inla_available}
 attr(cpred, "basis_interaction")
+```
+
+We can also obtain the predicted effects for the interaction specific coefficients, which represents the difference between the temperature–mortality associations for ages 75+ and 0–74. On the relative-risk scale, it can be interpreted as the ratio of their relative risks, centered at the common population MMT.
+
+```{r}
+cpred_interaction <- bcrosspred(
+  mod,
+  combine_effects = ~ cb:age,
+  exp_at = temp,
+  cen = cen
+)
 ```
 
 # Plot
@@ -161,15 +205,24 @@ plot(cpred, select = "age[75plus]", ptype = "3d", zlim = zlim, main = "Age 75+")
 
 ## Overall cumulative associations
 
-The corresponding overall cumulative associations can also be compared in the same layout:
+The corresponding overall cumulative associations can be plotted for each age group and with the specific interaction effect:
 
-```{r, eval = inla_available, fig.width = 10, fig.height = 5}
+```{r, eval = inla_available, fig.width = 14, fig.height = 5}
 ylim <- range(
   cpred[["age[00_74]"]]$allRRfit,
   cpred[["age[75plus]"]]$allRRfit,
+  cpred_interaction[["age[75plus]"]]$allRRfit,
   na.rm = TRUE
 )
-par(mfrow = c(1, 2))
+par(mfrow = c(1, 3))
 plot(cpred, select = "age[00_74]", ptype = "overall", ylim = ylim, main = "Age 0–74")
 plot(cpred, select = "age[75plus]", ptype = "overall", ylim = ylim, main = "Age 75+")
+plot(
+  cpred_interaction,
+  select = "age[75plus]",
+  ptype = "overall",
+  ylim = ylim,
+  ylab = "Relative-risk ratio",
+  main = "Age interaction: 75+ vs 0–74"
+)
 ```

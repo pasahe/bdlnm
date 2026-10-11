@@ -102,7 +102,7 @@
 #' if (check_inla()) {
 #'  # Fit the model
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson",
-#'              sample.arg = list(seed = 432, seed = 1L))
+#'              sample.arg = list(n = 1000, seed = 1L))
 #' }
 #'
 #'
@@ -174,7 +174,7 @@ bdlnm <- function(
 
   # In case there is no random effect, we can fit the model using model frame:
 
-  fterms <- terms(formula, specials = "f")
+  fterms <- stats::terms(formula, specials = "f")
 
   if (is.null(attr(fterms, "specials")$f)) {
     has_random_terms <- FALSE

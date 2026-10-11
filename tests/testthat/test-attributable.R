@@ -137,6 +137,61 @@ test_that("attributable returns filtered time-series matrices when filter is spe
   # no missings
   expect_equal(sum(is.na(attr2$af.summary[, "0.5quant"])), 0)
   expect_equal(sum(is.na(attr2$an.summary[, "0.5quant"])), 0)
+
+  summer_cases <- sum(
+    slondon$mort_75plus[slondon$summer == 1],
+    na.rm = TRUE
+  )
+  expect_equal(attr2$antotal, attr2$aftotal * summer_cases)
+
+  # Cases are included in the total even when the corresponding daily
+  # attributable number is unavailable because of the lag window.
+  slondon$early <- as.integer(seq_len(nrow(slondon)) <= 30L)
+  expect_warning(
+    attr_early <- attributable(
+      cpred_centered,
+      slondon,
+      columns = list(
+        date = "date",
+        exp = "tmean",
+        cases = "mort_75plus",
+        filter = "early"
+      )
+    )
+  )
+  early_cases <- sum(
+    slondon$mort_75plus[slondon$early == 1],
+    na.rm = TRUE
+  )
+  expect_true(anyNA(attr_early$an))
+  expect_equal(
+    attr_early$antotal,
+    attr_early$aftotal * early_cases
+  )
+})
+
+test_that("attributable rejects a filter with no valid attributable numbers", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+
+  filtered_data <- slondon
+  filtered_data$unavailable <- as.integer(seq_len(nrow(filtered_data)) <= 21L)
+
+  expect_error(
+    suppressWarnings(
+      attributable(
+        cpred_centered,
+        filtered_data,
+        columns = list(
+          date = "date",
+          exp = "tmean",
+          cases = "mort_75plus",
+          filter = "unavailable"
+        )
+      )
+    ),
+    "All time points are excluded by the filter or have a missing attributable number"
+  )
 })
 
 test_that("attributable works when cases = NULL (only AF returned)", {

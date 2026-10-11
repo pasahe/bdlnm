@@ -1,4 +1,4 @@
-# bdlnm 0.1.0.10000
+# bdlnm 0.1.0.10001
 
 * Added support in `bdlnm()` for cross-basis interactions with fixed effects and basis-specific random effects.
 * Added `combine_effects` to `bcrosspred()` to obtain predictions for fixed interaction levels and random-effect units. Interaction information is
@@ -10,6 +10,7 @@
 * Added the `columns` argument to `attributable()` for identifying exposure, outcome, date, filtering and interaction columns. The previous `name_*`
   arguments are deprecated, and the unused `range` argument was removed.
 * Improved cross-basis coefficient-name handling and validation for models containing interactions and `f()` terms.
+* Fixed `attributable()` so that, when a filter is supplied, total attributable numbers are calculated using all non-missing cases in the filtered period, including cases at time points where a daily attributable number is unavailable. Also corrected the validation for filters that leave no valid attributable numbers.
 * Updated tests, documentation and vignettes for the prediction-first workflow and interaction models.
 
 # bdlnm 0.1.0

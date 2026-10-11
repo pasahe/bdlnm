@@ -99,7 +99,7 @@
 #' if (check_inla()) {
 #'  # Fit the model
 #'  mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas, data = london, family = "poisson",
-#'              sample.arg = list(seed = 432, seed = 1L))
+#'              sample.arg = list(n = 1000, seed = 1L))
 #'
 #'  # Prediction
 #'  cpred <- bcrosspred(mod, exp_at = temp)
@@ -171,7 +171,7 @@ bcrosspred <- function(
 
   if (!is.null(combine_effects)) {
     combine_labels <- attr(
-      terms(combine_effects, specials = "f", keep.order = TRUE),
+      stats::terms(combine_effects, specials = "f", keep.order = TRUE),
       "term.labels"
     )
     standalone_basis_only <- identical(combine_labels, basis_name)

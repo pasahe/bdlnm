@@ -63,16 +63,7 @@ The supported elements of \code{columns} are:
 
 \code{data} must represent one regularly spaced time series; multiple concurrent series or panel data are not supported. If only seasonal observations are available, expand the data to the full sequence, insert \code{NA} for missing exposures or cases, and use \code{filter} to select the relevant observations.
 
-The prediction grid in \code{object} must include every non-missing exposure value
-observed in the column identified by \code{columns$exp}. Values are matched
-directly to the \code{exp_at} grid of each relevant prediction; \code{attributable()}
-does not interpolate predictions for exposure values that are absent from
-that grid. Therefore, before calculating attributable measures, construct
-centered relative-risk predictions with an exposure grid that includes the
-unique non-missing values in \code{data[[columns$exp]]}, for example by passing
-those values to the \code{exp_at} argument of \code{\link[=bcrosspred]{bcrosspred()}}. The grid may contain
-additional exposure values, and repeated or missing exposure observations in
-\code{data} do not need to be passed repeatedly to \code{bcrosspred()}.
+The prediction grid in \code{object} must include every non-missing exposure value observed in the data's exposure column. Values are matched directly to the \code{exp_at} grid of each relevant prediction. Therefore, before calculating attributable measures, construct centered relative-risk predictions with an exposure grid that includes the unique non-missing values in \code{data[[columns$exp]]} (ex. \code{bcrosspred(cpred, exp_at = unique(data[[columns$exp]]))}).
 
 Two different algorithms can be chosen to calculate attributable measures:
 \itemize{
@@ -124,11 +115,12 @@ seas <- splines::ns(london$date, df = round(8 * length(london$date) / 365.25))
 
 # Model
 
+\dontrun{
 if (check_inla()) {
 mod <- bdlnm(mort_75plus ~ cb + factor(dow) + seas,
              data = london,
              family = "poisson",
-             sample.arg = list(seed = 432, seed = 1L))
+             sample.arg = list(n = 1000, seed = 1L))
 
 # compute centering (MMT) using optimal_exposure
 cpred <- bcrosspred(mod, exp_at = temp)
@@ -139,7 +131,17 @@ cen <- mmt$summary[["0.5quant"]]
 cpred <- bcrosspred(mod, exp_at = london$tmean, cen = cen)
 
 # Attributable numbers and fractions (using the backwards algorithm):
-attr <- attributable(cpred, london, columns = list(date = "date", exp = "tmean", cases = "mort_75plus"), dir = "back")
+attr <- attributable(
+  cpred,
+  london,
+  columns = list(
+    date = "date",
+    exp = "tmean",
+    cases = "mort_75plus"
+  ),
+  dir = "back"
+)
+}
 }
 
 

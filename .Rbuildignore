@@ -1,3 +1,4 @@
+^\.git$
 ^bdlnm\.Rproj$
 ^\.Rproj\.user$
 ^LICENSE\.md$

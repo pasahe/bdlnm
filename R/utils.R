@@ -199,7 +199,7 @@ sum_formula_expressions <- function(expressions) {
 #' @keywords internal
 #' @export
 expand_basis_formula <- function(formula, basis, data) {
-	formula_terms <- terms(formula, specials = "f", keep.order = TRUE)
+	formula_terms <- stats::terms(formula, specials = "f", keep.order = TRUE)
 	term_labels <- attr(formula_terms, "term.labels")
 	expanded_terms <- list()
 
@@ -265,7 +265,7 @@ expand_basis_formula <- function(formula, basis, data) {
 
 			for (term_expansion in term_expansions) {
 				for (basis_column in basis_columns) {
-					replacement <- setNames(list(as.name(basis_column)), basis_name)
+					replacement <- stats::setNames(list(as.name(basis_column)), basis_name)
 					new_expansions[[length(new_expansions) + 1L]] <- do.call(
 						substitute,
 						list(term_expansion, replacement)
@@ -308,7 +308,7 @@ expand_basis_formula <- function(formula, basis, data) {
 #'
 #' @keywords internal
 basis_interaction_info <- function(formula, basis, data) {
-	formula_terms <- terms(formula, specials = "f", keep.order = TRUE)
+	formula_terms <- stats::terms(formula, specials = "f", keep.order = TRUE)
 	term_expressions <- lapply(attr(formula_terms, "term.labels"), str2lang)
 	interaction_info <- list()
 
@@ -407,7 +407,7 @@ extract_coef <- function(object, basis, combine_effects) {
 
 	if (!is.null(combine_effects)) {
 	
-		combine_terms <- terms(
+		combine_terms <- stats::terms(
 			combine_effects,
 			specials = "f",
 			keep.order = TRUE
