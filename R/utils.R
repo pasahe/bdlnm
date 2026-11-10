@@ -377,8 +377,48 @@ basis_interaction_info <- function(formula, basis, data) {
 	interaction_info
 }
 
+# Parse explicit numeric prediction values without evaluating bracket contents.
+parse_combine_effects <- function(combine_effects) {
+	at <- list()
+	if (is.character(combine_effects)) {
+		if (length(combine_effects) != 1L || is.na(combine_effects)) {
+			cli::cli_abort("{.arg combine_effects} must be a single string or a one-sided formula.")
+		}
+		pattern <- "(`[^`]+`|[[:alpha:]_.][[:alnum:]_.]*)[[:space:]]*\\[([^][]*)\\]"
+		match <- regexec(pattern, combine_effects)
+		parts <- regmatches(combine_effects, match)[[1L]]
+		if (length(parts)) {
+			variable <- as.character(str2lang(parts[[2L]]))
+			tokens <- trimws(strsplit(paste0(parts[[3L]], ",END"), ",", fixed = TRUE)[[1L]])
+			tokens <- tokens[-length(tokens)]
+			number <- "^[+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][+-]?[0-9]+)?$"
+			values <- suppressWarnings(as.numeric(tokens))
+			if (!length(tokens) || any(!grepl(number, tokens)) || any(!is.finite(values))) {
+				cli::cli_abort("Prediction values in brackets must be finite, comma-separated numbers, for example {.code int_idx [0, 5, 10]}.")
+			}
+			at[[variable]] <- unique(values)
+			start <- match[[1L]][[1L]]
+			width <- attr(match[[1L]], "match.length")[[1L]]
+			combine_effects <- paste0(substr(combine_effects, 1L, start - 1L),
+				parts[[2L]], substring(combine_effects, start + width))
+		}
+		if (grepl("[\\[\\]]", combine_effects, perl = TRUE)) {
+			cli::cli_abort("Only one bracketed numeric value specification is currently supported in {.arg combine_effects}.")
+		}
+		combine_effects <- tryCatch(
+			stats::as.formula(paste("~", combine_effects)),
+			error = function(e) cli::cli_abort("Invalid {.arg combine_effects} expression.")
+		)
+	}
+	if (!is.null(combine_effects) &&
+		(!inherits(combine_effects, "formula") || length(combine_effects) != 2L)) {
+		cli::cli_abort("{.arg combine_effects} must be a single string or a one-sided formula.")
+	}
+	list(formula = combine_effects, at = at)
+}
+
 # Function to select only the coefficients from the basis from all the posterior samples
-extract_coef <- function(object, basis, combine_effects) {
+extract_coef <- function(object, basis, combine_effects, interaction_at = list()) {
 	# find if basis is present in object$basis
 	which_basis <- NULL
 	for (b in names(object$basis)) {
@@ -496,6 +536,11 @@ extract_coef <- function(object, basis, combine_effects) {
 
 		has_random <- any(random_terms)
 		has_fixed_interaction <- any(fixed_interaction_terms)
+		if (length(interaction_at) &&
+			(!has_fixed_interaction || !identical(names(interaction_at), interaction_variable) ||
+			 !is.symbol(interaction_expression))) {
+			cli::cli_abort("Bracketed values must specify the variable in a direct fixed interaction with the selected basis.")
+		}
 
 		if (has_random && has_fixed_interaction) {
 			cli::cli_abort(
@@ -630,11 +675,32 @@ extract_coef <- function(object, basis, combine_effects) {
 			int_levels <- unique(int_levels)
 
 			if (length(int_levels) == 0L && has_continuous_interaction) {
-				cli::cli_abort(c(
-					"A continuous interaction was found for {.val {which_basis}} and {.val {interaction_variable}}.",
-					"i" = "Continuous interactions are not currently supported by {.arg combine_effects} because no value of {.val {interaction_variable}} is specified for prediction.",
-					"i" = "If {.val {interaction_variable}} represents categories, include it as a factor in the fitted model."
-				))
+				values <- interaction_at[[interaction_variable]]
+				if (is.null(values)) {
+					cli::cli_abort(c(
+						"A continuous interaction was found for {.val {which_basis}} and {.val {interaction_variable}}.",
+						"i" = "Specify prediction values using a string such as {.code \"cb * int_idx [0, 5, 10]\"}."
+					))
+				}
+				int_rows <- paste0(cb_cols, ":", interaction_prefix)
+				missing_rows <- setdiff(int_rows, rownames(coef))
+				if (length(missing_rows)) {
+					cli::cli_abort(c("Continuous interaction coefficients are missing.", "x" = "Missing: {.val {missing_rows}}"))
+				}
+				int_coef <- coef[int_rows, , drop = FALSE]
+				rownames(int_coef) <- cb_cols
+				all_ids <- paste0(interaction_variable, "[", values, "]")
+				coef_cb <- array(NA_real_, dim = c(n_cols, n_samples, length(values)),
+					dimnames = list(cb_cols, colnames(coef), all_ids))
+				for (i in seq_along(values)) {
+					value_coef <- values[[i]] * int_coef
+					if (has_standalone_basis) value_coef <- coef[cb_cols, , drop = FALSE] + value_coef
+					coef_cb[, , i] <- value_coef
+				}
+				return(coef_cb)
+			}
+			if (length(interaction_at)) {
+				cli::cli_abort("Bracketed numeric prediction values require a continuous fixed interaction in the fitted model.")
 			}
 
 			if (length(int_levels) == 0L) {

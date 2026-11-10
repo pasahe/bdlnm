@@ -466,6 +466,48 @@ test_that("bcrosspred combines a random interaction without a standalone basis",
 
 })
 
+test_that("bcrosspred evaluates a continuous interaction at requested values", {
+  skip_on_cran()
+  skip_if_not(check_inla(), "INLA not available")
+  continuous_data <- london[seq_len(90L), ]
+  cb <- dlnm::crossbasis(continuous_data$tmean, lag = 3L,
+    argvar = list(fun = "lin"), arglag = list(fun = "lin"))
+  temp <- seq(min(continuous_data$tmean), max(continuous_data$tmean), length.out = 5L)
+  continuous_data$int_idx <- rep(c(-2, 0, 2, 5), length.out = nrow(continuous_data))
+  mod_continuous <- bdlnm(
+    mort_75plus ~ cb * int_idx,
+    data = continuous_data, family = "poisson",
+    sample.arg = list(n = 2L, seed = 1L)
+  )
+  prediction <- bcrosspred(mod_continuous,
+    combine_effects = "cb * int_idx [-2, 0, 2.5]", exp_at = temp)
+  basis_rows <- paste0("cb", colnames(cb))
+  standalone <- mod_continuous$coefficients[basis_rows, , drop = FALSE]
+  interaction <- mod_continuous$coefficients[paste0(basis_rows, ":int_idx"), , drop = FALSE]
+  rownames(interaction) <- basis_rows
+  expect_identical(names(prediction)[1:3], c("int_idx[-2]", "int_idx[0]", "int_idx[2.5]"))
+  for (value in c(-2, 0, 2.5)) {
+    expect_equal(prediction[[paste0("int_idx[", value, "]")]]$coefficients,
+      standalone + value * interaction)
+  }
+  single <- bcrosspred(mod_continuous,
+    combine_effects = "int_idx [2.5] * cb", exp_at = temp)
+  expect_equal(single[["int_idx[2.5]"]]$allfit, prediction[["int_idx[2.5]"]]$allfit)
+  deviation <- bcrosspred(mod_continuous,
+    combine_effects = "cb:int_idx [-2, 0]", exp_at = temp)
+  expect_equal(deviation[["int_idx[-2]"]]$coefficients, -2 * interaction)
+  expect_equal(deviation[["int_idx[0]"]]$coefficients, 0 * interaction)
+  expect_error(bcrosspred(mod_continuous, combine_effects = ~ cb * int_idx),
+    "Specify prediction values")
+  for (spec in c("cb * int_idx []", "cb * int_idx [1,]",
+      "cb * int_idx [NA]", "cb * int_idx [Inf]", "cb * int_idx [1:3]",
+      "cb * int_idx [mean(x)]")) {
+    expect_error(bcrosspred(mod_continuous, combine_effects = spec), "prediction values|Prediction values")
+  }
+  expect_error(suppressWarnings(bcrosspred(mod_continuous, combine_effects = "cb [1]")),
+    "Bracketed values")
+})
+
 test_that("bcrosspred rejects multiple basis-specific random effects", {
   skip_on_cran()
   skip_if_not(check_inla(), "INLA not available")

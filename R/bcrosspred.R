@@ -4,7 +4,14 @@
 #'
 #' @param object A fitted `"bdlnm"` object returned by [bdlnm()].
 #' @param basis If the `bdlnm` model has more than one basis, the name of the basis to use to compute predictions. It must be one of `names(object$basis)`. If the model contains only one basis it is selected automatically.
-#' @param combine_effects Optional one-sided formula for models with basis-specific interaction effects. It specifies which effects involving the selected basis should be combined for prediction. It can request the standalone basis (ex. `~ cb`), a fixed interaction with the basis (ex. `~ cb * group`), or a basis-specific random effect (ex. `~ cb + f(id, cb, model = "iid")`). If `NULL`, predictions use only the standalone basis coefficients.
+#' @param combine_effects Optional one-sided formula or character string for models with basis-specific interaction effects. It specifies which effects involving the selected basis should be combined for prediction. It can request the standalone basis (ex. `~ cb`), a fixed interaction with the basis (ex. `~ cb * group`), or a basis-specific random effect (ex. `~ cb + f(id, cb, model = "iid")`). If `NULL`, predictions use only the standalone basis coefficients.
+#' For continuous fixed interactions, `combine_effects` can instead be a string
+#' with explicit comma-separated numeric values, for example
+#' `"cb * int_idx [0, 5, 10]"`. At each value `v`, predictions combine the
+#' standalone basis coefficients with `v` times the interaction coefficients.
+#' Use `"cb:int_idx [0, 5, 10]"` for the interaction component alone.
+#' Negative and decimal values are supported; ranges and shortcuts such as
+#' `[all]` are not supported. A continuous interaction requires explicit values.
 #' @param exp_at Numeric vector of exposure values at which to evaluate predictions. If `NULL`, the exposure range is extracted from the attributes of `basis` and a grid of 50 values is constructed using [pretty()].
 #' @param lag_at Numeric vector of integer lag values at which to evaluate predictions. Only used when `basis` is a `crossbasis`. If `NULL`, the full lag range stored in `basis` is used with a step of `1`.
 #' @param cen Centering exposure value for predictions. If `NULL` the centering value depends on the exposure basis function or set to a mid-range value (see `Details`).
@@ -167,6 +174,9 @@ bcrosspred <- function(
     )
   }
 
+  parsed_effects <- parse_combine_effects(combine_effects)
+  combine_effects <- parsed_effects$formula
+  interaction_at <- parsed_effects$at
   standalone_basis_only <- is.null(combine_effects)
 
   if (!is.null(combine_effects)) {
@@ -197,7 +207,7 @@ bcrosspred <- function(
   }
 
   #Get only CB coefficients
-  coef <- extract_coef(object, basis, combine_effects)
+  coef <- extract_coef(object, basis, combine_effects, interaction_at)
 
   #Get model link
   if (is.null(model.link)) {
@@ -607,6 +617,10 @@ bcrosspred <- function(
     if (length(selected_interactions) == 1L) {
       interaction_variable <- selected_interactions[[1L]]
       interaction_info <- basis_interactions[[interaction_variable]]
+      if (!is.null(interaction_at[[interaction_variable]])) {
+        interaction_info$values <- interaction_at[[interaction_variable]]
+        interaction_info$reference <- NULL
+      }
       interaction_info$variable <- interaction_variable
       attr(all_res, "basis_interaction") <- interaction_info
     }

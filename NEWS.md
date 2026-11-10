@@ -1,3 +1,7 @@
+# bdlnm 0.1.0.10002
+
+* Added continuous fixed-interaction predictions to `bcrosspred()`. The `combine_effects` argument now accepts character strings with explicit numeric prediction values, such as `"cb * int_idx [0, 5, 10]"`, while retaining support for one-sided formulas. Predictions combine the standalone basis coefficients with the interaction coefficients multiplied by each requested value. Use `"cb:int_idx [0, 5, 10]"` to predict the interaction component alone. Single values, negative values and decimals are supported.
+
 # bdlnm 0.1.0.10001
 
 * Added support in `bdlnm()` for cross-basis interactions with fixed effects and basis-specific random effects.
