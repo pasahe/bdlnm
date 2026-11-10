@@ -10,6 +10,9 @@
 #' `"cb * int_idx [0, 5, 10]"`. At each value `v`, predictions combine the
 #' standalone basis coefficients with `v` times the interaction coefficients.
 #' Use `"cb:int_idx [0, 5, 10]"` for the interaction component alone.
+#' A previously defined numeric vector can be supplied by name, for example
+#' `"cb * int_idx [year_idx]"`. The vector is looked up in the environment
+#' where `bcrosspred()` is called and must be nonempty with finite numeric values.
 #' Negative and decimal values are supported; ranges and shortcuts such as
 #' `[all]` are not supported. A continuous interaction requires explicit values.
 #' @param exp_at Numeric vector of exposure values at which to evaluate predictions. If `NULL`, the exposure range is extracted from the attributes of `basis` and a grid of 50 values is constructed using [pretty()].
@@ -174,7 +177,7 @@ bcrosspred <- function(
     )
   }
 
-  parsed_effects <- parse_combine_effects(combine_effects)
+  parsed_effects <- parse_combine_effects(combine_effects, envir = parent.frame())
   combine_effects <- parsed_effects$formula
   interaction_at <- parsed_effects$at
   standalone_basis_only <- is.null(combine_effects)

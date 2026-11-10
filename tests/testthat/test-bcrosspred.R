@@ -504,6 +504,34 @@ test_that("bcrosspred evaluates a continuous interaction at requested values", {
       "cb * int_idx [mean(x)]")) {
     expect_error(bcrosspred(mod_continuous, combine_effects = spec), "prediction values|Prediction values")
   }
+  local({
+    idx <- c(-2, 0, 2.5, -2)
+    from_vector <- bcrosspred(mod_continuous,
+      combine_effects = "cb * int_idx[idx]", exp_at = temp)
+    expect_equal(from_vector, prediction)
+    idx <- 2.5
+    from_single <- bcrosspred(mod_continuous,
+      combine_effects = "int_idx [idx] * cb", exp_at = temp)
+    expect_equal(from_single, single)
+    idx <- c(-2, 0)
+    from_deviation <- bcrosspred(mod_continuous,
+      combine_effects = "cb:int_idx [idx]", exp_at = temp)
+    expect_equal(from_deviation, deviation)
+  })
+  expect_error(bcrosspred(mod_continuous,
+    combine_effects = "cb * int_idx [bdlnm_missing_values_vector]"),
+    "was not found in the calling environment")
+  for (invalid_values in list(numeric(0), NULL, c(0, NA_real_), Inf,
+      c("0", "5"), TRUE, matrix(1:4, 2), list(1, 2))) {
+    expect_error(bcrosspred(mod_continuous,
+      combine_effects = "cb * int_idx [invalid_values]"),
+      "must be a nonempty numeric vector")
+  }
+  expression_evaluated <- FALSE
+  expect_error(bcrosspred(mod_continuous,
+    combine_effects = "cb * int_idx [{expression_evaluated <- TRUE; 10}]"),
+    "Prediction values")
+  expect_false(expression_evaluated)
   expect_error(suppressWarnings(bcrosspred(mod_continuous, combine_effects = "cb [1]")),
     "Bracketed values")
 })

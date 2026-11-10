@@ -377,8 +377,8 @@ basis_interaction_info <- function(formula, basis, data) {
 	interaction_info
 }
 
-# Parse explicit numeric prediction values without evaluating bracket contents.
-parse_combine_effects <- function(combine_effects) {
+# Parse numeric prediction values or look up a vector without evaluating expressions.
+parse_combine_effects <- function(combine_effects, envir = parent.frame()) {
 	at <- list()
 	if (is.character(combine_effects)) {
 		if (length(combine_effects) != 1L || is.na(combine_effects)) {
@@ -392,9 +392,23 @@ parse_combine_effects <- function(combine_effects) {
 			tokens <- trimws(strsplit(paste0(parts[[3L]], ",END"), ",", fixed = TRUE)[[1L]])
 			tokens <- tokens[-length(tokens)]
 			number <- "^[+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][+-]?[0-9]+)?$"
-			values <- suppressWarnings(as.numeric(tokens))
-			if (!length(tokens) || any(!grepl(number, tokens)) || any(!is.finite(values))) {
-				cli::cli_abort("Prediction values in brackets must be finite, comma-separated numbers, for example {.code int_idx [0, 5, 10]}.")
+			value_name <- if (length(tokens) == 1L) {
+				tryCatch(str2lang(tokens[[1L]]), error = function(e) NULL)
+			} else NULL
+			if (is.symbol(value_name)) {
+				value_name <- as.character(value_name)
+				if (!exists(value_name, envir = envir, inherits = TRUE)) {
+					cli::cli_abort("Prediction values vector {.var {value_name}} was not found in the calling environment.")
+				}
+				values <- get(value_name, envir = envir, inherits = TRUE)
+				if (!is.numeric(values) || is.complex(values) || !is.null(dim(values)) || !length(values) || any(!is.finite(values))) {
+					cli::cli_abort("Prediction values vector {.var {value_name}} must be a nonempty numeric vector containing only finite values.")
+				}
+			} else {
+				values <- suppressWarnings(as.numeric(tokens))
+				if (!length(tokens) || any(!grepl(number, tokens)) || any(!is.finite(values))) {
+					cli::cli_abort("Prediction values in brackets must be finite, comma-separated numbers or the name of a numeric vector, for example {.code int_idx [0, 5, 10]} or {.code int_idx [year_idx]}.")
+				}
 			}
 			at[[variable]] <- unique(values)
 			start <- match[[1L]][[1L]]
