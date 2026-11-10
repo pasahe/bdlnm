@@ -378,55 +378,68 @@ basis_interaction_info <- function(formula, basis, data) {
 }
 
 # Parse numeric prediction values or look up a vector without evaluating expressions.
-parse_combine_effects <- function(combine_effects, envir = parent.frame()) {
-	at <- list()
-	if (is.character(combine_effects)) {
-		if (length(combine_effects) != 1L || is.na(combine_effects)) {
-			cli::cli_abort("{.arg combine_effects} must be a single string or a one-sided formula.")
-		}
-		pattern <- "(`[^`]+`|[[:alpha:]_.][[:alnum:]_.]*)[[:space:]]*\\[([^][]*)\\]"
-		match <- regexec(pattern, combine_effects)
-		parts <- regmatches(combine_effects, match)[[1L]]
-		if (length(parts)) {
-			variable <- as.character(str2lang(parts[[2L]]))
-			tokens <- trimws(strsplit(paste0(parts[[3L]], ",END"), ",", fixed = TRUE)[[1L]])
-			tokens <- tokens[-length(tokens)]
-			number <- "^[+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][+-]?[0-9]+)?$"
-			value_name <- if (length(tokens) == 1L) {
-				tryCatch(str2lang(tokens[[1L]]), error = function(e) NULL)
-			} else NULL
-			if (is.symbol(value_name)) {
-				value_name <- as.character(value_name)
-				if (!exists(value_name, envir = envir, inherits = TRUE)) {
-					cli::cli_abort("Prediction values vector {.var {value_name}} was not found in the calling environment.")
-				}
-				values <- get(value_name, envir = envir, inherits = TRUE)
-				if (!is.numeric(values) || is.complex(values) || !is.null(dim(values)) || !length(values) || any(!is.finite(values))) {
-					cli::cli_abort("Prediction values vector {.var {value_name}} must be a nonempty numeric vector containing only finite values.")
-				}
-			} else {
-				values <- suppressWarnings(as.numeric(tokens))
-				if (!length(tokens) || any(!grepl(number, tokens)) || any(!is.finite(values))) {
-					cli::cli_abort("Prediction values in brackets must be finite, comma-separated numbers or the name of a numeric vector, for example {.code int_idx [0, 5, 10]} or {.code int_idx [year_idx]}.")
-				}
-			}
-			at[[variable]] <- unique(values)
-			start <- match[[1L]][[1L]]
-			width <- attr(match[[1L]], "match.length")[[1L]]
-			combine_effects <- paste0(substr(combine_effects, 1L, start - 1L),
-				parts[[2L]], substring(combine_effects, start + width))
-		}
-		if (grepl("[\\[\\]]", combine_effects, perl = TRUE)) {
-			cli::cli_abort("Only one bracketed numeric value specification is currently supported in {.arg combine_effects}.")
-		}
-		combine_effects <- tryCatch(
-			stats::as.formula(paste("~", combine_effects)),
-			error = function(e) cli::cli_abort("Invalid {.arg combine_effects} expression.")
-		)
+parse_combine_effects <- function(combine_effects) {
+	if (!is.null(combine_effects) && !inherits(combine_effects, "formula")) {
+		cli::cli_abort("{.arg combine_effects} must be a one-sided formula, for example {.code ~ cb * int_idx[c(0, 5, 10)]}.")
 	}
-	if (!is.null(combine_effects) &&
-		(!inherits(combine_effects, "formula") || length(combine_effects) != 2L)) {
-		cli::cli_abort("{.arg combine_effects} must be a single string or a one-sided formula.")
+	at <- list()
+	if (inherits(combine_effects, "formula")) {
+		if (length(combine_effects) != 2L) {
+			cli::cli_abort("{.arg combine_effects} must be a one-sided formula.")
+		}
+		# Resolve stored vectors where the formula was created.
+		formula_env <- environment(combine_effects)
+		if (is.null(formula_env)) formula_env <- parent.frame()
+		# In unevaluated formulas, -2 is a call to '-' with argument 2.
+		literal_number <- function(x) {
+			if (is.numeric(x) && !is.complex(x) && length(x) == 1L) return(x)
+			if (is.call(x) && length(x) == 2L &&
+				as.character(x[[1L]]) %in% c("+", "-") &&
+				is.numeric(x[[2L]]) && !is.complex(x[[2L]]) && length(x[[2L]]) == 1L) {
+				return(if (identical(x[[1L]], as.name("-"))) -x[[2L]] else x[[2L]])
+			}
+			cli::cli_abort("Prediction values must be numeric literals, a {.code c(...)} vector of numeric literals, or a numeric vector name.")
+		}
+		# Inspect the right-hand side using a stack of positions, without recursion.
+		# For ~ cb * int_idx[values], path c(2, 3) locates int_idx[values].
+		paths <- list(2L)
+		while (length(paths)) {
+			path <- paths[[length(paths)]]
+			paths <- paths[-length(paths)]
+			node <- combine_effects[[path]]
+			if (!is.call(node)) next
+			if (identical(node[[1L]], as.name("["))) {
+				# A supported '[' call has a variable and exactly one nonempty index.
+				if (length(at) || length(node) != 3L || !is.symbol(node[[2L]]) ||
+					identical(node[[3L]], quote(expr = ))) {
+					cli::cli_abort("Use one interaction variable with one bracketed prediction value specification.")
+				}
+				# Read a vector name, c(...) of numeric literals, or one numeric literal.
+				spec <- node[[3L]]
+				if (is.symbol(spec)) {
+					value_name <- as.character(spec)
+					if (!exists(value_name, envir = formula_env, inherits = TRUE)) {
+						cli::cli_abort("Prediction values vector {.var {value_name}} was not found in the formula environment.")
+					}
+					values <- get(value_name, envir = formula_env, inherits = TRUE)
+				} else if (is.call(spec) && identical(spec[[1L]], as.name("c"))) {
+					values <- unlist(lapply(as.list(spec)[-1L], literal_number), use.names = FALSE)
+				} else {
+					values <- literal_number(spec)
+				}
+				if (!is.numeric(values) || is.complex(values) || !is.null(dim(values)) ||
+					!length(values) || any(!is.finite(values))) {
+					cli::cli_abort("Prediction values must be a nonempty numeric vector containing only finite values.")
+				}
+				# Keep the values separately and replace int_idx[values] with int_idx.
+				# Coefficient extraction then receives an ordinary interaction formula.
+				at[[as.character(node[[2L]])]] <- unique(values)
+				combine_effects[[path]] <- node[[2L]]
+			} else if (length(node) > 1L) {
+				# Visit arguments only; element 1 is the operator or function name.
+				for (i in seq.int(2L, length(node))) paths[[length(paths) + 1L]] <- c(path, i)
+			}
+		}
 	}
 	list(formula = combine_effects, at = at)
 }
@@ -693,7 +706,7 @@ extract_coef <- function(object, basis, combine_effects, interaction_at = list()
 				if (is.null(values)) {
 					cli::cli_abort(c(
 						"A continuous interaction was found for {.val {which_basis}} and {.val {interaction_variable}}.",
-						"i" = "Specify prediction values using a string such as {.code \"cb * int_idx [0, 5, 10]\"}."
+						"i" = "Specify prediction values using a formula such as {.code ~ cb * int_idx[c(0, 5, 10)]}."
 					))
 				}
 				int_rows <- paste0(cb_cols, ":", interaction_prefix)

@@ -4,17 +4,7 @@
 #'
 #' @param object A fitted `"bdlnm"` object returned by [bdlnm()].
 #' @param basis If the `bdlnm` model has more than one basis, the name of the basis to use to compute predictions. It must be one of `names(object$basis)`. If the model contains only one basis it is selected automatically.
-#' @param combine_effects Optional one-sided formula or character string for models with basis-specific interaction effects. It specifies which effects involving the selected basis should be combined for prediction. It can request the standalone basis (ex. `~ cb`), a fixed interaction with the basis (ex. `~ cb * group`), or a basis-specific random effect (ex. `~ cb + f(id, cb, model = "iid")`). If `NULL`, predictions use only the standalone basis coefficients.
-#' For continuous fixed interactions, `combine_effects` can instead be a string
-#' with explicit comma-separated numeric values, for example
-#' `"cb * int_idx [0, 5, 10]"`. At each value `v`, predictions combine the
-#' standalone basis coefficients with `v` times the interaction coefficients.
-#' Use `"cb:int_idx [0, 5, 10]"` for the interaction component alone.
-#' A previously defined numeric vector can be supplied by name, for example
-#' `"cb * int_idx [year_idx]"`. The vector is looked up in the environment
-#' where `bcrosspred()` is called and must be nonempty with finite numeric values.
-#' Negative and decimal values are supported; ranges and shortcuts such as
-#' `[all]` are not supported. A continuous interaction requires explicit values.
+#' @param combine_effects Optional one-sided formula for models with basis-specific interaction effects. It specifies which effects involving the selected basis should be combined for prediction. It can request the standalone basis (ex. `~ cb`), a fixed interaction with the basis (ex. `~ cb * group`), or a basis-specific random effect (ex. `~ cb + f(id, cb, model = "iid")`). If `NULL`, predictions use only the standalone basis coefficients.
 #' @param exp_at Numeric vector of exposure values at which to evaluate predictions. If `NULL`, the exposure range is extracted from the attributes of `basis` and a grid of 50 values is constructed using [pretty()].
 #' @param lag_at Numeric vector of integer lag values at which to evaluate predictions. Only used when `basis` is a `crossbasis`. If `NULL`, the full lag range stored in `basis` is used with a step of `1`.
 #' @param cen Centering exposure value for predictions. If `NULL` the centering value depends on the exposure basis function or set to a mid-range value (see `Details`).
@@ -31,6 +21,8 @@
 #' When a model contains a basis-specific interaction and `combine_effects` requests that interaction, interaction-specific predictions are returned as
 #' a named collection. For fixed interactions, the names identify the levels of the interacting variable. For basis-specific random effects, they identify
 #' the random-effect units; a `global` prediction is also included when the standalone basis is requested. The `basis_interaction` attribute identifies the selected interaction variable and records its type and values.
+#' 
+#' For continuous fixed interactions, specify `combine_effects` values in brackets, for example `~ cb * int_idx[10]` or `~ cb * int_idx[c(0, 5, 10)]`. At each `x` value, predictions combine the standalone basis coefficients with `x` times the interaction coefficients. Use `~ cb:int_idx[c(0, 5, 10)]` for the interaction component alone. A previously defined numeric vector can be supplied by name, for example `~ cb * int_idx[values]`. A continuous interaction requires explicit prediction values.
 #'
 #' Posterior sample of the predicted associations are stored as matrices for the overall cumulative effect and 3D arrays for the exposure-lag-specific predictions. Summaries across these samples are computed using the mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to `ci.level`) and an approximate mode obtained from a kernel density estimate. Relative risks versions of these associations (exponentiated predictions) are also included if `model.link` is equal to `"log"` or `"logit"`. The `model.link` can be manually specified or, if `NULL`, it is tried to be inferred from the `model` type in `object`.
 #'
@@ -177,7 +169,7 @@ bcrosspred <- function(
     )
   }
 
-  parsed_effects <- parse_combine_effects(combine_effects, envir = parent.frame())
+  parsed_effects <- parse_combine_effects(combine_effects)
   combine_effects <- parsed_effects$formula
   interaction_at <- parsed_effects$at
   standalone_basis_only <- is.null(combine_effects)

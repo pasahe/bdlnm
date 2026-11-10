@@ -480,7 +480,7 @@ test_that("bcrosspred evaluates a continuous interaction at requested values", {
     sample.arg = list(n = 2L, seed = 1L)
   )
   prediction <- bcrosspred(mod_continuous,
-    combine_effects = "cb * int_idx [-2, 0, 2.5]", exp_at = temp)
+    combine_effects = ~ cb * int_idx[c(-2, 0, 2.5)], exp_at = temp)
   basis_rows <- paste0("cb", colnames(cb))
   standalone <- mod_continuous$coefficients[basis_rows, , drop = FALSE]
   interaction <- mod_continuous$coefficients[paste0(basis_rows, ":int_idx"), , drop = FALSE]
@@ -491,48 +491,46 @@ test_that("bcrosspred evaluates a continuous interaction at requested values", {
       standalone + value * interaction)
   }
   single <- bcrosspred(mod_continuous,
-    combine_effects = "int_idx [2.5] * cb", exp_at = temp)
+    combine_effects = ~ int_idx[2.5] * cb, exp_at = temp)
   expect_equal(single[["int_idx[2.5]"]]$allfit, prediction[["int_idx[2.5]"]]$allfit)
   deviation <- bcrosspred(mod_continuous,
-    combine_effects = "cb:int_idx [-2, 0]", exp_at = temp)
+    combine_effects = ~ cb:int_idx[c(-2, 0)], exp_at = temp)
   expect_equal(deviation[["int_idx[-2]"]]$coefficients, -2 * interaction)
   expect_equal(deviation[["int_idx[0]"]]$coefficients, 0 * interaction)
+  stored_formula <- local({
+    idx <- c(-2, 0, 2.5, -2)
+    ~ cb * int_idx[idx]
+  })
+  local({
+    idx <- 999
+    expect_equal(bcrosspred(mod_continuous,
+      combine_effects = stored_formula, exp_at = temp), prediction)
+  })
   expect_error(bcrosspred(mod_continuous, combine_effects = ~ cb * int_idx),
     "Specify prediction values")
-  for (spec in c("cb * int_idx []", "cb * int_idx [1,]",
-      "cb * int_idx [NA]", "cb * int_idx [Inf]", "cb * int_idx [1:3]",
-      "cb * int_idx [mean(x)]")) {
-    expect_error(bcrosspred(mod_continuous, combine_effects = spec), "prediction values|Prediction values")
+  for (spec in list(~ cb * int_idx[], ~ cb * int_idx[0, 5, 10],
+      ~ cb * int_idx[c()], ~ cb * int_idx[Inf], ~ cb * int_idx[1:3],
+      ~ cb * int_idx[mean(temp)])) {
+    expect_error(bcrosspred(mod_continuous, combine_effects = spec),
+      "Prediction values|prediction value")
   }
-  local({
-    idx <- c(-2, 0, 2.5, -2)
-    from_vector <- bcrosspred(mod_continuous,
-      combine_effects = "cb * int_idx[idx]", exp_at = temp)
-    expect_equal(from_vector, prediction)
-    idx <- 2.5
-    from_single <- bcrosspred(mod_continuous,
-      combine_effects = "int_idx [idx] * cb", exp_at = temp)
-    expect_equal(from_single, single)
-    idx <- c(-2, 0)
-    from_deviation <- bcrosspred(mod_continuous,
-      combine_effects = "cb:int_idx [idx]", exp_at = temp)
-    expect_equal(from_deviation, deviation)
-  })
   expect_error(bcrosspred(mod_continuous,
-    combine_effects = "cb * int_idx [bdlnm_missing_values_vector]"),
-    "was not found in the calling environment")
+    combine_effects = ~ cb * int_idx[bdlnm_missing_values_vector]),
+    "formula environment")
   for (invalid_values in list(numeric(0), NULL, c(0, NA_real_), Inf,
-      c("0", "5"), TRUE, matrix(1:4, 2), list(1, 2))) {
+      c("0", "5"), TRUE, matrix(1:4, 2), list(1, 2), 1+2i)) {
     expect_error(bcrosspred(mod_continuous,
-      combine_effects = "cb * int_idx [invalid_values]"),
-      "must be a nonempty numeric vector")
+      combine_effects = ~ cb * int_idx[invalid_values]),
+      "nonempty numeric vector")
   }
   expression_evaluated <- FALSE
   expect_error(bcrosspred(mod_continuous,
-    combine_effects = "cb * int_idx [{expression_evaluated <- TRUE; 10}]"),
+    combine_effects = ~ cb * int_idx[{expression_evaluated <- TRUE; 10}]),
     "Prediction values")
   expect_false(expression_evaluated)
-  expect_error(suppressWarnings(bcrosspred(mod_continuous, combine_effects = "cb [1]")),
+  expect_error(bcrosspred(mod_continuous,
+    combine_effects = "cb * int_idx [0, 5, 10]"), "must be a one-sided formula")
+  expect_error(suppressWarnings(bcrosspred(mod_continuous, combine_effects = ~ cb[1])),
     "Bracketed values")
 })
 
