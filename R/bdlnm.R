@@ -31,11 +31,11 @@
 #'
 #' @section Posterior samples:
 #'
-#' After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via [INLA::inla.posterior.sample()]. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a `"crossbasis"` built from an exposure basis with `C` parameters and a lag basis with `L` parameters, there will be `C × L` cross-basis associated coefficients (named e.g. `v1.l1`, ..., `vC.lL`). For a `"onebasis"` object the coefficients follow the simpler form `b1`, ..., `bC`.
+#' After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via [INLA::inla.posterior.sample()]. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles). For a `"crossbasis"` built from an exposure basis with `C` parameters and a lag basis with `L` parameters, there will be `C × L` cross-basis associated coefficients (named e.g. `v1.l1`, ..., `vC.lL`). For a `"onebasis"` object the coefficients follow the simpler form `b1`, ..., `bC`.
 #'
 #' Additional arguments supplied via `sample.arg` are forwarded to [INLA::inla.posterior.sample()] (see documentation for all available arguments). By default, the number of samples is `1000`. Be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric `seed` in `sample.arg`.
 #'
-#' Posterior sample estimations are then summarized across samples using mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to `ci.level`) and an approximate mode obtained from a kernel density estimate.
+#' Posterior sample estimations are then summarized across samples using mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to `ci.level`).
 #'
 #' @section Requirements:
 #' The INLA package must be installed from the R-INLA repository (\href{https://www.r-inla.org/}{R-INLA Project}); if not available the function aborts with a short instruction on how to install it.
@@ -44,7 +44,7 @@
 #' - `model`: the fitted `INLA` model returned by [INLA::inla()].
 #' - `basis`: a named list containing all the detected basis of class `crossbasis` or `onebasis` included in the model `formula`.
 #' - `coefficients`: a matrix whose columns are posterior sample draws returned by [INLA::inla.posterior.sample()] (named `sample1`, `sample2`, ...) and whose rows are all model coefficients.
-#' - `coefficients.summary`: a matrix of summary statistics for all the posterior samples stored in `coefficients` (mean, sd, quantiles, mode).
+#' - `coefficients.summary`: a matrix of summary statistics for all the posterior samples stored in `coefficients` (mean, sd, quantiles).
 #'
 #' The `"n_sim"` attribute records the number of posterior samples. When the formula contains interactions involving a basis, the `"basis_interaction"` attribute records their type (`"fixed"` or `"random"`), variable values, and the reference value for categorical fixed interactions.
 #'
@@ -339,7 +339,7 @@ bdlnm <- function(
   ## -----------------------
 
   quantiles <- c((1 - ci.level) / 2, 0.5, 1 - (1 - ci.level) / 2)
-  sumcols <- c("mean", "sd", paste0(quantiles, "quant"), "mode")
+  sumcols <- c("mean", "sd", paste0(quantiles, "quant"))
 
   # sampled coefficients summary
   coefsum <- matrix(nrow = nrow(coef), ncol = length(sumcols))
@@ -353,11 +353,6 @@ bdlnm <- function(
     coefsum[, paste0(q, "quant")] <- apply(coef, 1, stats::quantile, probs = q)
   }
 
-  #calculate mode (using default kernel density estimate, revisar...)
-  coefsum[, "mode"] <- apply(coef, 1, function(v) {
-    dv <- stats::density(v)
-    with(dv, x[which.max(y)])
-  })
 
   res <- list(
     model = model,

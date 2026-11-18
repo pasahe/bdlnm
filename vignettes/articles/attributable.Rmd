@@ -223,6 +223,8 @@ slondon |>
   theme_bw()
 ```
 
+Summary outputs contain the mean, standard deviation, median, and lower and upper credible-interval bounds.
+
 The total attributable fraction and number, only for summers, are:
 
 ```{r, eval = inla_available}

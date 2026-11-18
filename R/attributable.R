@@ -41,10 +41,10 @@
 #'   - `an`: matrix (rows = time points, columns = posterior samples) with attributable numbers per time point.
 #'   - `aftotal`: numeric vector (length = number of posterior samples) with posterior samples of total AF across all the selected period.
 #'   - `antotal`: numeric vector (length = number of posterior samples) with posterior samples of total AN across all the selected period.
-#'   - `af.summary`: data.frame with summary statistics (mean, sd, quantiles, mode) for AF per time point.
-#'   - `an.summary`: data.frame with summary statistics (mean, sd, quantiles, mode) for AN per time point.
-#'   - `aftotal.summary`: data.frame with summary statistics (mean, sd, quantiles, mode) for total AF.
-#'   - `antotal.summary`: data.frame with summary statistics (mean, sd, quantiles, mode) for total AN.
+#'   - `af.summary`: data.frame with summary statistics (mean, sd, quantiles) for AF per time point.
+#'   - `an.summary`: data.frame with summary statistics (mean, sd, quantiles) for AN per time point.
+#'   - `aftotal.summary`: data.frame with summary statistics (mean, sd, quantiles) for total AF.
+#'   - `antotal.summary`: data.frame with summary statistics (mean, sd, quantiles) for total AN.
 #'
 #' @author Pau Satorra, Marcos Quijal-Zamorano.
 #'
@@ -813,17 +813,8 @@ attributable <- function(
       })
     }
 
-    #calculate mode (using default kernel density estimate, revisar...)
-    M_ansum[ind_an, "mode"] <- apply(M_an[ind_an, ], 1, function(v) {
-      dv <- stats::density(v)
-      with(dv, x[which.max(y)])
-    })
   }
 
-  M_afsum[ind_af, "mode"] <- apply(M_af[ind_af, ], 1, function(v) {
-    dv <- stats::density(v)
-    with(dv, x[which.max(y)])
-  })
 
   M_afsum[ind_af, "mean"] <- apply(M_af[ind_af, ], 1, mean)
   M_afsum[ind_af, "sd"] <- apply(M_af[ind_af, ], 1, stats::sd)
@@ -850,14 +841,8 @@ attributable <- function(
         ansum[quant_cols[i]] <- stats::quantile(an, quant_val[i])
       }
 
-      #calculate mode (using default kernel density estimate, revisar...)
-      dv <- stats::density(an)
-      ansum["mode"] <- with(dv, x[which.max(y)])
     }
 
-    #calculate mode (using default kernel density estimate, revisar...)
-    dv <- stats::density(af)
-    afsum["mode"] <- with(dv, x[which.max(y)])
 
     afsum["mean"] <- mean(af)
     afsum["sd"] <- stats::sd(af)

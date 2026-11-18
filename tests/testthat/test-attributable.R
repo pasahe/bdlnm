@@ -32,10 +32,10 @@ test_that("attributable returns expected structure and summaries (backwards)", {
   expect_equal(colnames(attr$an), paste0("sample", seq_len(n_sim)))
   expect_equal(colnames(attr$af), paste0("sample", seq_len(n_sim)))
 
-  # summaries present and contain mean, sd and at least one quantile + mode
-  expect_true(all(c("mean", "sd", "mode") %in% colnames(attr$an.summary)))
+  # summaries present and contain mean, sd and at least one quantile
+  expect_identical(colnames(attr$an.summary), c("mean", "sd", "0.025quant", "0.5quant", "0.975quant"))
   expect_true(any(grepl("quant$", colnames(attr$an.summary))))
-  expect_true(all(c("mean", "sd", "mode") %in% colnames(attr$af.summary)))
+  expect_identical(colnames(attr$af.summary), c("mean", "sd", "0.025quant", "0.5quant", "0.975quant"))
   expect_true(any(grepl("quant$", colnames(attr$af.summary))))
 
   #NA at the beginning
@@ -84,10 +84,10 @@ test_that("attributable returns expected structure and summaries (forward)", {
   expect_equal(colnames(attr$an), paste0("sample", seq_len(n_sim)))
   expect_equal(colnames(attr$af), paste0("sample", seq_len(n_sim)))
 
-  # summaries present and contain mean, sd and at least one quantile + mode
-  expect_true(all(c("mean", "sd", "mode") %in% colnames(attr$an.summary)))
+  # summaries present and contain mean, sd and at least one quantile
+  expect_identical(colnames(attr$an.summary), c("mean", "sd", "0.025quant", "0.5quant", "0.975quant"))
   expect_true(any(grepl("quant$", colnames(attr$an.summary))))
-  expect_true(all(c("mean", "sd", "mode") %in% colnames(attr$af.summary)))
+  expect_identical(colnames(attr$af.summary), c("mean", "sd", "0.025quant", "0.5quant", "0.975quant"))
   expect_true(any(grepl("quant$", colnames(attr$af.summary))))
 
   #NA at the end
@@ -210,7 +210,7 @@ test_that("attributable works when cases = NULL (only AF returned)", {
   expect_type(attr3, "list")
   expect_equal(names(attr3), c("af", "af.summary"))
   expect_equal(dim(attr3$af), c(nrow(slondon), n_sim))
-  expect_equal(dim(attr3$af.summary), c(nrow(slondon), 6))
+  expect_equal(dim(attr3$af.summary), c(nrow(slondon), 5))
 })
 
 

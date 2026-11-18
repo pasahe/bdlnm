@@ -35,7 +35,7 @@ An S3 object of class \code{"bdlnm"} with the following components:
 \item \code{model}: the fitted \code{INLA} model returned by \code{\link[INLA:inla]{INLA::inla()}}.
 \item \code{basis}: a named list containing all the detected basis of class \code{crossbasis} or \code{onebasis} included in the model \code{formula}.
 \item \code{coefficients}: a matrix whose columns are posterior sample draws returned by \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}} (named \code{sample1}, \code{sample2}, ...) and whose rows are all model coefficients.
-\item \code{coefficients.summary}: a matrix of summary statistics for all the posterior samples stored in \code{coefficients} (mean, sd, quantiles, mode).
+\item \code{coefficients.summary}: a matrix of summary statistics for all the posterior samples stored in \code{coefficients} (mean, sd, quantiles).
 }
 
 The \code{"n_sim"} attribute records the number of posterior samples. When the formula contains interactions involving a basis, the \code{"basis_interaction"} attribute records their type (\code{"fixed"} or \code{"random"}), variable values, and the reference value for categorical fixed interactions.
@@ -70,11 +70,11 @@ When missing values are present in the data supplied to \code{\link[INLA:inla]{I
 \section{Posterior samples}{
 
 
-After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}}. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles and mode). For a \code{"crossbasis"} built from an exposure basis with \code{C} parameters and a lag basis with \code{L} parameters, there will be \verb{C × L} cross-basis associated coefficients (named e.g. \code{v1.l1}, ..., \code{vC.lL}). For a \code{"onebasis"} object the coefficients follow the simpler form \code{b1}, ..., \code{bC}.
+After fitting the model, the function draw samples from the approximate posterior distribution of the latent field via \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}}. These samples are collected into a matrix and summarized across samples (mean, sd, quantiles). For a \code{"crossbasis"} built from an exposure basis with \code{C} parameters and a lag basis with \code{L} parameters, there will be \verb{C × L} cross-basis associated coefficients (named e.g. \code{v1.l1}, ..., \code{vC.lL}). For a \code{"onebasis"} object the coefficients follow the simpler form \code{b1}, ..., \code{bC}.
 
 Additional arguments supplied via \code{sample.arg} are forwarded to \code{\link[INLA:inla.posterior.sample]{INLA::inla.posterior.sample()}} (see documentation for all available arguments). By default, the number of samples is \code{1000}. Be aware of the computation and memory cost when increasing the number of samples drawn. By default, the seed is set at random. For reproducible samplings, you need to set a non-zero numeric \code{seed} in \code{sample.arg}.
 
-Posterior sample estimations are then summarized across samples using mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to \code{ci.level}) and an approximate mode obtained from a kernel density estimate.
+Posterior sample estimations are then summarized across samples using mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to \code{ci.level}).
 }
 
 \section{Requirements}{

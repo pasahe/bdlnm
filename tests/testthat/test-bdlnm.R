@@ -10,7 +10,7 @@ test_that("ensure bdlnm returned expected structure (crossbasis example)", {
   expect_equal(class(mod$coefficients), c("matrix", "array"))
   expect_equal(dim(mod$coefficients), c(35, n_sim))
   expect_equal(class(mod$coefficients.summary), c("matrix", "array"))
-  expect_equal(dim(mod$coefficients.summary), c(35, 6L))
+  expect_equal(dim(mod$coefficients.summary), c(35, 5L))
 })
 
 test_that("ensure bdlnm returned expected structure (onebasis example)", {
@@ -33,7 +33,7 @@ test_that("ensure bdlnm returned expected structure (onebasis example)", {
   expect_equal(class(mod_2$coefficients), c("matrix", "array"))
   expect_equal(dim(mod_2$coefficients), c(18, n_sim))
   expect_equal(class(mod_2$coefficients.summary), c("matrix", "array"))
-  expect_equal(dim(mod_2$coefficients.summary), c(18, 6L))
+  expect_equal(dim(mod_2$coefficients.summary), c(18, 5L))
 })
 
 
@@ -97,14 +97,14 @@ test_that("bdlnm throws informative error if control.compute config = FALSE is p
   )
 })
 
-test_that("bdlnm returns sensible summaries (means, sd, quantiles, mode)", {
+test_that("bdlnm returns sensible summaries (means, sd, quantiles)", {
   skip_on_cran()
   skip_if_not(check_inla(), "INLA not available")
 
   coefsum <- mod$coefficients.summary
 
-  # check summary columns include mean, sd and at least one quantile and mode
-  expect_true(all(c("mean", "sd", "mode") %in% colnames(coefsum)))
+  # check summary columns include mean, sd and at least one quantile
+  expect_identical(colnames(coefsum), c("mean", "sd", "0.025quant", "0.5quant", "0.975quant"))
   expect_true(any(grepl("quant$", colnames(coefsum))))
 })
 

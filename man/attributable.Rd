@@ -42,10 +42,10 @@ A list with components:
 \item \code{an}: matrix (rows = time points, columns = posterior samples) with attributable numbers per time point.
 \item \code{aftotal}: numeric vector (length = number of posterior samples) with posterior samples of total AF across all the selected period.
 \item \code{antotal}: numeric vector (length = number of posterior samples) with posterior samples of total AN across all the selected period.
-\item \code{af.summary}: data.frame with summary statistics (mean, sd, quantiles, mode) for AF per time point.
-\item \code{an.summary}: data.frame with summary statistics (mean, sd, quantiles, mode) for AN per time point.
-\item \code{aftotal.summary}: data.frame with summary statistics (mean, sd, quantiles, mode) for total AF.
-\item \code{antotal.summary}: data.frame with summary statistics (mean, sd, quantiles, mode) for total AN.
+\item \code{af.summary}: data.frame with summary statistics (mean, sd, quantiles) for AF per time point.
+\item \code{an.summary}: data.frame with summary statistics (mean, sd, quantiles) for AN per time point.
+\item \code{aftotal.summary}: data.frame with summary statistics (mean, sd, quantiles) for total AF.
+\item \code{antotal.summary}: data.frame with summary statistics (mean, sd, quantiles) for total AN.
 }
 }
 \description{

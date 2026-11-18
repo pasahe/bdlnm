@@ -96,7 +96,7 @@ mod <- bdlnm(
 )
 ```
 
-The returned object is of class bdlnm and contains the fitted INLA model, the crossbasis objects included in the formula, and posterior samples of the estimated coefficients together with their summaries (mean, standard deviation, and quantiles).
+The returned object is of class bdlnm and contains the fitted INLA model, the crossbasis objects included in the formula, and posterior samples of the estimated coefficients together with their summaries (mean, standard deviation, median, and lower and upper credible-interval bounds).
 
 ```{r, eval = inla_available}
 str(mod, max.level = 1)

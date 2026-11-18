@@ -1,3 +1,7 @@
+# bdlnm 0.1.0.10003
+
+* Improved computational efficiency of `bcrosspred()`, particularly when predicting across multiple random-effect levels. Removed posterior mode calculations from all summary outputs to reduce computational cost. Summaries retain means, standard deviations, medians, and credible-interval bounds. 
+
 # bdlnm 0.1.0.10002
 
 * Added continuous fixed-interaction predictions to `bcrosspred()`. The `combine_effects` argument accepts one-sided formulas with explicit numeric prediction values, such as `~ cb * int_idx[c(0, 5, 10)]`, or a previously defined numeric vector, such as `~ cb * int_idx[idx]`. Vector names are resolved in the formula environment; character strings are not accepted. Predictions combine the standalone basis coefficients with the interaction coefficients multiplied by each requested value. Use `~ cb:int_idx[c(0, 5, 10)]` to predict the interaction component alone. Single values, negative values and decimals are supported.

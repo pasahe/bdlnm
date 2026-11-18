@@ -1,6 +1,6 @@
 #' Predict exposure-lag-response effects from a Bayesian distributed-lag model (B-DLNM)
 #'
-#' Calculate predictions from a fitted Bayesian distributed lag non-linear model ([bdlnm()]). Predicted associations are computed on a grid of values of the exposure and lags, relative to a reference exposure center value. The function gives posterior samples of exposure–lag-specific associations, overall cumulative associations (summed across lags) and optionally incremental cumulative associations, together with summary statistics (mean, sd, credible interval quantiles and mode). When `combine_effects` includes a basis interaction, separate predictions are returned for each interaction level or random-effect unit.
+#' Calculate predictions from a fitted Bayesian distributed lag non-linear model ([bdlnm()]). Predicted associations are computed on a grid of values of the exposure and lags, relative to a reference exposure center value. The function gives posterior samples of exposure–lag-specific associations, overall cumulative associations (summed across lags) and optionally incremental cumulative associations, together with summary statistics (mean, sd, credible interval quantiles). When `combine_effects` includes a basis interaction, separate predictions are returned for each interaction level or random-effect unit.
 #'
 #' @param object A fitted `"bdlnm"` object returned by [bdlnm()].
 #' @param basis If the `bdlnm` model has more than one basis, the name of the basis to use to compute predictions. It must be one of `names(object$basis)`. If the model contains only one basis it is selected automatically.
@@ -24,7 +24,7 @@
 #' 
 #' For continuous fixed interactions, specify `combine_effects` values in brackets, for example `~ cb * int_idx[10]` or `~ cb * int_idx[c(0, 5, 10)]`. At each `x` value, predictions combine the standalone basis coefficients with `x` times the interaction coefficients. Use `~ cb:int_idx[c(0, 5, 10)]` for the interaction component alone. A previously defined numeric vector can be supplied by name, for example `~ cb * int_idx[values]`. A continuous interaction requires explicit prediction values.
 #'
-#' Posterior sample of the predicted associations are stored as matrices for the overall cumulative effect and 3D arrays for the exposure-lag-specific predictions. Summaries across these samples are computed using the mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to `ci.level`) and an approximate mode obtained from a kernel density estimate. Relative risks versions of these associations (exponentiated predictions) are also included if `model.link` is equal to `"log"` or `"logit"`. The `model.link` can be manually specified or, if `NULL`, it is tried to be inferred from the `model` type in `object`.
+#' Posterior sample of the predicted associations are stored as matrices for the overall cumulative effect and 3D arrays for the exposure-lag-specific predictions. Summaries across these samples are computed using the mean, sd, credible-interval quantiles (the mid and the lower/upper tails according to `ci.level`). Relative risks versions of these associations (exponentiated predictions) are also included if `model.link` is equal to `"log"` or `"logit"`. The `model.link` can be manually specified or, if `NULL`, it is tried to be inferred from the `model` type in `object`.
 #'
 #' Be aware of memory usage: exposure-lag-specific predictions are stored in 3D arrays of dimension `length(predvar)` × `length(predlag)` × `n_sim`. For dense grids and many posterior samples this can be computationally intensive.
 #'
@@ -387,9 +387,25 @@ bcrosspred <- function(
     Xpred <- basisvar
   }
 
-  # for each unit in the specified terms return a prediction stored in all_res
+  # These matrices and labels are shared by all interaction units.
+  sample_names <- paste0("sample", seq_len(n_sample))
+  lag_names <- paste0("lag", predlag)
+  quantiles <- c((1 - ci.level) / 2, 0.5, 1 - (1 - ci.level) / 2)
+  quantile_cols <- paste0(quantiles, "quant")
+  sumcols <- c("mean", "sd", quantile_cols)
+
+  # Sum lag blocks once; retain cumulative blocks only when requested.
+  Xpredall <- 0
+  if (cumul) Xpredcum <- matrix(0, nrow(Xpred), ncol(Xpred))
+  for (i in seq_along(predlag)) {
+    ind <- seq_along(predvar) + length(predvar) * (i - 1L)
+    Xpredall <- Xpredall + Xpred[ind, , drop = FALSE]
+    if (cumul) Xpredcum[ind, ] <- Xpredall
+  }
+
+  # Each unit still has its own coefficients, predictions and summaries.
   names_coef <- dimnames(coef)[[3]]
-  all_res <- list()
+  all_res <- stats::setNames(vector("list", length(names_coef)), names_coef)
   for (id in names_coef) {
 
     coef_id <- coef[, , id]
@@ -400,8 +416,8 @@ bcrosspred <- function(
       dim = c(length(predvar), length(predlag), n_sample),
       dimnames = list(
         predvar,
-        paste0("lag", predlag),
-        paste0("sample", seq_len(n_sample))
+        lag_names,
+        sample_names
       )
     )
 
@@ -409,35 +425,17 @@ bcrosspred <- function(
     ## Overall & cumulative
     ## ----------------------
 
-    # Xpred arranged as blocks for each lag: sum over lags for overall effect
-
-    Xpredall <- 0
-
-    cumfit <- matrix(0, nrow(Xpred), n_sample)
-
-    for (i in seq(length(predlag))) {
-      ind <- seq(length(predvar)) + length(predvar) * (i - 1)
-      Xpredall <- Xpredall + Xpred[ind, , drop = FALSE]
-
-      if (cumul) {
-        cumfit[ind, ] <- Xpredall %*% coef_id
-      }
-    }
-
-    # convert to array
-    cumfit <- array(
-      cumfit,
-      dim = c(length(predvar), length(predlag), n_sample),
-      dimnames = list(
-        predvar,
-        paste0("lag", predlag),
-        paste0("sample", seq_len(n_sample))
+    if (cumul) {
+      cumfit <- array(
+        Xpredcum %*% coef_id,
+        dim = c(length(predvar), length(predlag), n_sample),
+        dimnames = list(predvar, lag_names, sample_names)
       )
-    )
+    }
 
     allfit <- Xpredall %*% coef_id
     rownames(allfit) <- predvar
-    colnames(allfit) <- paste0("sample", seq_len(n_sample))
+    colnames(allfit) <- sample_names
 
     ## ----------------------
     ## Build output object
@@ -454,7 +452,7 @@ bcrosspred <- function(
       res$cen <- cen
     }
 
-    colnames(coef_id) <- paste0("sample", seq_len(n_sample))
+    colnames(coef_id) <- sample_names
 
     res <- c(
       res,
@@ -480,8 +478,6 @@ bcrosspred <- function(
     ## summaries
     ## -----------------------
 
-    quantiles <- c((1 - ci.level) / 2, 0.5, 1 - (1 - ci.level) / 2)
-    sumcols <- c("mean", "sd", paste0(quantiles, "quant"), "mode")
 
     # sampled coefficients summary
     coefsum <- matrix(nrow = nrow(coef_id), ncol = length(sumcols))
@@ -491,42 +487,28 @@ bcrosspred <- function(
     coefsum[, "mean"] <- apply(coef_id, 1, mean)
     coefsum[, "sd"] <- apply(coef_id, 1, stats::sd)
 
-    for (q in quantiles) {
-      coefsum[, paste0(q, "quant")] <- apply(coef_id, 1, stats::quantile, probs = q)
-    }
+    coefsum[, quantile_cols] <- t(apply(
+      coef_id, 1, stats::quantile, probs = quantiles
+    ))
 
-    #calculate mode (using default kernel density estimate, revisar...)
-    coefsum[, "mode"] <- apply(coef_id, 1, function(v) {
-      dv <- stats::density(v)
-      with(dv, x[which.max(y)])
-    })
 
     res$coefficients.summary <- coefsum
 
     #matfit summary
     matfitsum <- array(
       dim = c(length(predvar), length(predlag), length(sumcols)),
-      dimnames = list(predvar, paste0("lag", predlag), sumcols)
+      dimnames = list(predvar, lag_names, sumcols)
     )
 
     matfitsum[,, "mean"] <- apply(res$matfit, c(1, 2), mean)
     matfitsum[,, "sd"] <- apply(res$matfit, c(1, 2), stats::sd)
 
-    for (q in quantiles) {
-      matfitsum[,, paste0(q, "quant")] <- apply(
-        res$matfit,
-        c(1, 2),
-        stats::quantile,
-        probs = q
-      )
-    }
+    # Calculate all quantiles in one pass, then restore exposure-lag order.
+    matfitsum[,, quantile_cols] <- aperm(apply(
+      res$matfit, c(1, 2), stats::quantile, probs = quantiles
+    ), c(2, 3, 1))
 
 
-    #calculate mode (using default kernel density estimate, revisar...)
-    matfitsum[,, "mode"] <- apply(res$matfit, c(1, 2), function(v) {
-      dv <- stats::density(v)
-      with(dv, x[which.max(y)])
-    })
 
     res$matfit.summary <- matfitsum
 
@@ -534,26 +516,16 @@ bcrosspred <- function(
       #cumfit summary
       cumfitsum <- array(
         dim = c(length(predvar), length(predlag), length(sumcols)),
-        dimnames = list(predvar, paste0("lag", predlag), sumcols)
+        dimnames = list(predvar, lag_names, sumcols)
       )
 
       cumfitsum[,, "mean"] <- apply(res$cumfit, c(1, 2), mean)
       cumfitsum[,, "sd"] <- apply(res$cumfit, c(1, 2), stats::sd)
 
-      for (q in quantiles) {
-        cumfitsum[,, paste0(q, "quant")] <- apply(
-          res$cumfit,
-          c(1, 2),
-          stats::quantile,
-          probs = q
-        )
-      }
+      cumfitsum[,, quantile_cols] <- aperm(apply(
+        res$cumfit, c(1, 2), stats::quantile, probs = quantiles
+      ), c(2, 3, 1))
 
-      #calculate mode (using default kernel density estimate, revisar...)
-      cumfitsum[,, "mode"] <- apply(res$cumfit, c(1, 2), function(v) {
-        dv <- stats::density(v)
-        with(dv, x[which.max(y)])
-      })
 
       res$cumfit.summary <- cumfitsum
     }
@@ -566,20 +538,10 @@ bcrosspred <- function(
     allfitsum[, "mean"] <- apply(res$allfit, 1, mean)
     allfitsum[, "sd"] <- apply(res$allfit, 1, stats::sd)
 
-    for (q in quantiles) {
-      allfitsum[, paste0(q, "quant")] <- apply(
-        res$allfit,
-        1,
-        stats::quantile,
-        probs = q
-      )
-    }
+    allfitsum[, quantile_cols] <- t(apply(
+      res$allfit, 1, stats::quantile, probs = quantiles
+    ))
 
-    #calculate mode (using default kernel density estimate, revisar...)
-    allfitsum[, "mode"] <- apply(res$allfit, 1, function(v) {
-      dv <- stats::density(v)
-      with(dv, x[which.max(y)])
-    })
 
     res$allfit.summary <- allfitsum
 

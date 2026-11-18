@@ -23,9 +23,9 @@ test_that("optimal_exposure returns object of class optimal_exposure with expect
     seq(attr(cb, "lag")[1], attr(cb, "lag")[2], by = 1)
   )
 
-  # summary format: must contain mean, sd, mode and at least one quantile
+  # summary format: must contain mean, sd and at least one quantile
   ms_cols <- names(mmt$summary)
-  expect_true(all(c("mean", "sd", "mode") %in% ms_cols))
+  expect_identical(ms_cols, c("mean", "sd", "0.025quant", "0.5quant", "0.975quant"))
   expect_true(any(grepl("quant$", ms_cols)))
 
 })
@@ -71,9 +71,9 @@ test_that("optimal_exposure returns object of class optimal_exposure with expect
 
   expect_equal(attr(mmt_2, "lag_at"), NULL)
 
-  # summary format: must contain mean, sd, mode and at least one quantile
+  # summary format: must contain mean, sd and at least one quantile
   ms_cols <- names(mmt_2$summary)
-  expect_true(all(c("mean", "sd", "mode") %in% ms_cols))
+  expect_identical(ms_cols, c("mean", "sd", "0.025quant", "0.5quant", "0.975quant"))
   expect_true(any(grepl("quant$", ms_cols)))
 })
 
