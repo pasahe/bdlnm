@@ -1,5 +1,7 @@
 # bdlnm 0.1.0.10003
 
+* Added the built-in `italy` dataset containing multi-city temperature and mortality data from 87 Italian cities.
+
 * Improved computational efficiency of `bcrosspred()`, particularly when predicting across multiple random-effect levels. Removed posterior mode calculations from all summary outputs to reduce computational cost. Summaries retain means, standard deviations, medians, and credible-interval bounds. 
 
 # bdlnm 0.1.0.10002
